@@ -106,6 +106,17 @@ public class AuthController {
             case OtpResult.Verified verified -> {
                 User user = accounts.findOrCreate(verified.phoneE164());
 
+                // A removed or suspended account must not be able to sign back
+                // in with a fresh code. Without this, removal would last only
+                // until the next OTP, and moderation would be theatre.
+                if (!user.isActive()) {
+                    LoginFlow.clear(session);
+                    model.addAttribute("error", user.getStatus() == com.househunting.user.UserStatus.REMOVED
+                            ? "This account has been removed."
+                            : "This account is suspended while we review a report.");
+                    yield "auth/phone";
+                }
+
                 if (user.getFirstName() == null || user.getFirstName().isBlank()) {
                     // New account: collect a name before signing in, so the
                     // session principal is never missing one.

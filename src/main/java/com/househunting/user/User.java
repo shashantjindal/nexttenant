@@ -97,6 +97,23 @@ public class User {
     @Column(name = "last_seen_at")
     private Instant lastSeenAt;
 
+    /**
+     * Moderator rights.
+     *
+     * <p>Granted only by direct database access. There is deliberately no UI to
+     * promote a user: the privilege is rare, permanent in effect, and an
+     * accidental click should not be able to confer it.
+     */
+    @Column(name = "is_admin", nullable = false)
+    private boolean admin = false;
+
+    @Column(name = "removed_at")
+    private Instant removedAt;
+
+    /** Kept even if the account is later reinstated. */
+    @Column(name = "removed_reason", length = 200)
+    private String removedReason;
+
     /** Required by JPA. Not for application use. */
     protected User() {
     }
@@ -128,13 +145,22 @@ public class User {
         this.status = UserStatus.SUSPENDED;
     }
 
-    public void reinstate() {
-        this.status = UserStatus.ACTIVE;
+    /** Terminal. Applied after two confirmed reports from two different people. */
+    public void remove(Instant now, String reason) {
+        this.status = UserStatus.REMOVED;
+        this.removedAt = now;
+        this.removedReason = reason;
     }
 
-    /** Terminal. Applied after two confirmed reports from two different people. */
-    public void remove() {
-        this.status = UserStatus.REMOVED;
+    /**
+     * Undoes a removal.
+     *
+     * <p>removedAt and removedReason are deliberately kept: "this account was
+     * removed in March for asking for money" stays true even after the decision
+     * is reversed, and a moderator reviewing a later report should see it.
+     */
+    public void reinstate() {
+        this.status = UserStatus.ACTIVE;
     }
 
     public void updateProfile(String firstName, Gender gender, AgeBracket ageBracket) {
@@ -195,6 +221,18 @@ public class User {
 
     public Instant getLastSeenAt() {
         return lastSeenAt;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public Instant getRemovedAt() {
+        return removedAt;
+    }
+
+    public String getRemovedReason() {
+        return removedReason;
     }
 
     // ---- Identity --------------------------------------------------------

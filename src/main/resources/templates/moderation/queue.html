@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Moderation queue — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <p class="auth__notice" th:if="${notice}" th:text="${notice}">notice</p>
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <div class="section__head">
+        <h1 class="section__title">
+            Moderation queue
+            <span class="filters__count" th:if="${openCount > 0}" th:text="${openCount}">3</span>
+        </h1>
+    </div>
+
+    <div class="empty" th:if="${items.isEmpty()}">
+        <p class="empty__title">Nothing waiting</p>
+        <p class="empty__body">No open reports.</p>
+    </div>
+
+    <div class="request-list">
+        <article class="request-row" th:each="item : ${items}">
+
+            <div class="request-row__head">
+                <div>
+                    <div class="request-row__name" th:text="${item.reason}">This is a broker</div>
+                    <div class="request-row__meta">
+                        <span th:if="${item.listingArea}" th:text="${item.listingArea}">Powai</span>
+                        <span th:if="${item.ownerName}" th:text="' · ' + ${item.ownerName}"> · Priya</span>
+                    </div>
+                </div>
+
+                <!--/* Shown BEFORE the click. A moderator should know that this
+                       decision removes an account, not discover it afterwards. */-->
+                <span class="request-row__status"
+                      th:classappend="${item.wouldRemoveAccount()} ? ' request-row__status--danger' : ''"
+                      th:text="${item.wouldRemoveAccount()}
+                               ? 'Confirming removes this account'
+                               : ${item.strikesAlready} + ' of ' + ${strikesToRemove} + ' strikes'">
+                    0 of 2 strikes
+                </span>
+            </div>
+
+            <p class="wizard__hint" th:if="${item.reasonHelp}" th:text="${item.reasonHelp}">help</p>
+
+            <blockquote class="request-row__note" th:if="${item.detail}" th:text="${item.detail}">detail</blockquote>
+
+            <div class="request-row__actions">
+                <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${item.listingId})}"
+                   target="_blank" rel="noopener">View listing</a>
+
+                <form method="post" th:action="@{/admin/reports/{id}/confirm(id=${item.reportId})}">
+                    <button type="submit" class="btn btn--primary">Confirm</button>
+                </form>
+
+                <form method="post" th:action="@{/admin/reports/{id}/dismiss(id=${item.reportId})}">
+                    <button type="submit" class="btn btn--ghost">Dismiss</button>
+                </form>
+            </div>
+        </article>
+    </div>
+</main>
+
+</body>
+</html>

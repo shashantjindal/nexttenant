@@ -65,7 +65,7 @@ class PhotoUploadTest {
 
     private static Authentication as(User user) {
         return UsernamePasswordAuthenticationToken.authenticated(
-                new AuthenticatedUser(user.getId(), user.getFirstName()),
+                new AuthenticatedUser(user.getId(), user.getFirstName(), user.isAdmin()),
                 null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
 

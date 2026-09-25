@@ -1136,3 +1136,11 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 
 .detail__save { margin-top: var(--s-8); display: flex; justify-content: center; }
+
+/* ---- Moderation -------------------------------------------------------- */
+
+.reason { align-items: flex-start; padding: var(--s-2) 0; }
+.reason small { display: block; color: var(--c-ink-3); font-size: var(--t-xs); margin-top: 2px; }
+.reason strong { font-family: var(--font-display); font-weight: 600; color: var(--c-ink); font-size: var(--t-sm); }
+
+.request-row__status--danger { background: var(--c-brand-tint); color: var(--c-brand); font-weight: 600; }

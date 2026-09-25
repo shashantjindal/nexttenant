@@ -45,6 +45,11 @@ public class SecurityConfig {
                                          "/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/error").permitAll()
 
+                        // Moderation. Declared BEFORE anyRequest(), and by
+                        // role rather than by a check inside each handler, so
+                        // an /admin route added later is protected by default.
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
                         // Everything else — dashboard, wizard, requests —
                         // requires a session. `anyRequest()` last means a new
                         // route is private by default: forgetting to list it

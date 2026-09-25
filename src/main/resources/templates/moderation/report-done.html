@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Report received — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div class="empty" style="margin-top: 48px;">
+        <p class="empty__title">Thanks &mdash; we are on it</p>
+        <p class="empty__body">
+            A person reviews every report. If it is confirmed, the listing comes down
+            straight away. Two confirmed reports and the account goes with it.
+        </p>
+        <a class="btn btn--primary" th:href="@{/flats}">Back to browsing</a>
+    </div>
+</main>
+
+</body>
+</html>

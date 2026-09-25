@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * </ul>
  */
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class HouseHuntingApplication {
 
     public static void main(String[] args) {

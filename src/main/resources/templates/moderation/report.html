@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Report this listing — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <a class="detail__back" th:href="@{/flats/{id}(id=${listing.id})}">&larr; Back to the listing</a>
+
+    <h1 class="wizard__title">Report this listing</h1>
+    <p class="wizard__lede">
+        Reports are anonymous. The person who posted this is never told who reported them.
+        Two confirmed reports and the account is removed.
+    </p>
+
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <form method="post" th:action="@{/flats/{id}/report(id=${listing.id})}" class="wizard__form">
+        <fieldset class="wizard__group">
+            <legend>What is wrong</legend>
+
+            <label class="check reason" th:each="r : ${reasons}">
+                <input type="radio" name="reason" th:value="${r}" required>
+                <span>
+                    <strong th:text="${r.label}">This is a broker</strong>
+                    <small th:if="${r.help}" th:text="${r.help}">help</small>
+                </span>
+            </label>
+        </fieldset>
+
+        <fieldset class="wizard__group">
+            <legend>Anything else we should know</legend>
+            <label class="field">
+                <span class="sr-only">Details</span>
+                <textarea name="detail" rows="4" maxlength="2000"
+                          placeholder="What happened, and when"></textarea>
+            </label>
+        </fieldset>
+
+        <div class="wizard__nav">
+            <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${listing.id})}">Cancel</a>
+            <button type="submit" class="btn btn--primary">Submit report</button>
+        </div>
+    </form>
+</main>
+
+</body>
+</html>

@@ -17,10 +17,25 @@ import java.util.UUID;
  * structure, so adding a field would invalidate every live session and log
  * everybody out on deploy.
  */
-public record AuthenticatedUser(UUID id, String firstName) implements Serializable {
+public record AuthenticatedUser(UUID id, String firstName, boolean admin)
+        implements Serializable, java.security.Principal {
 
     @java.io.Serial
     private static final long serialVersionUID = 1L;
+
+    /**
+     * The id, as the security principal name.
+     *
+     * <p>Spring Session stores this in SPRING_SESSION.PRINCIPAL_NAME, which is
+     * what makes revoking every session for one account a single DELETE. With
+     * the default — the record's toString() — sessions could not be found by
+     * user, and the claim that server-side sessions allow instant revocation
+     * would be theoretical.
+     */
+    @Override
+    public String getName() {
+        return id.toString();
+    }
 
     /** True once the profile step is done and the account is usable. */
     public boolean hasName() {

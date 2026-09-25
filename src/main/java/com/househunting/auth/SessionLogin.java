@@ -27,6 +27,10 @@ public class SessionLogin {
     private static final List<SimpleGrantedAuthority> USER_AUTHORITIES =
             List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
+    private static final List<SimpleGrantedAuthority> ADMIN_AUTHORITIES =
+            List.of(new SimpleGrantedAuthority("ROLE_USER"),
+                    new SimpleGrantedAuthority("ROLE_ADMIN"));
+
     private final SecurityContextRepository contextRepository;
 
     public SessionLogin(SecurityContextRepository contextRepository) {
@@ -49,10 +53,11 @@ public class SessionLogin {
         // programmatic, so it is our job.
         request.changeSessionId();
 
-        AuthenticatedUser principal = new AuthenticatedUser(user.getId(), user.getFirstName());
+        AuthenticatedUser principal = new AuthenticatedUser(
+                user.getId(), user.getFirstName(), user.isAdmin());
 
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
-                principal, null, USER_AUTHORITIES);
+                principal, null, user.isAdmin() ? ADMIN_AUTHORITIES : USER_AUTHORITIES);
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
