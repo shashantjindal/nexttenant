@@ -39,6 +39,8 @@
         </nav>
 
         <div class="site-header__actions">
+            <a class="btn btn--ghost" th:if="${currentUser != null}"
+               th:href="@{/requests}">Requests</a>
             <a class="btn btn--ghost" th:if="${currentUser == null}"
                th:href="@{/login}" href="/login">Log in</a>
             <a class="btn btn--ghost" th:if="${currentUser != null}"

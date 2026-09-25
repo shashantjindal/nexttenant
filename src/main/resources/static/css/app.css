@@ -987,3 +987,69 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     object-fit: cover;
     border-radius: var(--r-md);
 }
+
+/* ---- Requests ---------------------------------------------------------- */
+
+.request-summary {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+    margin: var(--s-6) 0;
+}
+.request-summary__rent { font-family: var(--font-display); font-size: var(--t-lg); font-weight: 600; color: var(--c-ink); }
+.request-summary__rent small { font-family: var(--font-body); font-size: var(--t-xs); font-weight: 400; color: var(--c-ink-3); }
+.request-summary__where { font-size: var(--t-sm); color: var(--c-ink-2); margin-top: var(--s-1); }
+.request-summary__leaver { font-size: var(--t-xs); color: var(--c-ink-3); margin-top: var(--s-1); }
+
+.request-list { display: grid; gap: var(--s-4); }
+
+.request-row {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+}
+
+.request-row__head { display: flex; align-items: center; gap: var(--s-3); }
+.request-row__name { font-family: var(--font-display); font-weight: 600; color: var(--c-ink); }
+.request-row__meta { font-size: var(--t-xs); color: var(--c-ink-3); }
+
+.request-row__status {
+    margin-left: auto;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    background: var(--c-surface-2);
+    padding: 2px var(--s-3);
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+}
+
+.request-row__note {
+    margin: var(--s-4) 0 0;
+    padding: var(--s-3) var(--s-4);
+    background: var(--c-surface-2);
+    border-radius: var(--r-md);
+    font-size: var(--t-sm);
+    color: var(--c-ink-2);
+    white-space: pre-wrap;
+}
+
+.request-row__actions { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-4); }
+
+/* The connected state: gold, matching the prototype's connect animation. */
+.connected {
+    margin-top: var(--s-4);
+    padding: var(--s-4);
+    background: var(--c-gold);
+    border-radius: var(--r-md);
+    display: grid;
+    gap: var(--s-3);
+}
+.connected__title { font-family: var(--font-display); font-weight: 600; color: var(--c-gold-ink); margin: 0; font-size: var(--t-sm); }
+.connected__party, .connected__address { display: grid; gap: 2px; }
+.connected__role { font-size: var(--t-xs); color: var(--c-gold-ink); opacity: .8; }
+.connected__name { font-family: var(--font-display); font-weight: 600; color: var(--c-ink); }
+.connected__phone { font-family: var(--font-display); font-size: var(--t-md); color: var(--c-gold-ink); }
+.connected__address { font-size: var(--t-sm); color: var(--c-ink-2); }
+.connected .btn--primary { justify-self: start; }

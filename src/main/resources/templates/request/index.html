@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Requests — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <p class="auth__notice" th:if="${notice}" th:text="${notice}">notice</p>
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <!-- ================= Received ================= -->
+    <section>
+        <div class="section__head">
+            <h1 class="section__title">Requests received</h1>
+        </div>
+
+        <p class="detail__lede" th:if="${received.isEmpty()}">
+            Nobody has asked about your listing yet.
+        </p>
+
+        <div class="request-list">
+            <article class="request-row" th:each="r : ${received}">
+
+                <div class="request-row__head">
+                    <span class="leaver-card__initial" th:text="${r.requesterInitial}">R</span>
+                    <div>
+                        <div class="request-row__name">
+                            <span th:text="${r.requesterName}">Rahul</span><span
+                                th:if="${r.requesterAge}" th:text="', ' + ${r.requesterAge}">, 23–27</span>
+                        </div>
+                        <div class="request-row__meta">
+                            <span th:text="${r.ago}">2 days ago</span>
+                            <span th:if="${r.listingArea}" th:text="' · ' + ${r.listingArea}"> · Bandra West</span>
+                        </div>
+                    </div>
+                    <span class="request-row__status" th:text="${r.status.label}">Waiting for a reply</span>
+                </div>
+
+                <blockquote class="request-row__note" th:if="${r.note}" th:text="${r.note}">note</blockquote>
+
+                <!-- Pending: the leaver decides -->
+                <div class="request-row__actions" th:if="${r.pending}">
+                    <form method="post" th:action="@{/requests/{id}/accept(id=${r.id})}">
+                        <button type="submit" class="btn btn--primary">Approve and connect</button>
+                    </form>
+                    <form method="post" th:action="@{/requests/{id}/decline(id=${r.id})}">
+                        <button type="submit" class="btn btn--ghost">Decline</button>
+                    </form>
+                </div>
+
+                <!--/*
+                  Connected. r.contact is non-null ONLY when ContactRelease
+                  returned a value — meaning the request is CONNECTED and this
+                  viewer is party to it. A template cannot show a number the
+                  view model does not carry, and the view model only carries one
+                  when the rule was satisfied.
+                */-->
+                <div class="connected" th:if="${r.contact != null}">
+                    <p class="connected__title">Connected &mdash; you can both see each other's number</p>
+
+                    <div class="connected__party">
+                        <span class="connected__role" th:text="${r.contact.theirRole}">Wants the room</span>
+                        <span class="connected__name" th:text="${r.contact.theirFirstName}">Rahul</span>
+                        <a class="connected__phone" th:href="'tel:' + ${r.contact.theirPhone}"
+                           th:text="${r.contact.theirPhone}">+919876543210</a>
+                    </div>
+
+                    <a class="btn btn--primary" th:href="${r.contact.whatsappUrl}"
+                       target="_blank" rel="noopener">Message on WhatsApp</a>
+
+                    <form method="post" th:action="@{/requests/{id}/revoke(id=${r.id})}">
+                        <button type="submit" class="btn btn--ghost">Remove access</button>
+                    </form>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- ================= Sent ================= -->
+    <section style="margin-top: 48px;">
+        <div class="section__head">
+            <h2 class="section__title">My requests sent</h2>
+        </div>
+
+        <p class="detail__lede" th:if="${sent.isEmpty()}">
+            You have not asked about any rooms yet.
+            <a th:href="@{/flats}">Browse flats</a>
+        </p>
+
+        <div class="request-list">
+            <article class="request-row" th:each="s : ${sent}">
+
+                <div class="request-row__head">
+                    <span class="leaver-card__initial" th:text="${s.leaverInitial}">P</span>
+                    <div>
+                        <div class="request-row__name">
+                            <span th:text="${s.listingRent}">&#8377;32,000</span>
+                            <span th:if="${s.listingArea}" th:text="' · ' + ${s.listingArea}"> · Bandra West</span>
+                        </div>
+                        <div class="request-row__meta"
+                             th:text="'Sent ' + ${s.ago} + (${s.leaverName} != null ? ' to ' + ${s.leaverName} : '')">
+                            Sent 2 days ago to Priya
+                        </div>
+                    </div>
+                    <span class="request-row__status" th:text="${s.status.label}">Waiting for a reply</span>
+                </div>
+
+                <div class="request-row__actions" th:if="${s.pending}">
+                    <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${s.listingId})}">View listing</a>
+                    <form method="post" th:action="@{/requests/{id}/withdraw(id=${s.id})}">
+                        <button type="submit" class="btn btn--ghost">Withdraw</button>
+                    </form>
+                </div>
+
+                <div class="connected" th:if="${s.contact != null}">
+                    <p class="connected__title">Connected &mdash; you can both see each other's number</p>
+
+                    <div class="connected__party">
+                        <span class="connected__role" th:text="${s.contact.theirRole}">Current tenant</span>
+                        <span class="connected__name" th:text="${s.contact.theirFirstName}">Priya</span>
+                        <a class="connected__phone" th:href="'tel:' + ${s.contact.theirPhone}"
+                           th:text="${s.contact.theirPhone}">+919876543210</a>
+                    </div>
+
+                    <!--/* The address is released to the requester only. The
+                           leaver already knows where they live. */-->
+                    <div class="connected__address" th:if="${s.contact.fullAddress != null}">
+                        <span class="connected__role">The address</span>
+                        <span th:text="${s.contact.societyName}">Sunbeam Apartments</span>
+                        <span th:text="${s.contact.fullAddress}">Flat 702, 14th Road</span>
+                    </div>
+
+                    <a class="btn btn--primary" th:href="${s.contact.whatsappUrl}"
+                       target="_blank" rel="noopener">Message on WhatsApp</a>
+
+                    <form method="post" th:action="@{/requests/{id}/revoke(id=${s.id})}">
+                        <button type="submit" class="btn btn--ghost">Remove access</button>
+                    </form>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <div class="safety-card" style="margin-top: 48px;">
+        <h2 class="safety-card__heading">Before you visit</h2>
+        <ul>
+            <li>Never pay a deposit before visiting in person</li>
+            <li>Never pay for a viewing</li>
+            <li>Meet at the flat, in daylight &mdash; and tell someone where you are going</li>
+        </ul>
+    </div>
+</main>
+
+</body>
+</html>

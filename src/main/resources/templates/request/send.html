@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Request contact — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+
+    <a class="detail__back" th:href="@{/flats/{id}(id=${listing.id})}">&larr; Back to the listing</a>
+
+    <h1 class="wizard__title">Request contact</h1>
+
+    <!-- The listing, so nobody sends a note about the wrong room -->
+    <div class="request-summary">
+        <div class="request-summary__rent">
+            <span th:text="${listing.rent}">&#8377;32,000</span>
+            <small>per month</small>
+        </div>
+        <div class="request-summary__where">
+            <span th:text="${listing.area}">Bandra West</span>
+            <span th:if="${listing.configuration}" th:text="'· ' + ${listing.configuration}">· 2 BHK</span>
+            <span th:if="${listing.roomType}" th:text="'· ' + ${listing.roomType}">· Private room</span>
+        </div>
+        <div class="request-summary__leaver"
+             th:if="${listing.leaverFirstName}"
+             th:text="${listing.leaverFirstName} + ' · available ' + ${listing.availableFrom}">
+            Priya · available 1 November
+        </div>
+    </div>
+
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <!-- Already asked: show the state rather than a form that will be refused -->
+    <div class="notice notice--relaxed" th:if="${existing}">
+        <p class="notice__title">You have already asked about this room</p>
+        <p class="notice__body" th:text="${existing.status.label}">Waiting for a reply</p>
+        <a class="btn btn--ghost" th:href="@{/requests}">See my requests</a>
+    </div>
+
+    <!--/*
+      The safety rules come BEFORE the send button, not after. By the time
+      somebody has a phone number in hand they are already talking to a
+      stranger about money; the moment to say this is while they are still
+      deciding to.
+    */-->
+    <div class="safety-card" th:unless="${existing}">
+        <h2 class="safety-card__heading">Before you share numbers</h2>
+        <p class="wizard__hint" style="margin-bottom: 12px;">
+            Three rules. Almost every scam in this market breaks one of them.
+        </p>
+        <ul>
+            <li><strong>Never pay a deposit before visiting in person.</strong></li>
+            <li><strong>Never pay for a viewing.</strong> Nobody legitimate charges to show you a room.</li>
+            <li><strong>Meet at the flat, in daylight.</strong> Not a cafe, not a society gate.
+                Tell someone where you are going, and go before dark.</li>
+        </ul>
+    </div>
+
+    <form method="post" th:unless="${existing}"
+          th:action="@{/flats/{id}/request(id=${listing.id})}" class="wizard__form">
+
+        <fieldset class="wizard__group">
+            <legend>Your note</legend>
+            <p class="wizard__hint">
+                Edit the square brackets. Leavers read maybe fifteen of these a week
+                &mdash; specifics win.
+            </p>
+
+            <label class="field">
+                <span class="sr-only">Your note</span>
+                <textarea name="note" rows="6" th:maxlength="${maxNote}"
+                          placeholder="Write a few lines">Hi! I am [what you do] and I am looking to move in around [date]. I can visit [when you are free]. [One line about you.]</textarea>
+            </label>
+        </fieldset>
+
+        <div class="wizard__nav">
+            <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${listing.id})}">Cancel</a>
+            <button type="submit" class="btn btn--primary">Send request</button>
+        </div>
+    </form>
+
+    <p class="wizard__hint" style="text-align:center; margin-top:16px;" th:unless="${existing}">
+        Your number is shared only if
+        <span th:text="${listing.leaverFirstName}">Priya</span> accepts.
+    </p>
+</main>
+
+</body>
+</html>
