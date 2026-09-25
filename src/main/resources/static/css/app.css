@@ -664,3 +664,21 @@
     .filters { position: sticky; top: calc(var(--header-h) + var(--s-4)); }
     .search__title { font-size: var(--t-xl); }
 }
+
+/* Area search box inside the filter panel. Hidden until the script reveals it. */
+.filters__search { margin-bottom: var(--s-3); }
+
+.filters__search input {
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    font-size: 16px;
+}
+
+.filters__hint {
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin: var(--s-2) 0 0;
+    min-height: 1em;   /* reserve the line so the list does not jump */
+}

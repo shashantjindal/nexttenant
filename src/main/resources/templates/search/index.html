@@ -63,8 +63,20 @@
                 <!-- Area -->
                 <fieldset class="filters__group">
                     <legend>Area</legend>
-                    <div class="filters__scroll">
-                        <label class="check" th:each="a : ${allAreas}">
+
+                    <!--/* Hidden until the script reveals it: without JavaScript
+                           a search box that does nothing is worse than none,
+                           and the checkboxes below are the real control. */-->
+                    <div class="filters__search" hidden>
+                        <label class="sr-only" for="area-search">Search by area</label>
+                        <input type="search" id="area-search" autocomplete="off"
+                               placeholder="Search by area or station">
+                        <p class="filters__hint" id="area-hint" aria-live="polite"></p>
+                    </div>
+
+                    <div class="filters__scroll" id="area-list">
+                        <label class="check" th:each="a : ${allAreas}"
+                               th:attr="data-name=${a.name}, data-station=${a.nearestStation}">
                             <input type="checkbox" name="area" th:value="${a.name}"
                                    th:checked="${form.hasArea(a.name)}">
                             <span th:text="${a.name}">Bandra West</span>
@@ -210,6 +222,8 @@
             </p>
         </section>
     </div>
+
+    <script th:src="@{/js/area-filter.js}" defer></script>
 </main>
 
 </body>
