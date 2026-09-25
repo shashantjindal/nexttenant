@@ -19,7 +19,7 @@ Server-rendered rather than a JSON API + SPA: there is exactly one client
 
 ## Prerequisites
 
-- **JDK 21** — required both to compile and to run Gradle itself
+- **JDK 21** — optional; Gradle downloads it if missing (see below)
 - **Docker Desktop** — for PostgreSQL/PostGIS *(phase 2)*
 
 ## Java version handling (no JAVA_HOME setup required)
