@@ -1,0 +1,34 @@
+# Normalise line endings so the repo is identical on Windows, macOS and Linux CI.
+
+# Default: let Git decide, storing LF in the repository.
+*                 text=auto
+
+# Source and config: LF in the repo, native in the working copy.
+*.java            text diff=java
+*.kts             text
+*.yml             text
+*.yaml            text
+*.sql             text
+*.html            text diff=html
+*.css             text
+*.js              text
+*.md              text
+
+# MUST stay LF: a shell script with CRLF fails on Linux with
+#   bad interpreter: /bin/sh^M: no such file or directory
+gradlew           text eol=lf
+*.sh              text eol=lf
+
+# MUST stay CRLF: Windows batch files misbehave with LF.
+*.bat             text eol=crlf
+*.cmd             text eol=crlf
+
+# Never touch binaries.
+*.jar             binary
+*.png             binary
+*.jpg             binary
+*.jpeg            binary
+*.webp            binary
+*.ico             binary
+*.woff            binary
+*.woff2           binary
