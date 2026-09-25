@@ -45,6 +45,54 @@ Regenerate the daemon criteria with:
 ./gradlew updateDaemonJvm --jvm-version=21
 ```
 
+## Database
+
+PostgreSQL 16 + PostGIS 3.4, run from `docker-compose.yml`:
+
+```
+docker compose up -d        start
+docker compose ps           status + health
+docker compose down         stop, KEEP data
+docker compose down -v      stop, DESTROY data
+```
+
+Data lives in the named volume `db-data`, not in the container — deleting the
+container loses nothing, `down -v` loses everything.
+
+Connect with psql:
+
+```
+docker exec -it househunting-db psql -U househunting -d househunting
+```
+
+### Schema migrations
+
+Flyway owns the schema; Hibernate only validates against it
+(`ddl-auto: validate`). Migrations live in
+`src/main/resources/db/migration` and run automatically at startup.
+
+**Never edit a migration that has already run.** Flyway stores a checksum of
+each file, and changing an applied one fails startup everywhere it already ran.
+Correct a mistake by adding the next version, not by editing history.
+
+Naming is `V<n>__<description>.sql` — note the **two** underscores; with one,
+Flyway silently ignores the file.
+
+### Spring Boot 4 and auto-configuration modules
+
+Spring Boot 4 split auto-configuration out of a single `spring-boot-autoconfigure`
+jar into per-technology modules. Putting a library on the classpath is no longer
+enough to activate its Spring integration:
+
+| Want            | Need                                                    |
+|-----------------|---------------------------------------------------------|
+| Flyway to run   | `flyway-core` + `flyway-database-postgresql` + `spring-boot-flyway` |
+
+Omitting the `spring-boot-*` module fails **silently** — the app starts and the
+feature simply does not exist. To diagnose, run with `--debug` and search the
+condition evaluation report: absent from all three sections (positive, negative,
+unconditional) means the auto-configuration was never even a candidate.
+
 ## Running
 
 ```

@@ -2,6 +2,55 @@ spring:
   application:
     name: househunting
 
+  # ---- Database connection ------------------------------------------------
+  # Every value has an env-var override with a local default. The same jar then
+  # runs against the dev container and production with no code change and no
+  # secret in the repository.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/househunting}
+    username: ${DB_USERNAME:househunting}
+    password: ${DB_PASSWORD:localdev}
+    hikari:
+      # Pool sizing is not "bigger is better". Each connection is a real
+      # server-side process; past a point more connections make Postgres slower,
+      # not faster. Ten is generous for a single app instance.
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000   # fail in 10s rather than hang the request
+
+  # ---- JPA / Hibernate ----------------------------------------------------
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate only VERIFIES that our entities match
+      # it, and refuses to start if they have drifted.
+      #
+      # Never `update` here: it silently alters schema, never drops anything,
+      # cannot be reviewed or rolled back, and differs across Hibernate versions.
+      ddl-auto: validate
+
+    # Spring Boot defaults this to true. Left on, the Hibernate session stays
+    # open through template rendering, so a lazy association touched inside a
+    # Thymeleaf loop fires a query during HTML generation — which is exactly how
+    # N+1 problems stay invisible. Off, every query must happen in the service
+    # layer where it can be seen and measured.
+    open-in-view: false
+
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          # Store and read timestamps in UTC regardless of the server's zone.
+          # Formatting to IST is a presentation concern, handled at the edge.
+          time_zone: UTC
+
+  # ---- Schema migrations --------------------------------------------------
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Refuse to run against a non-empty database with no history table. Stops us
+    # silently adopting some other project's schema.
+    baseline-on-migrate: false
+
   thymeleaf:
     # Fail at STARTUP if the template directory is missing, rather than throwing
     # a 500 the first time a user hits a page. Prefer loud and early.
@@ -10,13 +59,16 @@ spring:
 server:
   port: 8080
   error:
-    # Show the real exception message on error pages. Safe in development;
-    # we will turn this off for production, where it leaks internals.
+    # Safe in development; turned off for production, where it leaks internals.
     include-message: always
     include-binding-errors: always
 
 logging:
   level:
-    # Our own code logs at DEBUG; everything else stays at INFO so the
-    # console is readable. Narrow, intentional logging beats a firehose.
     com.househunting: DEBUG
+    # Flyway announces each migration it applies — worth seeing.
+    org.flywaydb: INFO
+    # Uncomment to see every SQL statement Hibernate issues. Invaluable when
+    # hunting N+1 queries; far too noisy to leave on.
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE

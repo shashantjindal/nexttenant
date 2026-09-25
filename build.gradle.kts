@@ -54,6 +54,33 @@ dependencies {
     // this never reaches the production jar.
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // ---- Persistence --------------------------------------------------------
+    // JPA (the spec) + Hibernate (the implementation) + HikariCP (connection
+    // pooling). Used for entity CRUD; the PostGIS search queries are written by
+    // hand in SQL, where an ORM would only get in the way.
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+
+    // `runtimeOnly` is load-bearing, not a micro-optimisation: our code compiles
+    // against java.sql and JPA interfaces only. Keeping the driver off the
+    // compile classpath means an accidental `import org.postgresql.*` fails to
+    // compile, so database portability is enforced by the build rather than by
+    // code review.
+    runtimeOnly("org.postgresql:postgresql")
+
+    // ---- Schema migrations --------------------------------------------------
+    // Since Flyway 10 the database-specific support is a separate artifact.
+    // Without flyway-database-postgresql, startup fails with
+    // "Unsupported Database: PostgreSQL 16" — which looks like a version
+    // mismatch but is actually a missing module.
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
+    // Spring Boot 4 split auto-configuration out of one monolithic jar into
+    // per-technology modules. flyway-core alone puts Flyway on the classpath but
+    // NOT its Spring integration, so migrations never run — silently, with no
+    // error. This module is what registers FlywayAutoConfiguration.
+    implementation("org.springframework.boot:spring-boot-flyway")
+
     // ---- Testing ------------------------------------------------------------
     // Bundles JUnit 5, AssertJ, Mockito and Spring's test context framework.
     testImplementation("org.springframework.boot:spring-boot-starter-test")
