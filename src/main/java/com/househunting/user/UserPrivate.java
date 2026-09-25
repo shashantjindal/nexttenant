@@ -7,6 +7,8 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
+import com.househunting.common.Hashing;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -108,7 +110,7 @@ public class UserPrivate {
                     "phone must be a valid Indian mobile in E.164 form (+91XXXXXXXXXX)");
         }
         this.phoneE164 = phoneE164;
-        this.phoneHash = PhoneHash.of(phoneE164);
+        this.phoneHash = Hashing.sha256Hex(phoneE164);
     }
 
     public void setWorkEmail(String workEmail) {

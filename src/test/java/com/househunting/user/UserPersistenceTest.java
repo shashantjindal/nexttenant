@@ -98,7 +98,7 @@ class UserPersistenceTest {
         // digest of the same input.
         assertThat(priv.getPhoneHash())
                 .matches("^[0-9a-f]{64}$")
-                .isEqualTo(PhoneHash.of("+919876543210"));
+                .isEqualTo(com.househunting.common.Hashing.sha256Hex("+919876543210"));
 
         userPrivateRepository.save(priv);
         entityManager.flush();
@@ -128,7 +128,7 @@ class UserPersistenceTest {
         priv.setPhoneE164("+919000000001");
 
         assertThat(priv.getPhoneHash()).isNotEqualTo(before);
-        assertThat(priv.getPhoneHash()).isEqualTo(PhoneHash.of("+919000000001"));
+        assertThat(priv.getPhoneHash()).isEqualTo(com.househunting.common.Hashing.sha256Hex("+919000000001"));
     }
 
     @Test

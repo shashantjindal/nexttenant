@@ -63,6 +63,29 @@ spring:
     # a 500 the first time a user hits a page. Prefer loud and early.
     check-template-location: true
 
+# ---- Application settings -------------------------------------------------
+househunting:
+  otp:
+    # HMAC key for hashing codes. The default below is committed, therefore
+    # public, therefore not a secret — OtpSecretCheck refuses to start with it
+    # under any profile but dev. Generate a real one with:
+    #     openssl rand -base64 48
+    secret: ${HOUSEHUNTING_OTP_SECRET:dev-only-insecure-otp-secret-change-me}
+
+    code-validity: 10m
+    resend-cooldown: 30s
+
+    # Six digits is a million guesses. The attempt cap, not the code length,
+    # is what makes that safe.
+    max-attempts: 5
+    max-sends: 5
+
+    # Two dimensions: per-number stops one person being spammed, per-IP stops
+    # an attacker cycling numbers to run up the SMS bill.
+    per-phone-per-hour: 5
+    per-ip-per-hour: 20
+    rate-window: 1h
+
 server:
   port: 8080
   error:
