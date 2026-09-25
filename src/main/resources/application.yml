@@ -2,6 +2,13 @@ spring:
   application:
     name: househunting
 
+  # Defaults to dev locally; production overrides with SPRING_PROFILES_ACTIVE.
+  # The dev profile is what activates DevDataSeeder — in production that bean
+  # is never created at all, rather than created and then disabled by a flag
+  # somebody could get wrong.
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   # ---- Database connection ------------------------------------------------
   # Every value has an env-var override with a local default. The same jar then
   # runs against the dev container and production with no code change and no

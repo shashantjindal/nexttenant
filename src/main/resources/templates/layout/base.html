@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--/*
+  The site shell. Pages pass their own <title> and <main> into it:
+
+      <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}">
+
+  `~{::main}` is a fragment expression meaning "the <main> element of the page
+  doing the replacing". The page references the layout rather than the layout
+  enumerating pages, so each page stays a complete, openable HTML file.
+*/-->
+<html th:fragment="layout(title, content)" lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!--/* Replaced by the page's own <title>. */-->
+    <title th:replace="${title}">HouseHunting</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600&amp;display=swap">
+
+    <link rel="stylesheet" th:href="@{/css/tokens.css}" href="/css/tokens.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+
+<!--/* Keyboard users land here first; lets them jump past the nav. */-->
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <a class="wordmark" th:href="@{/}" href="/">HouseHunting</a>
+
+        <nav class="site-nav" aria-label="Main">
+            <a th:href="@{/flats}" href="/flats">Find a flat</a>
+            <a th:href="@{/list}" href="/list">List your flat</a>
+        </nav>
+
+        <div class="site-header__actions">
+            <a class="btn btn--ghost" th:href="@{/login}" href="/login">Log in</a>
+        </div>
+    </div>
+</header>
+
+<!--/* Replaced by the page's own <main>. */-->
+<main id="content" th:replace="${content}">
+    <p>Page content goes here.</p>
+</main>
+
+<footer class="site-footer">
+    <div class="site-footer__inner">
+        <p class="site-footer__note">
+            HouseHunting &middot; Shared flats in Mumbai &middot; No brokers, no owners, no PGs
+        </p>
+        <p class="site-footer__safety">
+            Never pay a deposit before visiting in person.
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>

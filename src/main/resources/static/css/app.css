@@ -1,0 +1,392 @@
+/* ===========================================================================
+   Components.
+
+   Written mobile-first: the base rules describe the phone layout, and media
+   queries add complexity for wider screens. The other direction — desktop
+   first, then overriding it back down — means every mobile rule fights a
+   desktop rule, and phones (the majority of this audience) pay for CSS they
+   will never use.
+
+   Your two prototypes are the same page at two widths, so they are one
+   stylesheet here, not two.
+   =========================================================================== */
+
+/* ---- Utilities --------------------------------------------------------- */
+
+.page-width {
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: var(--s-2);
+    background: var(--c-brand);
+    color: var(--c-brand-ink);
+    padding: var(--s-2) var(--s-4);
+    border-radius: var(--r-sm);
+    z-index: 100;
+}
+.skip-link:focus { left: var(--s-4); }
+
+/* ---- Buttons ----------------------------------------------------------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-5);
+    border-radius: var(--r-pill);
+    border: 1px solid transparent;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--t-base);
+    text-decoration: none;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.btn:hover { text-decoration: none; }
+
+.btn--primary { background: var(--c-brand); color: var(--c-brand-ink); }
+.btn--primary:hover { background: var(--c-brand-hover); color: var(--c-brand-ink); }
+
+.btn--secondary {
+    background: var(--c-surface);
+    color: var(--c-ink);
+    border-color: var(--c-line);
+}
+.btn--secondary:hover { border-color: var(--c-line-strong); color: var(--c-ink); }
+
+.btn--ghost { background: transparent; color: var(--c-ink-2); }
+.btn--ghost:hover { color: var(--c-brand); }
+
+/* ---- Header ------------------------------------------------------------ */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(250, 250, 248, .88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--c-line);
+}
+
+.site-header__inner {
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    gap: var(--s-6);
+}
+
+.wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--t-md);
+    color: var(--c-brand);
+    letter-spacing: -0.01em;
+}
+.wordmark:hover { text-decoration: none; color: var(--c-brand-hover); }
+
+/* Hidden on phones; the prototype uses a bottom tab bar there, which arrives
+   with the search screens. */
+.site-nav { display: none; gap: var(--s-6); }
+.site-nav a { color: var(--c-ink-2); font-size: var(--t-sm); }
+.site-nav a:hover { color: var(--c-brand); text-decoration: none; }
+
+.site-header__actions { margin-left: auto; }
+
+/* ---- Hero -------------------------------------------------------------- */
+
+.hero {
+    padding-block: var(--s-12) var(--s-10);
+    text-align: center;
+}
+
+.hero__title {
+    font-size: var(--t-2xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--s-4);
+}
+.hero__title span { display: block; color: var(--c-brand); }
+
+.hero__sub {
+    color: var(--c-ink-3);
+    font-size: var(--t-sm);
+    margin: 0 0 var(--s-8);
+}
+
+.hero__actions {
+    display: grid;
+    gap: var(--s-3);
+    max-width: 360px;
+    margin-inline: auto;
+}
+
+.hero__action-note {
+    display: block;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin-top: var(--s-1);
+}
+
+/* ---- Stats ------------------------------------------------------------- */
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-2);
+    padding: var(--s-6) 0;
+    border-block: 1px solid var(--c-line);
+}
+
+.stat { text-align: center; }
+
+.stat__value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--t-xl);
+    font-weight: 600;
+    color: var(--c-ink);
+    line-height: 1.1;
+}
+
+.stat__label {
+    display: block;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin-top: var(--s-1);
+}
+
+/* ---- Sections ---------------------------------------------------------- */
+
+.section { padding-block: var(--s-12); }
+
+.section__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-4);
+    margin-bottom: var(--s-6);
+}
+
+.section__title { font-size: var(--t-lg); font-weight: 600; }
+
+.section__link { font-size: var(--t-sm); white-space: nowrap; }
+
+/* ---- Listing cards ----------------------------------------------------- */
+
+.card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+}
+
+.listing-card {
+    display: block;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+    color: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.listing-card:hover {
+    text-decoration: none;
+    color: inherit;
+    border-color: var(--c-line-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.listing-card__badge {
+    display: inline-block;
+    background: var(--c-brand-tint);
+    color: var(--c-brand);
+    border: 1px solid var(--c-brand-tint-hard);
+    font-size: var(--t-xs);
+    font-weight: 600;
+    padding: 2px var(--s-2);
+    border-radius: var(--r-pill);
+    margin-bottom: var(--s-3);
+}
+
+.listing-card__rent {
+    font-family: var(--font-display);
+    font-size: var(--t-xl);
+    font-weight: 600;
+    color: var(--c-ink);
+    line-height: 1.1;
+}
+
+.listing-card__rent small {
+    font-family: var(--font-body);
+    font-size: var(--t-xs);
+    font-weight: 400;
+    color: var(--c-ink-3);
+}
+
+.listing-card__total {
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin: var(--s-1) 0 var(--s-4);
+}
+
+.listing-card__where {
+    font-family: var(--font-display);
+    font-size: var(--t-base);
+    font-weight: 500;
+    color: var(--c-ink);
+}
+
+.listing-card__station {
+    font-size: var(--t-sm);
+    color: var(--c-ink-2);
+    margin-top: 2px;
+}
+
+.listing-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin-top: var(--s-4);
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--c-line);
+}
+
+.tag {
+    font-size: var(--t-xs);
+    color: var(--c-ink-2);
+    background: var(--c-surface-2);
+    border-radius: var(--r-pill);
+    padding: 2px var(--s-3);
+}
+
+.listing-card__available {
+    display: block;
+    font-size: var(--t-xs);
+    color: var(--c-gold-ink);
+    background: var(--c-gold);
+    border-radius: var(--r-pill);
+    padding: 2px var(--s-3);
+}
+
+/* ---- Steps ------------------------------------------------------------- */
+
+.steps { display: grid; gap: var(--s-6); counter-reset: step; }
+
+.step { display: flex; gap: var(--s-4); align-items: flex-start; }
+
+.step__num {
+    counter-increment: step;
+    flex: 0 0 auto;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border-radius: var(--r-pill);
+    background: var(--c-brand);
+    color: var(--c-brand-ink);
+    font-family: var(--font-display);
+    font-size: var(--t-sm);
+    font-weight: 600;
+}
+.step__num::before { content: counter(step); }
+
+.step__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--c-ink);
+    font-size: var(--t-base);
+}
+
+.step__body { font-size: var(--t-sm); margin: 2px 0 0; }
+
+/* ---- Trust ------------------------------------------------------------- */
+
+.trust {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-xl);
+    padding: var(--s-8) var(--s-5);
+}
+
+.trust__list { display: grid; gap: var(--s-5); margin-top: var(--s-6); }
+
+.trust__item-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--c-ink);
+    font-size: var(--t-sm);
+}
+
+.trust__item-body { font-size: var(--t-sm); margin: 2px 0 0; }
+
+/* ---- Footer ------------------------------------------------------------ */
+
+.site-footer {
+    border-top: 1px solid var(--c-line);
+    margin-top: var(--s-16);
+    padding-block: var(--s-8);
+}
+
+.site-footer__inner {
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    text-align: center;
+}
+
+.site-footer__note { font-size: var(--t-xs); color: var(--c-ink-3); margin: 0; }
+
+.site-footer__safety {
+    font-size: var(--t-xs);
+    color: var(--c-gold-ink);
+    margin: var(--s-2) 0 0;
+}
+
+/* ===========================================================================
+   Wider screens.
+
+   768px is where a phone stops and a tablet starts. Everything above adds
+   capability rather than undoing the mobile layout.
+   =========================================================================== */
+
+@media (min-width: 768px) {
+    :root { --gutter: 32px; }
+
+    .site-nav { display: flex; }
+
+    .hero { padding-block: var(--s-20) var(--s-16); }
+    .hero__title { font-size: var(--t-4xl); }
+    .hero__sub { font-size: var(--t-base); }
+
+    .hero__actions {
+        display: flex;
+        justify-content: center;
+        gap: var(--s-4);
+        max-width: none;
+    }
+
+    .stats { gap: var(--s-8); padding: var(--s-8) 0; }
+    .stat__value { font-size: var(--t-2xl); }
+    .stat__label { font-size: var(--t-sm); }
+
+    .section { padding-block: var(--s-16); }
+    .section__title { font-size: var(--t-xl); }
+
+    .card-grid { grid-template-columns: repeat(2, 1fr); gap: var(--s-5); }
+
+    .steps { grid-template-columns: repeat(3, 1fr); gap: var(--s-8); }
+
+    .trust { padding: var(--s-12) var(--s-10); }
+    .trust__list { grid-template-columns: repeat(2, 1fr); gap: var(--s-8); }
+}
+
+@media (min-width: 1024px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+    .trust__list { grid-template-columns: repeat(4, 1fr); }
+}

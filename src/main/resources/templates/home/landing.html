@@ -1,44 +1,189 @@
 <!DOCTYPE html>
-<!-- The xmlns:th declaration is not required at runtime, but it tells the IDE
-     what th:* attributes mean, so you get autocomplete and error highlighting. -->
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!--/*
+  Passes its own <title> and <main> into the shell in layout/base.html.
+  Everything outside <main> below is design-time scaffolding: it makes this
+  file openable in a browser on its own, and is discarded when rendered.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HouseHunting</title>
-    <style>
-        body {
-            margin: 0;
-            background: #FAFAF8;
-            color: #1C1917;
-            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-            display: grid;
-            place-items: center;
-            min-height: 100vh;
-        }
-        main { text-align: center; padding: 24px; }
-        h1 { font-size: 40px; margin: 0 0 8px; color: #7A3420; }
-        p  { color: #6B6560; margin: 0; }
-        .badge {
-            display: inline-block;
-            margin-top: 24px;
-            padding: 6px 14px;
-            border: 1px solid #DAD7D0;
-            border-radius: 999px;
-            font-size: 13px;
-            color: #6B6560;
-        }
-    </style>
+    <title>HouseHunting — take over a room in a Mumbai flat</title>
 </head>
 <body>
-    <main>
-        <h1>HouseHunting</h1>
-        <p>Someone&rsquo;s moving out. Take their place.</p>
 
-        <!-- th:text replaces this element's content with the model attribute.
-             The text between the tags is a design-time placeholder: it shows
-             when the file is opened directly, and is discarded when rendered. -->
-        <span class="badge" th:text="${phase}">placeholder shown only in a raw browser</span>
-    </main>
+<main id="content">
+
+    <!-- ================= Hero ================= -->
+    <section class="hero page-width">
+        <h1 class="hero__title">
+            Someone&rsquo;s moving out.
+            <span>Take their place.</span>
+        </h1>
+
+        <p class="hero__sub">
+            Shared flats &middot; One spot at a time &middot; No owners, no brokers, no PGs
+        </p>
+
+        <div class="hero__actions">
+            <div>
+                <a class="btn btn--primary" th:href="@{/flats}" href="/flats">Find a flat</a>
+                <small class="hero__action-note">Move into a flat that&rsquo;s already running</small>
+            </div>
+            <div>
+                <a class="btn btn--secondary" th:href="@{/list}" href="/list">List your flat</a>
+                <small class="hero__action-note">Find someone to take your place &middot; Free &middot; 6 minutes</small>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= Stats ================= -->
+    <section class="page-width" aria-label="At a glance">
+        <div class="stats">
+            <div class="stat">
+                <!--/* th:text swaps the content; the literal below shows when this
+                       file is opened directly, and is discarded when rendered. */-->
+                <span class="stat__value" th:text="${liveCount}">340</span>
+                <span class="stat__label">flats with a spot open now</span>
+            </div>
+            <div class="stat">
+                <span class="stat__value" th:text="${areaCount}">22</span>
+                <span class="stat__label">areas</span>
+            </div>
+            <div class="stat">
+                <span class="stat__value" th:text="${brokerageSaved}">&#8377;48 lakh</span>
+                <span class="stat__label">brokerage saved</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= Just listed ================= -->
+    <section class="section page-width">
+        <div class="section__head">
+            <h2 class="section__title">Just listed</h2>
+            <a class="section__link" th:href="@{/flats}" href="/flats">
+                See all <span th:text="${liveCount}">340</span> &rarr;
+            </a>
+        </div>
+
+        <div class="card-grid">
+            <!--/*
+              th:each repeats this element per item. The loop variable `card` is
+              a ListingCardDto, which carries no phone number, address or exact
+              location — so this template could not leak one even by mistake.
+            */-->
+            <a class="listing-card"
+               th:each="card : ${cards}"
+               th:href="@{/flats/{id}(id=${card.id})}"
+               href="#">
+
+                <span class="listing-card__badge"
+                      th:if="${card.zeroBrokerage}">Zero brokerage</span>
+
+                <div class="listing-card__rent">
+                    <span th:text="${card.rent}">&#8377;32,000</span>
+                    <small>per month</small>
+                </div>
+
+                <p class="listing-card__total">
+                    <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
+                </p>
+
+                <div class="listing-card__where" th:text="${card.area}">Bandra West</div>
+                <div class="listing-card__station">
+                    <span th:text="${card.walkTime}">8 min walk</span> from
+                    <span th:text="${card.station}">Bandra</span>
+                </div>
+
+                <div class="listing-card__tags">
+                    <span class="tag" th:text="${card.configuration}">2 BHK</span>
+                    <span class="tag" th:text="${card.roomType}">Private room</span>
+                    <span class="tag" th:text="${card.furnishing}">Semi-furnished</span>
+                    <span class="listing-card__available"
+                          th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- ================= How it works ================= -->
+    <section class="section page-width">
+        <div class="section__head">
+            <h2 class="section__title">Three steps, no broker</h2>
+        </div>
+
+        <ol class="steps" style="list-style: none; padding: 0; margin: 0;">
+            <li class="step">
+                <span class="step__num" aria-hidden="true"></span>
+                <div>
+                    <div class="step__title">Find the room</div>
+                    <p class="step__body">
+                        Filter by area, station, rent and move-in date. Locations are
+                        approximate until you are connected.
+                    </p>
+                </div>
+            </li>
+            <li class="step">
+                <span class="step__num" aria-hidden="true"></span>
+                <div>
+                    <div class="step__title">Request contact</div>
+                    <p class="step__body">
+                        Send a short note. The person leaving decides who gets their
+                        number &mdash; it is never shared without them.
+                    </p>
+                </div>
+            </li>
+            <li class="step">
+                <span class="step__num" aria-hidden="true"></span>
+                <div>
+                    <div class="step__title">Take it to WhatsApp</div>
+                    <p class="step__body">
+                        Once they accept, you both see each other&rsquo;s number. Visit
+                        the flat in daylight before paying anything.
+                    </p>
+                </div>
+            </li>
+        </ol>
+    </section>
+
+    <!-- ================= Trust ================= -->
+    <section class="section page-width">
+        <div class="trust">
+            <h2 class="section__title">What we check before a flat goes live</h2>
+
+            <div class="trust__list">
+                <div>
+                    <div class="trust__item-title">Phone verified</div>
+                    <p class="trust__item-body">
+                        Every account is one OTP-verified Indian number.
+                        One number, one account.
+                    </p>
+                </div>
+                <div>
+                    <div class="trust__item-title">Work email verified</div>
+                    <p class="trust__item-body">
+                        Optional, but the badge people trust most. No documents,
+                        no ID uploads, ever.
+                    </p>
+                </div>
+                <div>
+                    <div class="trust__item-title">Agreement on record</div>
+                    <p class="trust__item-body">
+                        Every listing declares how the agreement transfers, and who
+                        holds the deposit today.
+                    </p>
+                </div>
+                <div>
+                    <div class="trust__item-title">Brokers get reported out</div>
+                    <p class="trust__item-body">
+                        One click to report a listing. Two confirmed reports and the
+                        account is gone.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
 </body>
 </html>

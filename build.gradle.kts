@@ -97,6 +97,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-data-jpa-test")  // @DataJpaTest
     testImplementation("org.springframework.boot:spring-boot-jpa-test")       // TestEntityManager
     testImplementation("org.springframework.boot:spring-boot-jdbc-test")      // @AutoConfigureTestDatabase
+    testImplementation("org.springframework.boot:spring-boot-webmvc-test")    // @AutoConfigureMockMvc
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
