@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${listing.roomType} + ' in ' + ${listing.area} + ' — HouseHunting'">
+        Room in Bandra West — HouseHunting
+    </title>
+</head>
+<body>
+
+<main id="content" class="page-width detail">
+
+    <a class="detail__back" th:href="@{/flats}">&larr; Back to results</a>
+
+    <div class="detail__layout">
+
+        <!-- ================= Main column ================= -->
+        <div class="detail__main">
+
+            <!-- Header -->
+            <header class="detail__header">
+                <div class="detail__badges">
+                    <span class="listing-card__badge" th:if="${listing.zeroBrokerage}">Zero brokerage</span>
+                    <span class="detail__posted" th:text="'Posted ' + ${listing.postedAgo}">Posted 2 days ago</span>
+                </div>
+
+                <h1 class="detail__title">
+                    <span th:text="${listing.roomType}">Private room</span>
+                    in <span th:text="${listing.area}">Bandra West</span>
+                </h1>
+
+                <p class="detail__subtitle" th:if="${listing.station}">
+                    <span th:text="${listing.walkTime}">8 min walk</span>
+                    from <span th:text="${listing.station}">Bandra</span> station
+                    <span th:if="${listing.floorLabel}" th:text="'· ' + ${listing.floorLabel}">· 7th floor</span>
+                </p>
+            </header>
+
+            <!-- Key numbers -->
+            <section class="stat-grid">
+                <div class="stat-grid__item">
+                    <span class="stat-grid__label">Rent</span>
+                    <span class="stat-grid__value" th:text="${listing.rent}">₹32,000</span>
+                    <span class="stat-grid__note">per month</span>
+                </div>
+                <div class="stat-grid__item">
+                    <span class="stat-grid__label">Deposit</span>
+                    <span class="stat-grid__value" th:text="${listing.deposit}">₹64,000</span>
+                </div>
+                <div class="stat-grid__item">
+                    <span class="stat-grid__label">Configuration</span>
+                    <span class="stat-grid__value" th:text="${listing.configuration}">2 BHK</span>
+                    <span class="stat-grid__note" th:if="${listing.furnishing}"
+                          th:text="${listing.furnishing}">Semi-furnished</span>
+                </div>
+                <div class="stat-grid__item">
+                    <span class="stat-grid__label">Available from</span>
+                    <span class="stat-grid__value" th:text="${listing.availableFrom}">1 November</span>
+                    <span class="stat-grid__note" th:text="${listing.availableIn}">in 37 days</span>
+                </div>
+            </section>
+
+            <!-- Handover terms -->
+            <section class="detail__section" th:if="${!listing.terms.isEmpty()}">
+                <h2 class="detail__heading">Handover terms</h2>
+                <p class="detail__lede">
+                    The things that usually take a week of messages to find out.
+                </p>
+
+                <dl class="terms">
+                    <div class="terms__row" th:each="term : ${listing.terms}">
+                        <dt class="terms__label">
+                            <span th:text="${term.label}">Owner informed</span>
+                            <small th:if="${term.help}" th:text="${term.help}">help text</small>
+                        </dt>
+                        <dd class="terms__value" th:text="${term.value}">Yes</dd>
+                    </div>
+                </dl>
+
+                <p class="detail__attribution" th:if="${listing.leaverFirstName}">
+                    All declared by <strong th:text="${listing.leaverFirstName}">Priya</strong>
+                    when the listing went up.
+                </p>
+            </section>
+
+            <!-- The flat -->
+            <section class="detail__section">
+                <h2 class="detail__heading">The flat</h2>
+
+                <dl class="terms">
+                    <div class="terms__row" th:if="${listing.furnishing}">
+                        <dt class="terms__label">Furnishing</dt>
+                        <dd class="terms__value" th:text="${listing.furnishing}">Semi-furnished</dd>
+                    </div>
+                    <div class="terms__row" th:if="${listing.handoverType}">
+                        <dt class="terms__label">What you get</dt>
+                        <dd class="terms__value" th:text="${listing.handoverType}">Room with furniture</dd>
+                    </div>
+                    <div class="terms__row" th:if="${listing.hasLift != null}">
+                        <dt class="terms__label">Lift</dt>
+                        <dd class="terms__value" th:text="${listing.hasLift} ? 'Yes' : 'No'">Yes</dd>
+                    </div>
+                </dl>
+
+                <div class="chips" th:if="${!listing.amenities.isEmpty()}">
+                    <span class="chip" th:each="a : ${listing.amenities}" th:text="${a}">Lift</span>
+                    <span class="chip chip--perk" th:each="p : ${listing.perks}" th:text="${p}">Balcony</span>
+                </div>
+                <p class="detail__lede" th:if="${listing.amenities.isEmpty()}">
+                    The leaver has not listed amenities yet.
+                </p>
+            </section>
+
+            <!-- Flatmates -->
+            <section class="detail__section" th:if="${listing.existingFlatmates != null}">
+                <h2 class="detail__heading">Who you would live with</h2>
+
+                <dl class="terms">
+                    <div class="terms__row">
+                        <dt class="terms__label">Flatmates staying on</dt>
+                        <dd class="terms__value" th:text="${listing.existingFlatmates}">2</dd>
+                    </div>
+                    <div class="terms__row" th:if="${listing.flatmateAgeRange}">
+                        <dt class="terms__label">Age range</dt>
+                        <dd class="terms__value" th:text="${listing.flatmateAgeRange}">22–32</dd>
+                    </div>
+                    <div class="terms__row" th:if="${listing.flatmateProfessions}">
+                        <dt class="terms__label">What they do</dt>
+                        <dd class="terms__value" th:text="${listing.flatmateProfessions}">Working professionals</dd>
+                    </div>
+                    <div class="terms__row" th:if="${listing.flatmateGender}">
+                        <dt class="terms__label">Open to</dt>
+                        <dd class="terms__value" th:text="${listing.flatmateGender}">Anyone</dd>
+                    </div>
+                </dl>
+
+                <div class="chips" th:if="${!listing.houseRules.isEmpty()}">
+                    <span class="chip" th:each="rule : ${listing.houseRules}"
+                          th:text="${rule.label} + ': ' + ${rule.value}">Pets: No</span>
+                </div>
+            </section>
+
+            <!-- Approximate location -->
+            <section class="detail__section">
+                <h2 class="detail__heading">Roughly here</h2>
+                <p class="detail__lede">
+                    The circle covers about <span th:text="${listing.approxRadiusLabel}">0.5 km</span>.
+                    The exact address is shared once <span th:text="${listing.leaverFirstName}">Priya</span>
+                    accepts your request.
+                </p>
+
+                <!--/*
+                  The map receives listing.approxLat / approxLng — the
+                  trigger-maintained jittered point, 120-300m from the truth.
+                  The exact location is not in this DTO, so it cannot be passed
+                  here even by mistake.
+
+                  The circle is deliberately wider than the offset, so the real
+                  building is always somewhere inside it. A circle narrower than
+                  the jitter would exclude the true location, which is a
+                  different kind of lie.
+                */-->
+                <div id="approx-map"
+                     class="detail__map"
+                     th:attr="data-lat=${listing.approxLat},
+                              data-lng=${listing.approxLng},
+                              data-radius=${listing.approxRadiusMetres}">
+                </div>
+                <noscript>
+                    <p class="detail__lede">
+                        Map needs JavaScript. This room is in
+                        <strong th:text="${listing.area}">Bandra West</strong>,
+                        about <span th:text="${listing.walkTime}">8 min walk</span>
+                        from <span th:text="${listing.station}">Bandra</span> station.
+                    </p>
+                </noscript>
+            </section>
+
+            <!-- Similar -->
+            <section class="detail__section" th:if="${!similar.isEmpty()}">
+                <h2 class="detail__heading">Similar rooms nearby</h2>
+                <div class="card-grid">
+                    <th:block th:each="card : ${similar}">
+                        <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                    </th:block>
+                </div>
+            </section>
+
+            <p class="detail__report">
+                <a th:href="@{/flats/{id}/report(id=${listing.id})}">Report this listing</a>
+            </p>
+        </div>
+
+        <!-- ================= Sidebar ================= -->
+        <aside class="detail__aside">
+            <div class="cost-card">
+                <div class="cost-card__rent">
+                    <span th:text="${listing.rent}">₹32,000</span>
+                    <small>per month</small>
+                </div>
+
+                <h3 class="cost-card__heading">What it costs to move in</h3>
+
+                <dl class="cost-card__lines">
+                    <div class="cost-line" th:each="line : ${listing.costLines}"
+                         th:classappend="${line.isTotal} ? ' cost-line--total' : ''">
+                        <dt th:text="${line.label}">First month's rent</dt>
+                        <dd th:text="${line.amount}"
+                            th:classappend="${line.isFree} ? ' cost-line--free' : ''">₹32,000</dd>
+                    </div>
+                </dl>
+
+                <a class="btn btn--primary btn--block"
+                   th:href="@{/flats/{id}/request(id=${listing.id})}">Request contact</a>
+
+                <p class="cost-card__note">
+                    Your contact is shared only if
+                    <span th:text="${listing.leaverFirstName}">Priya</span> accepts.
+                </p>
+            </div>
+
+            <!-- The person leaving: PUBLIC profile only -->
+            <div class="leaver-card" th:if="${listing.leaverFirstName}">
+                <div class="leaver-card__head">
+                    <span class="leaver-card__initial"
+                          th:text="${#strings.substring(listing.leaverFirstName, 0, 1)}">P</span>
+                    <div>
+                        <div class="leaver-card__name" th:text="${listing.leaverFirstName}">Priya</div>
+                        <div class="leaver-card__since"
+                             th:text="'Member since ' + ${listing.leaverMemberSince}">Member since March 2026</div>
+                    </div>
+                </div>
+
+                <ul class="leaver-card__badges">
+                    <li th:if="${listing.leaverPhoneVerified}">Phone verified</li>
+                    <li th:if="${listing.leaverWorkEmailVerified}">Work email verified</li>
+                </ul>
+            </div>
+
+            <div class="safety-card">
+                <h3 class="safety-card__heading">Before you share numbers</h3>
+                <ul>
+                    <li>Never pay a deposit before visiting in person</li>
+                    <li>Never pay for a viewing</li>
+                    <li>Meet at the flat, in daylight</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script th:src="@{/js/approx-map.js}" defer></script>
+</main>
+
+</body>
+</html>
