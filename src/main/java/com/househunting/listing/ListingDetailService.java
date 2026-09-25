@@ -61,6 +61,19 @@ public class ListingDetailService {
         this.clock = clock;
     }
 
+    /**
+     * Builds the public view of a DRAFT, for the wizard preview.
+     *
+     * <p>The design says "This is exactly what someone looking sees", so the
+     * preview must be built by the same code that builds the real page. A
+     * separate preview renderer would drift, and the drift would be invisible
+     * until someone published a listing that looked different from its preview.
+     */
+    @Transactional(readOnly = true)
+    public ListingDetailDto preview(Listing draft) {
+        return toDetail(draft);
+    }
+
     @Transactional(readOnly = true)
     public Optional<ListingDetailDto> findPublicListing(UUID id) {
         return listings.findByIdAndStatus(id, ListingStatus.LIVE)

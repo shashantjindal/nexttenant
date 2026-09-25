@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Where is the flat? — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
+                       'Where is the flat?',
+                       'We only ever show an approximate circle publicly.')}"></div>
+
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <form method="post" th:action="@{/list/{id}/1(id=${draft.id})}" class="wizard__form">
+
+        <fieldset class="wizard__group">
+            <legend>Where it is</legend>
+
+            <label class="field">
+                <span class="field__label">Area</span>
+                <select name="areaName" required>
+                    <option value="">Choose an area</option>
+                    <option th:each="a : ${areas}"
+                            th:value="${a.name}"
+                            th:text="${a.name} + ' · ' + ${a.nearestStation} + ' station'"
+                            th:selected="${a.name == draft.areaName}"
+                            th:attr="data-lat=${a.latitude}, data-lng=${a.longitude}">Bandra West</option>
+                </select>
+            </label>
+
+            <div class="field-row">
+                <label class="field">
+                    <span class="field__label">Nearest station</span>
+                    <input type="text" name="station" th:value="${draft.nearestStation}"
+                           maxlength="80" placeholder="Bandra">
+                </label>
+
+                <label class="field">
+                    <span class="field__label">Walk to station (minutes)</span>
+                    <input type="number" name="walkMinutes" th:value="${draft.minutesToStation}"
+                           min="0" max="120" inputmode="numeric">
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="wizard__group">
+            <legend>Drag the pin to your building</legend>
+            <p class="wizard__hint">
+                This is the only place the exact location is ever recorded. It is
+                stored separately from the listing and released only when you accept
+                someone's request — publicly we show a 500&nbsp;m circle placed a few
+                hundred metres away.
+            </p>
+
+            <!--/*
+              The pin is the single point at which an exact coordinate enters the
+              system. It posts to listing_private, and saving there fires the
+              database trigger that recomputes the public jittered point. No Java
+              code performs that calculation, so none can skip it.
+            */-->
+            <div id="pin-map"
+                 class="wizard__map"
+                 th:attr="data-lat=${priv != null and priv.exactLocation != null}
+                                   ? ${T(com.househunting.geo.GeoPoints).latitudeOf(priv.exactLocation)} : '',
+                          data-lng=${priv != null and priv.exactLocation != null}
+                                   ? ${T(com.househunting.geo.GeoPoints).longitudeOf(priv.exactLocation)} : ''"></div>
+
+            <input type="hidden" name="latitude" id="pin-lat"
+                   th:value="${priv != null and priv.exactLocation != null}
+                             ? ${T(com.househunting.geo.GeoPoints).latitudeOf(priv.exactLocation)} : ''">
+            <input type="hidden" name="longitude" id="pin-lng"
+                   th:value="${priv != null and priv.exactLocation != null}
+                             ? ${T(com.househunting.geo.GeoPoints).longitudeOf(priv.exactLocation)} : ''">
+
+            <p class="wizard__hint" id="pin-status" aria-live="polite"></p>
+        </fieldset>
+
+        <fieldset class="wizard__group">
+            <legend>The building</legend>
+            <p class="wizard__hint">
+                Never shown publicly. Released with your number when you accept a request.
+            </p>
+
+            <label class="field">
+                <span class="field__label">Society or building name</span>
+                <input type="text" name="societyName" maxlength="120"
+                       th:value="${priv != null} ? ${priv.societyName} : ''"
+                       placeholder="Sunbeam Apartments">
+            </label>
+
+            <label class="field">
+                <span class="field__label">Full address</span>
+                <input type="text" name="fullAddress" maxlength="255"
+                       th:value="${priv != null} ? ${priv.fullAddress} : ''"
+                       placeholder="Flat 702, 14th Road, Bandra West">
+            </label>
+
+            <div class="field-row">
+                <label class="field">
+                    <span class="field__label">Floor</span>
+                    <input type="number" name="floor" th:value="${draft.floor}"
+                           min="-3" max="120" inputmode="numeric">
+                </label>
+
+                <label class="field">
+                    <span class="field__label">Lift in building</span>
+                    <select name="hasLift">
+                        <option value="">Not sure</option>
+                        <option value="true" th:selected="${draft.hasLift == true}">Yes</option>
+                        <option value="false" th:selected="${draft.hasLift == false}">No</option>
+                    </select>
+                </label>
+            </div>
+        </fieldset>
+
+        <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
+    </form>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script th:src="@{/js/pin-map.js}" defer></script>
+</main>
+
+</body>
+</html>

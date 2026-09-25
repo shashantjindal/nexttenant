@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+  The wizard shell: progress, title, and the save-and-exit affordance.
+
+  "Save and exit" is a plain link, not a button that saves. Each step already
+  persisted on submit, so there is nothing left to save — which is the whole
+  point of saving per step rather than accumulating answers in the session.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="head(step, totalSteps, title, lede)" class="wizard__head">
+    <div class="wizard__progress" aria-hidden="true">
+        <span class="wizard__bar"
+              th:style="'width:' + ${step * 100 / totalSteps} + '%'"></span>
+    </div>
+
+    <div class="wizard__meta">
+        <span class="wizard__step"
+              th:text="'Step ' + ${step} + ' of ' + ${totalSteps}">Step 1 of 6</span>
+        <a class="wizard__exit" th:href="@{/dashboard}">Save and exit</a>
+    </div>
+
+    <h1 class="wizard__title" th:text="${title}">Where is the flat?</h1>
+    <p class="wizard__lede" th:text="${lede}" th:if="${lede}">lede</p>
+</div>
+
+<div th:fragment="nav(draft, step)" class="wizard__nav">
+    <a class="btn btn--ghost"
+       th:if="${step > 1}"
+       th:href="@{/list/{id}/{prev}(id=${draft.id}, prev=${step - 1})}">Back</a>
+    <span th:unless="${step > 1}"></span>
+
+    <button type="submit" class="btn btn--primary"
+            th:text="${step == 5} ? 'Preview listing' : 'Continue'">Continue</button>
+</div>
+
+</body>
+</html>

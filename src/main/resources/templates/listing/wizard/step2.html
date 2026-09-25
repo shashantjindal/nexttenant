@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Tell us about the flat — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
+                       'Tell us about the flat',
+                       'People filter on exactly these fields, so be accurate rather than generous.')}"></div>
+
+    <form method="post" th:action="@{/list/{id}/2(id=${draft.id})}" class="wizard__form">
+
+        <fieldset class="wizard__group">
+            <legend>Layout</legend>
+
+            <label class="field">
+                <span class="field__label">Configuration</span>
+                <select name="configuration" required>
+                    <option value="">Choose</option>
+                    <option th:each="c : ${configurations}" th:value="${c}" th:text="${c.label}"
+                            th:selected="${c == draft.configuration}">2 BHK</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">What you are handing over</span>
+                <select name="roomType" required>
+                    <option value="">Choose</option>
+                    <option th:each="r : ${roomTypes}" th:value="${r}" th:text="${r.label}"
+                            th:selected="${r == draft.roomType}">Private room</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">What comes with it</span>
+                <select name="handoverType">
+                    <option value="">Choose</option>
+                    <option th:each="h : ${handoverTypes}" th:value="${h}" th:text="${h.label}"
+                            th:selected="${h == draft.handoverType}">Room with furniture</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Flatmates staying on after you leave</span>
+                <input type="number" name="existingFlatmates" min="0" max="12"
+                       inputmode="numeric" th:value="${draft.existingFlatmates}">
+            </label>
+        </fieldset>
+
+        <fieldset class="wizard__group">
+            <legend>Furnishing and amenities</legend>
+
+            <label class="field">
+                <span class="field__label">Furnishing</span>
+                <select name="furnishing" required>
+                    <option value="">Choose</option>
+                    <option th:each="f : ${furnishings}" th:value="${f}" th:text="${f.label}"
+                            th:selected="${f == draft.furnishing}">Semi-furnished</option>
+                </select>
+            </label>
+
+            <div class="field">
+                <span class="field__label">What the flat has</span>
+                <div class="check-grid">
+                    <label class="check" th:each="a : ${amenityOptions}">
+                        <input type="checkbox" name="amenities" th:value="${a.code}"
+                               th:checked="${draft.amenities.contains(a.code)}">
+                        <span th:text="${a.label}">Lift</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="field">
+                <span class="field__label">Perks</span>
+                <div class="check-grid">
+                    <label class="check" th:each="p : ${perkOptions}">
+                        <input type="checkbox" name="perks" th:value="${p.code}"
+                               th:checked="${draft.perks.contains(p.code)}">
+                        <span th:text="${p.label}">Balcony</span>
+                    </label>
+                </div>
+            </div>
+        </fieldset>
+
+        <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
+    </form>
+</main>
+
+</body>
+</html>
