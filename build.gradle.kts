@@ -84,6 +84,14 @@ dependencies {
     // ---- Testing ------------------------------------------------------------
     // Bundles JUnit 5, AssertJ, Mockito and Spring's test context framework.
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // Spring Boot 4 also split the TEST slices into per-technology modules, and
+    // renamed their packages. spring-boot-starter-test alone no longer provides
+    // @DataJpaTest, @AutoConfigureTestDatabase or TestEntityManager - each now
+    // lives in the module for the technology it tests.
+    testImplementation("org.springframework.boot:spring-boot-data-jpa-test")  // @DataJpaTest
+    testImplementation("org.springframework.boot:spring-boot-jpa-test")       // TestEntityManager
+    testImplementation("org.springframework.boot:spring-boot-jdbc-test")      // @AutoConfigureTestDatabase
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

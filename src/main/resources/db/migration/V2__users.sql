@@ -100,7 +100,7 @@ CREATE TABLE user_private (
     -- SHA-256 of the E.164 number. Lets OTP rate limiting and "does this
     -- number exist" checks run WITHOUT reading the number itself, so those
     -- code paths never handle the real value.
-    phone_hash   CHAR(64)    NOT NULL,
+    phone_hash   VARCHAR(64) NOT NULL,
 
     -- The verified address. The BADGE lives in users; this does not.
     work_email   VARCHAR(255),
