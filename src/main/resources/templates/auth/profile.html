@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Your details — HouseHunting</title></head>
+<body>
+<main id="content" class="page-width auth">
+    <div class="auth__card">
+        <h1 class="auth__title">A few details</h1>
+        <p class="auth__sub">
+            Only your first name is ever shown to other people.
+        </p>
+
+        <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+        <form th:action="@{/login/profile}" method="post" class="auth__form">
+            <label class="field">
+                <span class="field__label">First name</span>
+                <input type="text" name="firstName" maxlength="40"
+                       autocomplete="given-name" required autofocus>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Gender</span>
+                <select name="gender">
+                    <option value="">Prefer not to say</option>
+                    <option th:each="g : ${genders}"
+                            th:value="${g}"
+                            th:text="${g.name().charAt(0) + g.name().substring(1).toLowerCase()}">Male</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Age</span>
+                <select name="ageBracket">
+                    <option value="">Prefer not to say</option>
+                    <option th:each="a : ${ageBrackets}"
+                            th:value="${a}"
+                            th:text="${#strings.replace(#strings.replace(a.name(), 'AGE_', ''), '_', '–')}">23–27</option>
+                </select>
+            </label>
+
+            <button type="submit" class="btn btn--primary btn--block">Continue</button>
+        </form>
+
+        <p class="auth__fine">
+            We never ask for documents or ID uploads.
+        </p>
+    </div>
+</main>
+</body>
+</html>

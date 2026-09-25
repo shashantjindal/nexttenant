@@ -390,3 +390,121 @@
     .card-grid { grid-template-columns: repeat(3, 1fr); }
     .trust__list { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ---- Auth screens ------------------------------------------------------ */
+
+.auth {
+    display: grid;
+    place-items: start center;
+    padding-block: var(--s-10) var(--s-16);
+}
+
+.auth__card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-xl);
+    padding: var(--s-8) var(--s-6);
+}
+
+.auth__title { font-size: var(--t-xl); margin-bottom: var(--s-2); }
+
+.auth__sub { font-size: var(--t-sm); color: var(--c-ink-3); margin: 0 0 var(--s-6); }
+
+.auth__error {
+    background: var(--c-brand-tint);
+    border: 1px solid var(--c-brand-tint-hard);
+    color: var(--c-brand);
+    font-size: var(--t-sm);
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    margin: 0 0 var(--s-5);
+}
+
+.auth__notice {
+    background: var(--c-gold);
+    color: var(--c-gold-ink);
+    font-size: var(--t-sm);
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    margin: 0 0 var(--s-5);
+}
+
+.auth__form { display: grid; gap: var(--s-5); }
+
+.auth__actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--s-4);
+}
+
+.auth__fine {
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin: var(--s-6) 0 0;
+    text-align: center;
+}
+
+.field { display: grid; gap: var(--s-2); }
+
+.field__label {
+    font-size: var(--t-sm);
+    font-weight: 500;
+    color: var(--c-ink);
+    font-family: var(--font-display);
+}
+
+.field input[type="text"],
+.field input[type="tel"],
+.field select {
+    width: 100%;
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    background: var(--c-surface);
+    /* 16px minimum: iOS Safari zooms the whole page when a focused input has
+       a smaller font, which is jarring and hard to undo. */
+    font-size: 16px;
+}
+
+.field input:focus, .field select:focus { border-color: var(--c-brand); }
+
+.field__phone {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--c-surface);
+}
+
+.field__phone:focus-within { border-color: var(--c-brand); }
+
+.field__prefix {
+    display: grid;
+    place-items: center;
+    padding-inline: var(--s-4);
+    background: var(--c-surface-2);
+    border-right: 1px solid var(--c-line);
+    color: var(--c-ink-2);
+    font-size: 16px;
+}
+
+.field__phone input {
+    border: none !important;
+    border-radius: 0 !important;
+    flex: 1;
+}
+
+.field__otp {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 28px !important;
+    font-weight: 600;
+    letter-spacing: 0.4em;
+    text-indent: 0.4em;   /* recentres text that letter-spacing pushes right */
+}
+
+.btn--block { width: 100%; }

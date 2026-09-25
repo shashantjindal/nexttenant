@@ -39,7 +39,11 @@
         </nav>
 
         <div class="site-header__actions">
-            <a class="btn btn--ghost" th:href="@{/login}" href="/login">Log in</a>
+            <a class="btn btn--ghost" th:if="${currentUser == null}"
+               th:href="@{/login}" href="/login">Log in</a>
+            <a class="btn btn--ghost" th:if="${currentUser != null}"
+               th:href="@{/dashboard}"
+               th:text="${currentUser.firstName() != null ? currentUser.firstName() : 'Dashboard'}">Dashboard</a>
         </div>
     </div>
 </header>

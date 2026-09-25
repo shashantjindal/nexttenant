@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Dashboard — HouseHunting</title></head>
+<body>
+<main id="content" class="page-width section">
+    <h1 class="section__title" th:text="'Hello, ' + ${user.firstName()}">Hello</h1>
+    <p>You are signed in. The dashboard arrives in a later phase.</p>
+
+    <form th:action="@{/logout}" method="post" style="margin-top: 24px;">
+        <button type="submit" class="btn btn--secondary">Log out</button>
+    </form>
+</main>
+</body>
+</html>

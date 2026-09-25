@@ -67,6 +67,23 @@ dependencies {
     // code review.
     runtimeOnly("org.postgresql:postgresql")
 
+    // ---- Security and sessions ----------------------------------------------
+    // Authentication, CSRF protection and the security filter chain. The login
+    // form is switched OFF in SecurityConfig: we authenticate by OTP.
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
+    // Sessions in PostgreSQL rather than in Tomcat memory, so a session
+    // survives a restart and is visible to every instance. That is what lets a
+    // removed account lose access immediately.
+    implementation("org.springframework.session:spring-session-jdbc")
+    implementation("org.springframework.boot:spring-boot-session")
+
+    // JdbcSessionAutoConfiguration lives in its OWN module. Without it the app
+    // silently falls back to Tomcat in-memory sessions: nothing fails, the
+    // cookie is JSESSIONID instead of SESSION, and the discovery happens in
+    // production the first time a deploy logs everybody out.
+    implementation("org.springframework.boot:spring-boot-session-jdbc")
+
     // ---- Spatial types ------------------------------------------------------
     // PostGIS geography columns have no Java equivalent. hibernate-spatial
     // teaches Hibernate to read and write JTS geometry types (Point, Polygon)
@@ -98,6 +115,10 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-jpa-test")       // TestEntityManager
     testImplementation("org.springframework.boot:spring-boot-jdbc-test")      // @AutoConfigureTestDatabase
     testImplementation("org.springframework.boot:spring-boot-webmvc-test")    // @AutoConfigureMockMvc
+
+    // MockMvc request post-processors such as csrf() and user(). Not part of
+    // spring-boot-starter-test: it belongs to Spring Security, not Boot.
+    testImplementation("org.springframework.security:spring-security-test")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

@@ -58,6 +58,18 @@ spring:
     # silently adopting some other project's schema.
     baseline-on-migrate: false
 
+  # ---- Sessions -----------------------------------------------------------
+  session:
+    store-type: jdbc
+    # Long, because this is a consumer app people return to over weeks, and
+    # re-running an OTP costs a real SMS. Sessions are revocable server-side,
+    # so a long lifetime is not the risk it would be with a JWT.
+    timeout: 30d
+    jdbc:
+      # Flyway owns the schema (V6). Letting Spring Session create its own
+      # tables would give the database two owners and no ordered history.
+      initialize-schema: never
+
   thymeleaf:
     # Fail at STARTUP if the template directory is missing, rather than throwing
     # a 500 the first time a user hits a page. Prefer loud and early.
