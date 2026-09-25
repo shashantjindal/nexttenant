@@ -24,14 +24,20 @@ public class ListingDetailController {
 
     private final ListingDetailService details;
     private final ListingRepository listings;
+    private final com.househunting.shortlist.ShortlistService shortlists;
 
-    public ListingDetailController(ListingDetailService details, ListingRepository listings) {
+    public ListingDetailController(ListingDetailService details, ListingRepository listings,
+                                   com.househunting.shortlist.ShortlistService shortlists) {
         this.details = details;
         this.listings = listings;
+        this.shortlists = shortlists;
     }
 
     @GetMapping("/flats/{id}")
-    public String detail(@PathVariable String id, Model model) {
+    public String detail(@PathVariable String id,
+                         @org.springframework.security.core.annotation.AuthenticationPrincipal
+                                 com.househunting.auth.AuthenticatedUser viewer,
+                         Model model) {
         UUID listingId = parseId(id);
 
         ListingDetailDto listing = details.findPublicListing(listingId)
@@ -45,6 +51,11 @@ public class ListingDetailController {
 
         model.addAttribute("listing", listing);
         model.addAttribute("similar", similarTo(listing));
+        // Null when signed out, so the heart renders as a prompt to log in
+        // rather than as a control that silently does nothing.
+        model.addAttribute("shortlisted",
+                viewer != null && shortlists.isShortlisted(viewer.id(), listingId));
+        model.addAttribute("signedIn", viewer != null);
 
         return "listing/detail";
     }

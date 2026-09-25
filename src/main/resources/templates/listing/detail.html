@@ -186,6 +186,22 @@
                 </div>
             </section>
 
+            <div class="detail__save">
+                <!--/* A POST, because it changes state. A GET heart would be
+                       triggered by link prefetching and quietly shortlist
+                       things nobody clicked. */-->
+                <form method="post" th:if="${signedIn}"
+                      th:action="@{/listings/{id}/shortlist(id=${listing.id})}">
+                    <input type="hidden" name="returnTo"
+                           th:value="@{/flats/{id}(id=${listing.id})}">
+                    <button type="submit" class="btn btn--secondary"
+                            th:text="${shortlisted} ? 'Saved &hearts;' : 'Save this room'">Save this room</button>
+                </form>
+                <a class="btn btn--ghost" th:unless="${signedIn}" th:href="@{/login}">
+                    Log in to save this room
+                </a>
+            </div>
+
             <p class="detail__report">
                 <a th:href="@{/flats/{id}/report(id=${listing.id})}">Report this listing</a>
             </p>

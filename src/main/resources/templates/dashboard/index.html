@@ -3,13 +3,155 @@
       lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><title>Dashboard — HouseHunting</title></head>
 <body>
-<main id="content" class="page-width section">
-    <h1 class="section__title" th:text="'Hello, ' + ${user.firstName()}">Hello</h1>
-    <p>You are signed in. The dashboard arrives in a later phase.</p>
 
-    <form th:action="@{/logout}" method="post" style="margin-top: 24px;">
-        <button type="submit" class="btn btn--secondary">Log out</button>
-    </form>
+<main id="content" class="page-width section">
+
+    <p class="auth__notice" th:if="${notice}" th:text="${notice}">notice</p>
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <div class="section__head">
+        <h1 class="section__title"
+            th:text="${user.firstName != null} ? 'Hello, ' + ${user.firstName} : 'Your dashboard'">
+            Hello
+        </h1>
+        <form method="post" th:action="@{/logout}">
+            <button type="submit" class="btn btn--ghost">Log out</button>
+        </form>
+    </div>
+
+    <!-- ================= Quick counts ================= -->
+    <div class="dash-tiles">
+        <a class="dash-tile" th:href="@{/requests}">
+            <span class="dash-tile__value" th:text="${pendingRequests}">3</span>
+            <span class="dash-tile__label">requests waiting</span>
+        </a>
+        <a class="dash-tile" th:href="@{/shortlist}">
+            <span class="dash-tile__value" th:text="${shortlistCount}">5</span>
+            <span class="dash-tile__label">shortlisted</span>
+        </a>
+        <a class="dash-tile" th:href="@{/flats}">
+            <span class="dash-tile__value">&rarr;</span>
+            <span class="dash-tile__label">browse flats</span>
+        </a>
+    </div>
+
+    <!-- ================= My listings ================= -->
+    <section style="margin-top: 40px;">
+        <div class="section__head">
+            <h2 class="section__title">My listing</h2>
+            <a class="section__link" th:if="${!myListings.isEmpty()}" th:href="@{/list}">
+                List another &rarr;
+            </a>
+        </div>
+
+        <!-- Nothing yet -->
+        <div class="empty" th:if="${myListings.isEmpty()}">
+            <p class="empty__title">No room listed yet</p>
+            <p class="empty__body">
+                Six steps, about four minutes. You pick who gets your number. Free, always.
+            </p>
+            <a class="btn btn--primary" th:href="@{/list}">List your flat</a>
+        </div>
+
+        <div class="listing-panels">
+            <article class="listing-panel" th:each="l : ${myListings}">
+
+                <div class="listing-panel__head">
+                    <div>
+                        <span class="listing-panel__status"
+                              th:classappend="${l.status.name() == 'LIVE'} ? ' listing-panel__status--live' : ''"
+                              th:text="${l.statusLabel}">Live</span>
+                        <span class="listing-panel__expiry"
+                              th:classappend="${l.expiringSoon} ? ' listing-panel__expiry--soon' : ''"
+                              th:if="${l.expiryLabel}"
+                              th:text="'· ' + ${l.expiryLabel}">· expires in 6 days</span>
+                    </div>
+                </div>
+
+                <!-- A draft resumes where it stopped -->
+                <div th:if="${l.isDraft()}">
+                    <p class="listing-panel__title">Unfinished listing</p>
+                    <p class="detail__lede"
+                       th:text="'You stopped at step ' + ${l.wizardStep} + ' of 6.'">
+                        You stopped at step 3 of 6.
+                    </p>
+                    <a class="btn btn--primary"
+                       th:href="@{/list/{id}/{step}(id=${l.id}, step=${l.wizardStep})}">
+                        Finish it
+                    </a>
+                </div>
+
+                <div th:unless="${l.isDraft()}">
+                    <p class="listing-panel__title">
+                        <span th:text="${l.rent}">&#8377;32,000</span>
+                        <span th:if="${l.area}" th:text="' · ' + ${l.area}"> · Bandra West</span>
+                        <span th:if="${l.roomType}" th:text="' · ' + ${l.roomType}"> · Private room</span>
+                    </p>
+
+                    <div class="listing-panel__stats">
+                        <span><strong th:text="${l.views}">0</strong> views</span>
+                        <span><strong th:text="${l.shortlists}">0</strong> shortlists</span>
+                        <span><strong th:text="${l.requests}">0</strong> requests</span>
+                    </div>
+
+                    <div class="listing-panel__actions">
+                        <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${l.id})}"
+                           th:if="${l.status.name() == 'LIVE'}">View</a>
+
+                        <form method="post" th:if="${l.canExtend()}"
+                              th:action="@{/listings/{id}/extend(id=${l.id})}">
+                            <button type="submit" class="btn btn--ghost">Extend 14 days</button>
+                        </form>
+
+                        <form method="post" th:if="${l.canPause()}"
+                              th:action="@{/listings/{id}/pause(id=${l.id})}">
+                            <button type="submit" class="btn btn--ghost">Pause</button>
+                        </form>
+
+                        <form method="post" th:if="${l.canResume()}"
+                              th:action="@{/listings/{id}/resume(id=${l.id})}">
+                            <button type="submit" class="btn btn--secondary">Put back online</button>
+                        </form>
+
+                        <form method="post" th:if="${l.canMarkRented()}"
+                              th:action="@{/listings/{id}/rented(id=${l.id})}">
+                            <button type="submit" class="btn btn--ghost">Mark as rented</button>
+                        </form>
+
+                        <form method="post" th:unless="${l.isFinished()}"
+                              th:action="@{/listings/{id}/take-down(id=${l.id})}">
+                            <button type="submit" class="btn btn--ghost">Take it down</button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- ================= Profile strength ================= -->
+    <section style="margin-top: 40px;">
+        <div class="section__head">
+            <h2 class="section__title">Profile strength</h2>
+        </div>
+
+        <div class="profile-card">
+            <div class="profile-card__bar" aria-hidden="true">
+                <span th:style="'width:' + ${profile.percent} + '%'"></span>
+            </div>
+            <p class="profile-card__pct" th:text="${profile.percent} + '% complete'">75% complete</p>
+
+            <!--/* Each item names a concrete benefit. A completion bar that
+                   just nags is a completion bar people ignore. */-->
+            <ul class="profile-card__todo" th:if="${!profile.missing.isEmpty()}">
+                <li th:each="item : ${profile.missing}" th:text="${item}">Verify a work email</li>
+            </ul>
+
+            <p class="profile-card__done" th:if="${profile.isComplete()}">
+                Everything done. Your listing carries every badge we offer.
+            </p>
+        </div>
+    </section>
 </main>
+
 </body>
 </html>

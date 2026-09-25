@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Shortlisted flats — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width section">
+    <div class="section__head">
+        <h1 class="section__title">Shortlisted flats</h1>
+        <span class="search__range" th:text="${#lists.size(cards)} + ' saved'">5 saved</span>
+    </div>
+
+    <div class="empty" th:if="${cards.isEmpty()}">
+        <p class="empty__title">Nothing shortlisted yet</p>
+        <p class="empty__body">
+            Tap the heart on any flat to keep it here. Listings that get rented or
+            taken down drop off the list automatically.
+        </p>
+        <a class="btn btn--primary" th:href="@{/flats}">Browse flats</a>
+    </div>
+
+    <div class="card-grid" th:unless="${cards.isEmpty()}">
+        <th:block th:each="card : ${cards}">
+            <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+        </th:block>
+    </div>
+</main>
+
+</body>
+</html>
