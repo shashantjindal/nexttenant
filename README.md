@@ -93,23 +93,143 @@ feature simply does not exist. To diagnose, run with `--debug` and search the
 condition evaluation report: absent from all three sections (positive, negative,
 unconditional) means the auto-configuration was never even a candidate.
 
-## Running
+## Running it locally
+
+All commands are PowerShell, run from the project root. Note the `.\` before
+`gradlew` — PowerShell will not run an executable from the current directory
+without it. Windows PowerShell 5.1 also does not support `&&`, so use separate
+lines or `;`.
+
+### First time
 
 ```
-./gradlew bootRun
+cd C:\dev\househunting
+docker compose up -d
+.\gradlew bootRun
 ```
+
+The first start applies all migrations and seeds 308 listings across 22 Mumbai
+areas, which takes about twenty seconds. Later starts skip the seed.
 
 Then open <http://localhost:8080>.
 
+### Every time after that
+
+```
+cd C:\dev\househunting
+docker compose up -d      # skip if Docker Desktop already has it running
+.\gradlew bootRun
+```
+
+Stop the app with `Ctrl+C`. Leave Postgres running, or stop it with
+`docker compose stop`.
+
+### Signing in
+
+There is no password. Enter any Indian mobile number and the six-digit code is
+printed to the terminal running the app:
+
+```
+==================== SMS (not actually sent) ====================
+  to:   +919820044556
+  CODE: 261688
+  text: 261688 is your HouseHunting code. It expires in 10 minutes.
+=================================================================
+```
+
+The code is **not** in the database: `otp_challenges` stores only an HMAC of it.
+That is deliberate, and it means the terminal is the only place to look.
+
+To see only the codes:
+
+```
+.\gradlew bootRun | Select-String "CODE:"
+```
+
+### Limits you will hit while testing
+
+These are real production limits, not debug settings, so they apply locally too:
+
+| Limit                  | Value                    |
+|------------------------|--------------------------|
+| Resend cooldown        | 30 seconds per number    |
+| Codes per number       | 5 per hour               |
+| Codes per IP           | 20 per hour              |
+| Wrong guesses          | 5, then the code is dead |
+
+If a code stops arriving, it is almost always the 30-second cooldown. Use a
+different number, or wait. They can be loosened for local work in
+`application.yml` under `househunting.otp.*` — leave the production values alone.
+
+### Becoming a moderator
+
+`/admin/reports` needs ROLE_ADMIN, which is granted only by direct database
+access — there is deliberately no UI to promote a user.
+
+```
+docker exec -it househunting-db psql -U househunting -d househunting
+```
+
+```sql
+-- find your account by the number you signed in with
+SELECT u.id, u.first_name, p.phone_e164
+FROM users u JOIN user_private p ON p.user_id = u.id
+WHERE p.phone_e164 = '+919820044556';
+
+UPDATE users SET is_admin = TRUE WHERE id = '<that id>';
+```
+
+Log out and back in — the role is read into the session at sign-in.
+
+### Starting over with clean data
+
+```
+docker compose down -v
+docker compose up -d
+.\gradlew bootRun
+```
+
+`down -v` destroys the volume and therefore all data. The next start re-runs
+every migration and re-seeds. The seed uses a fixed random seed, so you get the
+same 308 listings every time.
+
+To clear uploaded photos as well:
+
+```
+Remove-Item -Recurse -Force .\data\photos
+```
+
+### When something looks wrong
+
+| Symptom | Cause |
+|---------|-------|
+| `Port 8080 was already in use` | An earlier run is still going. `Get-NetTCPConnection -LocalPort 8080 -State Listen \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }` |
+| `Connection refused` on startup | Postgres is not up. `docker compose up -d` |
+| Gradle behaving strangely | `.\gradlew --stop`, then retry |
+| Template change not showing | Templates are served from `build\resources`. Stop and restart |
+| No OTP in the terminal | The 30-second resend cooldown. Try a different number |
+
 ## Useful commands
 
-| Command                  | Purpose                                        |
-|--------------------------|------------------------------------------------|
-| `./gradlew build`        | Compile, test, package                         |
-| `./gradlew bootRun`      | Run the app with DevTools live reload          |
-| `./gradlew test`         | Tests only                                     |
-| `./gradlew --stop`       | Kill daemons (first thing to try when Gradle misbehaves) |
-| `./gradlew dependencies` | Print the resolved dependency tree             |
+PowerShell, from the project root.
+
+| Command                     | Purpose                                              |
+|-----------------------------|------------------------------------------------------|
+| `.\gradlew bootRun`         | Run the app, with DevTools reloading on code changes |
+| `.\gradlew test`            | Run all tests (needs Postgres up)                    |
+| `.\gradlew build`           | Compile, test and package                            |
+| `.\gradlew --stop`          | Kill Gradle daemons — first thing to try when Gradle misbehaves |
+| `.\gradlew dependencies`    | Print the resolved dependency tree                   |
+| `docker compose up -d`      | Start Postgres                                       |
+| `docker compose stop`       | Stop Postgres, keep the data                         |
+| `docker compose down -v`    | Stop Postgres and **destroy** the data               |
+| `docker compose logs -f db` | Follow database logs                                 |
+
+Connect to the database directly:
+
+```
+docker exec -it househunting-db psql -U househunting -d househunting
+```
 
 ## Data model and the privacy boundary
 
@@ -176,5 +296,34 @@ capability lives in one folder, so a feature can be read or removed as a unit.
 ```
 com.househunting
 ├── HouseHuntingApplication.java   scan root — do not move
-└── home/                          landing page
+├── area/          the 22 Mumbai localities, and fuzzy autocomplete
+├── auth/          phone OTP, sessions, security config
+├── common/        Rupees, Hashing, RelativeTime
+├── dashboard/     the signed-in dashboard
+├── dev/           DevDataSeeder — @Profile("dev") only
+├── geo/           GeoPoints: the only sanctioned way to build a coordinate
+├── home/          landing page
+├── listing/       listings, detail page, lifecycle
+│   ├── dto/       ListingCardDto, ListingDetailDto — no private fields
+│   └── wizard/    the six-step listing wizard
+├── moderation/    reports, the two-strikes rule, admin queue
+├── photo/         upload, EXIF stripping, storage
+├── request/       interest requests and ContactRelease
+├── search/        filters, keyset paging, radius widening
+├── shortlist/     the heart on a card
+└── user/          User and UserPrivate
 ```
+
+Templates mirror the same shape under `src/main/resources/templates`.
+
+## Where the important decisions live
+
+If you read four files to understand how this application protects people,
+read these:
+
+| File | Why |
+|------|-----|
+| `request/ContactRelease.java` | The only place one person's phone number is released to another |
+| `photo/ImageProcessor.java` | Strips the GPS coordinates a phone embeds in every photo |
+| `db/migration/V3__listings.sql` | The public/private split and the deterministic location jitter |
+| `auth/SecurityConfig.java` | What is public, what is not, and why CSRF and session fixation matter |
