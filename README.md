@@ -22,35 +22,27 @@ Server-rendered rather than a JSON API + SPA: there is exactly one client
 - **JDK 21** — required both to compile and to run Gradle itself
 - **Docker Desktop** — for PostgreSQL/PostGIS *(phase 2)*
 
-## ⚠️ JAVA_HOME must point at JDK 17 or newer
+## Java version handling (no JAVA_HOME setup required)
 
-A Gradle build uses **two** JVMs, and they are chosen differently:
+A Gradle build uses **two** JVMs, chosen by different mechanisms:
 
-| JVM               | Chosen by                  | Job                                |
-|-------------------|----------------------------|------------------------------------|
-| Gradle daemon     | `JAVA_HOME`                | Runs Gradle, loads plugins         |
-| Compile toolchain | `java { toolchain { … } }` | Compiles this project's source     |
+| JVM               | Chosen by                             | Job                            |
+|-------------------|---------------------------------------|--------------------------------|
+| Gradle daemon     | `gradle/gradle-daemon-jvm.properties` | Runs Gradle, loads plugins     |
+| Compile toolchain | `java { toolchain { … } }`            | Compiles this project's source |
 
-The `toolchain` block in `build.gradle.kts` only governs the second. The Spring
-Boot Gradle plugin must be loaded by the **daemon**, and requires Java 17+.
+Both are declared **in this repository**, so the build does not depend on the
+machine's `JAVA_HOME`. If JDK 21 is not installed, Gradle downloads it.
 
-If `JAVA_HOME` points at an old JDK you will see:
+This matters when you work on several projects targeting different Java
+versions: a project's *compile* JDK is independent of `JAVA_HOME`, so a single
+machine-wide `JAVA_HOME` serves every project whatever Java version it targets.
+`JAVA_HOME` only has to satisfy the Gradle version itself.
 
-```
-> Dependency requires at least JVM runtime version 17. This build uses a Java 8 JVM.
-```
-
-Verify with:
-
-```
-echo $JAVA_HOME          # bash
-$env:JAVA_HOME           # PowerShell
-```
-
-Fix permanently (PowerShell, then reopen the terminal):
+Regenerate the daemon criteria with:
 
 ```
-[Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Java\jdk-21.0.10", "User")
+./gradlew updateDaemonJvm --jvm-version=21
 ```
 
 ## Running
