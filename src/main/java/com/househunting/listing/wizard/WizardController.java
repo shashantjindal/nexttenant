@@ -11,6 +11,7 @@ import com.househunting.listing.HandoverType;
 import com.househunting.listing.Listing;
 import com.househunting.listing.ListingDetailService;
 import com.househunting.listing.RoomType;
+import com.househunting.photo.PhotoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -45,13 +46,16 @@ public class WizardController {
     private final ListingDraftService drafts;
     private final ListingDetailService details;
     private final AreaRepository areas;
+    private final PhotoService photos;
 
     public WizardController(ListingDraftService drafts,
                             ListingDetailService details,
-                            AreaRepository areas) {
+                            AreaRepository areas,
+                            PhotoService photos) {
         this.drafts = drafts;
         this.details = details;
         this.areas = areas;
+        this.photos = photos;
     }
 
     /** "List your flat" — resume where they left off, or start. */
@@ -91,16 +95,34 @@ public class WizardController {
             }
             case 5 -> model.addAttribute("genders", FlatmateGender.values());
             case 6 -> {
-                // Built by the same code that renders the live page, so the
-                // preview cannot drift from the real thing.
-                model.addAttribute("preview", details.preview(draft));
-                model.addAttribute("missing", drafts.missingForPublication(draft));
+                model.addAttribute("photos", photos.forListing(id));
+                model.addAttribute("minPhotos", PhotoService.MIN_PHOTOS_TO_PUBLISH);
+                model.addAttribute("maxPhotos", PhotoService.MAX_PHOTOS);
             }
             default -> {
             }
         }
 
         return "listing/wizard/step" + step;
+    }
+
+    /**
+     * The preview, after the six steps.
+     *
+     * <p>Built by the same method that renders the live page, so the preview
+     * cannot drift from the real thing. A separate preview renderer would
+     * diverge, and the divergence would only surface after someone published
+     * something different from what they approved.
+     */
+    @GetMapping("/list/{id}/preview")
+    public String preview(@PathVariable UUID id,
+                          @AuthenticationPrincipal AuthenticatedUser user,
+                          Model model) {
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
+        addCommon(model, draft, TOTAL_STEPS);
+        model.addAttribute("preview", details.preview(draft));
+        model.addAttribute("missing", missingFor(draft));
+        return "listing/wizard/preview";
     }
 
     // ---- Step 1: where ----------------------------------------------------
@@ -211,17 +233,38 @@ public class WizardController {
     public String publish(@PathVariable UUID id,
                           @AuthenticationPrincipal AuthenticatedUser user,
                           Model model) {
-        try {
-            drafts.publish(id, user.id());
-        } catch (ListingDraftService.IncompleteListingException e) {
-            Listing draft = drafts.requireOwnedDraft(id, user.id());
-            addCommon(model, draft, 6);
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
+
+        List<String> missing = missingFor(draft);
+        if (!missing.isEmpty()) {
+            addCommon(model, draft, TOTAL_STEPS);
             model.addAttribute("preview", details.preview(draft));
-            model.addAttribute("missing", e.getMissing());
+            model.addAttribute("missing", missing);
             model.addAttribute("error", "This listing still needs a few things.");
-            return "listing/wizard/step6";
+            return "listing/wizard/preview";
         }
+
+        drafts.publish(id, user.id());
         return "redirect:/flats/" + id;
+    }
+
+    /**
+     * Everything still standing between this draft and publication.
+     *
+     * <p>Combines the field checks from the draft service with the photo
+     * minimum, because a listing with no photos is technically complete and
+     * practically useless — and the design states the minimum plainly.
+     */
+    private List<String> missingFor(Listing draft) {
+        List<String> missing = new java.util.ArrayList<>(drafts.missingForPublication(draft));
+
+        long count = photos.countFor(draft.getId());
+        if (count < PhotoService.MIN_PHOTOS_TO_PUBLISH) {
+            missing.add("at least %d photos (you have %d)"
+                    .formatted(PhotoService.MIN_PHOTOS_TO_PUBLISH, count));
+        }
+
+        return missing;
     }
 
     // ---- Shared -----------------------------------------------------------

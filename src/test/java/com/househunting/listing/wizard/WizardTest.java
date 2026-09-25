@@ -4,6 +4,7 @@ import com.househunting.auth.AuthenticatedUser;
 import com.househunting.listing.Listing;
 import com.househunting.listing.ListingRepository;
 import com.househunting.listing.ListingStatus;
+import com.househunting.photo.PhotoService;
 import com.househunting.user.AgeBracket;
 import com.househunting.user.Gender;
 import com.househunting.user.User;
@@ -44,6 +45,7 @@ class WizardTest {
     @Autowired private UserRepository users;
     @Autowired private ListingRepository listings;
     @Autowired private ListingDraftService drafts;
+    @Autowired private PhotoService photos;
 
     private User owner;
     private User stranger;
@@ -223,7 +225,7 @@ class WizardTest {
     void previewIsThePublicView() throws Exception {
         UUID id = completeAllSteps();
 
-        String html = mockMvc.perform(get("/list/" + id + "/6").with(authentication(as(owner))))
+        String html = mockMvc.perform(get("/list/" + id + "/preview").with(authentication(as(owner))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
@@ -257,6 +259,7 @@ class WizardTest {
     // ---- Helper -----------------------------------------------------------
 
     private UUID completeAllSteps() throws Exception {
+        // Throws from tinyJpeg(); declared on the method signature already.
         UUID id = startDraft(owner);
 
         mockMvc.perform(step(id, 1, owner)
@@ -287,6 +290,22 @@ class WizardTest {
                 .param("flatmateAgeMin", "22").param("flatmateAgeMax", "32")
                 .param("flatmateGender", "ANY"));
 
+        // Step 6 is photos, and publication needs the minimum. Uploaded
+        // through PhotoService rather than as multipart, because what is under
+        // test here is the wizard, not the upload plumbing.
+        for (int i = 0; i < PhotoService.MIN_PHOTOS_TO_PUBLISH; i++) {
+            photos.upload(id, tinyJpeg(), "room" + i + ".jpg");
+        }
+
         return id;
+    }
+
+    /** A minimal valid JPEG. */
+    private static byte[] tinyJpeg() throws Exception {
+        java.awt.image.BufferedImage image =
+                new java.awt.image.BufferedImage(60, 40, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "jpeg", out);
+        return out.toByteArray();
     }
 }

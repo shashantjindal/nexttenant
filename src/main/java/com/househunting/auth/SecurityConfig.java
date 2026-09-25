@@ -37,6 +37,10 @@ public class SecurityConfig {
                         // of the organic search traffic the product depends on.
                         .requestMatchers("/", "/flats", "/flats/**").permitAll()
                         .requestMatchers("/login", "/login/**", "/logout").permitAll()
+                        // Photos are public: a listing page shows them to
+                        // anyone. Serving is gated on processed_at, so an
+                        // unstripped image is never reachable here.
+                        .requestMatchers("/photos/**").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**",
                                          "/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/error").permitAll()

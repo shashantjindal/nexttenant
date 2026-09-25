@@ -19,9 +19,12 @@ import java.util.List;
 public class ListingCatalog {
 
     private final ListingRepository listings;
+    private final com.househunting.photo.PhotoService photos;
 
-    public ListingCatalog(ListingRepository listings) {
+    public ListingCatalog(ListingRepository listings,
+                          com.househunting.photo.PhotoService photos) {
         this.listings = listings;
+        this.photos = photos;
     }
 
     /**
@@ -35,8 +38,16 @@ public class ListingCatalog {
     public List<ListingCardDto> recentlyListed(int limit) {
         return listings
                 .findByStatusOrderByPublishedAtDesc(ListingStatus.LIVE, PageRequest.of(0, limit))
-                .map(listing -> ListingCardDto.from(listing, null))
+                .map(listing -> ListingCardDto.from(listing, coverUrl(listing.getId())))
                 .getContent();
+    }
+
+    /** Thumbnail URL for the cover photo, or null if the listing has none. */
+    private String coverUrl(java.util.UUID listingId) {
+        return photos.servableFor(listingId).stream()
+                .findFirst()
+                .map(p -> "/photos/" + p.getId() + "/thumb")
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)

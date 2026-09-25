@@ -68,7 +68,14 @@ public class ListingSearchRepository {
                        l.available_from, l.published_at,
                        -- The cursor value for this row. Safe to interpolate:
                        -- the column name comes from the SortOrder enum.
-                       CAST(l.%s AS text) AS sort_value
+                       CAST(l.%s AS text) AS sort_value,
+                       -- The cover photo, if there is a servable one. Correlated
+                       -- subquery rather than a JOIN: a join would multiply rows
+                       -- by photo count and need a DISTINCT to undo it. This uses
+                       -- photos_listing_ix and returns at most one row.
+                       (SELECT p.id FROM photos p
+                         WHERE p.listing_id = l.id AND p.processed_at IS NOT NULL
+                         ORDER BY p.position LIMIT 1) AS cover_photo_id
                 FROM listings l
                 WHERE %s
                 ORDER BY l.%s %s, l.id %s

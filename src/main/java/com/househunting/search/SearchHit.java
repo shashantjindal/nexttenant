@@ -62,7 +62,7 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
                 formatAvailability(availableFrom == null ? null : availableFrom.toLocalDate()),
                 labelOf(rs.getString("furnishing"), Furnishing.class),
                 brokerage == 0,
-                null   // cover photo arrives with the photo pipeline
+                coverUrl(rs)
         );
 
         return new SearchHit(card, rs.getString("sort_value"), id);
@@ -106,6 +106,17 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
             case Furnishing f -> f.getLabel();
             default -> value.name();
         };
+    }
+
+    /**
+     * The cover photo URL, or null when the listing has none.
+     *
+     * <p>The query only selects photos with processed_at set, so an image whose
+     * EXIF has not been discarded is never linked from a search result.
+     */
+    private static String coverUrl(ResultSet rs) throws SQLException {
+        UUID coverId = rs.getObject("cover_photo_id", UUID.class);
+        return coverId == null ? null : "/photos/" + coverId + "/thumb";
     }
 
     private static Integer getInteger(ResultSet rs, String column) throws SQLException {

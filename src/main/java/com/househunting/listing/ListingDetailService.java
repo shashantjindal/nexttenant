@@ -50,13 +50,16 @@ public class ListingDetailService {
 
     private final ListingRepository listings;
     private final UserRepository users;
+    private final com.househunting.photo.PhotoService photos;
     private final JdbcClient jdbc;
     private final Clock clock;
 
     public ListingDetailService(ListingRepository listings, UserRepository users,
+                                com.househunting.photo.PhotoService photos,
                                 JdbcClient jdbc, Clock clock) {
         this.listings = listings;
         this.users = users;
+        this.photos = photos;
         this.jdbc = jdbc;
         this.clock = clock;
     }
@@ -152,8 +155,21 @@ public class ListingDetailService {
                 leaver != null && leaver.isPhoneVerified(),
                 leaver != null && leaver.isWorkEmailVerified(),
 
-                List.of()   // photos arrive with the upload pipeline
+                photoUrls(l.getId())
         );
+    }
+
+    /**
+     * URLs for the photos that are safe to serve.
+     *
+     * <p>Only rows with processed_at set: an unprocessed image still carries
+     * the EXIF GPS that everything else here works to keep private, so it is
+     * not linked from a public page at all.
+     */
+    private List<String> photoUrls(java.util.UUID listingId) {
+        return photos.servableFor(listingId).stream()
+                .map(p -> "/photos/" + p.getId())
+                .toList();
     }
 
     /**

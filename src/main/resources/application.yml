@@ -70,6 +70,16 @@ spring:
       # tables would give the database two owners and no ordered history.
       initialize-schema: never
 
+  # ---- Uploads ------------------------------------------------------------
+  servlet:
+    multipart:
+      # Rejected by the container before a byte reaches our code, so an
+      # oversized upload costs nothing. PhotoService enforces the same limit
+      # again, because a limit only in configuration is a limit somebody can
+      # change without noticing what depended on it.
+      max-file-size: 12MB
+      max-request-size: 60MB
+
   thymeleaf:
     # Fail at STARTUP if the template directory is missing, rather than throwing
     # a 500 the first time a user hits a page. Prefer loud and early.
@@ -77,6 +87,13 @@ spring:
 
 # ---- Application settings -------------------------------------------------
 househunting:
+  photos:
+    # "local" writes under the directory below. Production will use an
+    # S3-compatible bucket behind the same PhotoStorage interface, so nothing
+    # above that interface changes.
+    storage: ${HOUSEHUNTING_PHOTO_STORAGE:local}
+    local-dir: ${HOUSEHUNTING_PHOTO_DIR:./data/photos}
+
   otp:
     # HMAC key for hashing codes. The default below is committed, therefore
     # public, therefore not a secret — OtpSecretCheck refuses to start with it

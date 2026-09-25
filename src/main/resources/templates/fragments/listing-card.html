@@ -17,6 +17,12 @@
    th:href="@{/flats/{id}(id=${card.id})}"
    href="#">
 
+    <!--/* The cover photo, when the listing has one. loading="lazy" matters on
+           a search page showing twenty cards: without it the browser fetches
+           every image immediately, including the eighteen below the fold. */-->
+    <img class="listing-card__photo" th:if="${card.coverPhotoUrl}"
+         th:src="${card.coverPhotoUrl}" alt="" loading="lazy">
+
     <span class="listing-card__badge" th:if="${card.zeroBrokerage}">Zero brokerage</span>
 
     <div class="listing-card__rent">

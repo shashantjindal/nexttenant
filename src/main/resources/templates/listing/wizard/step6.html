@@ -1,107 +1,77 @@
 <!DOCTYPE html>
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><title>Preview and publish — HouseHunting</title></head>
+<head><title>Photos — HouseHunting</title></head>
 <body>
 
 <main id="content" class="page-width wizard">
     <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
-                       'This is exactly what someone looking sees',
-                       'Your phone number is not on this page and never will be.')}"></div>
+                       'Photos',
+                       'Minimum 3 required. The first one is the cover.')}"></div>
 
-    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+    <p class="auth__error" th:if="${photoError}" th:text="${photoError}" role="alert">error</p>
+    <p class="auth__notice" th:if="${photoNotice}" th:text="${photoNotice}">added</p>
 
-    <div class="notice notice--relaxed" th:if="${!missing.isEmpty()}">
-        <p class="notice__title">Still needed before this can go live</p>
-        <ul class="wizard__missing">
-            <li th:each="item : ${missing}" th:text="${item}">the monthly rent</li>
-        </ul>
-        <p class="notice__body">
-            Step back through the wizard to fill these in.
+    <div class="wizard__group">
+        <form method="post" th:action="@{/list/{id}/photos(id=${draft.id})}"
+              enctype="multipart/form-data" class="photo-upload">
+            <label class="field">
+                <span class="field__label">Add photos</span>
+                <!--/* accept= filters the picker for convenience only. The
+                       server decodes every upload regardless: a file extension
+                       and a MIME type are both supplied by the client and
+                       neither is evidence of anything. */-->
+                <input type="file" name="file" accept="image/*" multiple required>
+            </label>
+            <button type="submit" class="btn btn--secondary">Upload</button>
+        </form>
+
+        <p class="wizard__hint">
+            Photos are re-encoded on upload, which removes the location data your
+            phone stores inside every picture. Without that, the exact address of
+            your flat would be readable from the image file &mdash; and the
+            approximate circle on your listing would mean nothing.
         </p>
     </div>
 
-    <!--/*
-      Built by ListingDetailService.preview(), the SAME method that renders the
-      live page. A separate preview renderer would drift, and the drift would
-      only surface after someone published a listing that looked different from
-      what they approved.
-    */-->
-    <section class="wizard__preview">
-        <div class="preview-card">
-            <span class="listing-card__badge" th:if="${preview.zeroBrokerage}">Zero brokerage</span>
+    <div class="photo-count">
+        <span th:text="${#lists.size(photos)} + ' of ' + ${maxPhotos} + ' photos'">0 of 10 photos</span>
+        <span class="photo-count__need"
+              th:if="${#lists.size(photos) < minPhotos}"
+              th:text="'Add ' + (${minPhotos} - ${#lists.size(photos)}) + ' more to publish'">Add 3 more</span>
+        <span class="photo-count__ok" th:if="${#lists.size(photos) >= minPhotos}">Enough to publish</span>
+    </div>
 
-            <div class="listing-card__rent">
-                <span th:text="${preview.rent}">&#8377;32,000</span>
-                <small>per month</small>
-            </div>
-            <p class="listing-card__total">
-                <span th:text="${preview.totalToMoveIn}">&#8377;1,13,500</span> to move in
-            </p>
+    <div class="photo-grid" th:if="${!photos.isEmpty()}">
+        <figure class="photo-tile" th:each="photo : ${photos}">
+            <img th:src="@{/photos/{id}/thumb(id=${photo.id})}" alt="Listing photo" loading="lazy">
 
-            <div class="listing-card__where" th:text="${preview.area}">Bandra West</div>
-            <div class="listing-card__station" th:if="${preview.station}">
-                <span th:text="${preview.walkTime}">8 min walk</span> from
-                <span th:text="${preview.station}">Bandra</span>
-                <span th:if="${preview.floorLabel}" th:text="'· ' + ${preview.floorLabel}">· 7th floor</span>
-            </div>
+            <figcaption>
+                <span class="photo-tile__cover" th:if="${photo.cover}">Cover</span>
 
-            <div class="listing-card__tags">
-                <span class="tag" th:if="${preview.configuration}" th:text="${preview.configuration}">2 BHK</span>
-                <span class="tag" th:if="${preview.roomType}" th:text="${preview.roomType}">Private room</span>
-                <span class="tag" th:if="${preview.furnishing}" th:text="${preview.furnishing}">Semi-furnished</span>
-                <span class="listing-card__available" th:if="${preview.availableFrom}"
-                      th:text="'From ' + ${preview.availableFrom}">From 1 Nov</span>
-            </div>
-        </div>
+                <div class="photo-tile__actions">
+                    <form method="post" th:if="${!photo.cover}"
+                          th:action="@{/list/{lid}/photos/{pid}/cover(lid=${draft.id}, pid=${photo.id})}">
+                        <button type="submit" class="btn btn--ghost">Make cover</button>
+                    </form>
 
-        <div class="preview-block" th:if="${!preview.terms.isEmpty()}">
-            <h2 class="detail__heading">Handover terms</h2>
-            <dl class="terms">
-                <div class="terms__row" th:each="term : ${preview.terms}">
-                    <dt class="terms__label" th:text="${term.label}">Owner informed</dt>
-                    <dd class="terms__value" th:text="${term.value}">Yes</dd>
+                    <form method="post"
+                          th:action="@{/list/{lid}/photos/{pid}/delete(lid=${draft.id}, pid=${photo.id})}">
+                        <button type="submit" class="btn btn--ghost">Remove</button>
+                    </form>
                 </div>
-            </dl>
-        </div>
+            </figcaption>
+        </figure>
+    </div>
 
-        <div class="preview-block">
-            <h2 class="detail__heading">Move-in cost</h2>
-            <dl class="cost-card__lines">
-                <div class="cost-line" th:each="line : ${preview.costLines}"
-                     th:classappend="${line.isTotal} ? ' cost-line--total' : ''">
-                    <dt th:text="${line.label}">First month's rent</dt>
-                    <dd th:text="${line.amount}">&#8377;32,000</dd>
-                </div>
-            </dl>
-        </div>
-
-        <div class="preview-block">
-            <h2 class="detail__heading">What is NOT on this page</h2>
-            <!--/* Worth stating explicitly. The leaver is about to publish, and
-                   this is the moment the privacy promise is most worth making
-                   concrete rather than leaving as marketing copy. */-->
-            <ul class="preview-absent">
-                <li>Your phone number</li>
-                <li>Your full address</li>
-                <li>Your building or society name</li>
-                <li>Your exact location &mdash; the map shows a 500&nbsp;m circle placed a few hundred metres away</li>
-            </ul>
-        </div>
-    </section>
+    <p class="wizard__hint" th:if="${photos.isEmpty()}">
+        No photos yet. Rooms with photos get several times more requests.
+    </p>
 
     <div class="wizard__nav">
         <a class="btn btn--ghost" th:href="@{/list/{id}/5(id=${draft.id})}">Back</a>
-
-        <form method="post" th:action="@{/list/{id}/publish(id=${draft.id})}">
-            <button type="submit" class="btn btn--primary"
-                    th:disabled="${!missing.isEmpty()}">Publish listing</button>
-        </form>
+        <a class="btn btn--primary" th:href="@{/list/{id}/preview(id=${draft.id})}">Preview listing</a>
     </div>
-
-    <p class="wizard__hint" style="text-align:center;">
-        Live for 14 days. You can extend, pause or take it down at any time.
-    </p>
 </main>
 
 </body>

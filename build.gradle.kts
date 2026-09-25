@@ -84,6 +84,12 @@ dependencies {
     // production the first time a deploy logs everybody out.
     implementation("org.springframework.boot:spring-boot-session-jdbc")
 
+    // ---- Image metadata -----------------------------------------------------
+    // Reads EXIF, which we need for exactly one reason: a photo carries its
+    // orientation there, and stripping metadata without first rotating the
+    // PIXELS turns every portrait photo sideways.
+    implementation("com.drewnoakes:metadata-extractor:2.21.0")
+
     // ---- Spatial types ------------------------------------------------------
     // PostGIS geography columns have no Java equivalent. hibernate-spatial
     // teaches Hibernate to read and write JTS geometry types (Point, Polygon)
@@ -120,6 +126,12 @@ dependencies {
     // spring-boot-starter-test: it belongs to Spring Security, not Boot.
     testImplementation("org.springframework.security:spring-security-test")
 
+    // Test-only: WRITES EXIF, so a test can build a photo that genuinely
+    // carries GPS coordinates and then prove ImageProcessor removed them.
+    // Asserting on a stripped file only means something if something was there
+    // to strip.
+    testImplementation("org.apache.commons:commons-imaging:1.0.0-alpha6")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -127,4 +139,11 @@ tasks.withType<Test> {
     // Gradle defaults to the JUnit 4 runner for historical reasons.
     // Spring Boot 3+ ships JUnit 5, so we must opt in explicitly or no test runs.
     useJUnitPlatform()
+}
+
+// Prints the test runtime classpath, so ad-hoc tooling scripts can reuse the
+// exact dependency set the tests resolve rather than hand-assembling one.
+tasks.register("printTestClasspath") {
+    val cp = sourceSets["test"].runtimeClasspath
+    doLast { println(cp.asPath) }
 }

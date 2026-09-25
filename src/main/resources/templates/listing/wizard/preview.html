@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Preview and publish — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
+                       'This is exactly what someone looking sees',
+                       'Your phone number is not on this page and never will be.')}"></div>
+
+    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
+
+    <div class="notice notice--relaxed" th:if="${!missing.isEmpty()}">
+        <p class="notice__title">Still needed before this can go live</p>
+        <ul class="wizard__missing">
+            <li th:each="item : ${missing}" th:text="${item}">the monthly rent</li>
+        </ul>
+    </div>
+
+    <!--/*
+      Built by ListingDetailService.preview(), the SAME method that renders the
+      live page. A separate preview renderer would drift, and the drift would
+      only surface after someone published a listing that looked different from
+      what they approved.
+    */-->
+    <section class="wizard__preview">
+        <div class="preview-card">
+            <span class="listing-card__badge" th:if="${preview.zeroBrokerage}">Zero brokerage</span>
+
+            <div class="listing-card__rent">
+                <span th:text="${preview.rent}">&#8377;32,000</span>
+                <small>per month</small>
+            </div>
+            <p class="listing-card__total">
+                <span th:text="${preview.totalToMoveIn}">&#8377;1,13,500</span> to move in
+            </p>
+
+            <div class="listing-card__where" th:text="${preview.area}">Bandra West</div>
+            <div class="listing-card__station" th:if="${preview.station}">
+                <span th:text="${preview.walkTime}">8 min walk</span> from
+                <span th:text="${preview.station}">Bandra</span>
+                <span th:if="${preview.floorLabel}" th:text="'· ' + ${preview.floorLabel}">· 7th floor</span>
+            </div>
+
+            <div class="listing-card__tags">
+                <span class="tag" th:if="${preview.configuration}" th:text="${preview.configuration}">2 BHK</span>
+                <span class="tag" th:if="${preview.roomType}" th:text="${preview.roomType}">Private room</span>
+                <span class="tag" th:if="${preview.furnishing}" th:text="${preview.furnishing}">Semi-furnished</span>
+                <span class="listing-card__available" th:if="${preview.availableFrom}"
+                      th:text="'From ' + ${preview.availableFrom}">From 1 Nov</span>
+            </div>
+        </div>
+
+        <div class="preview-block" th:if="${preview.hasPhotos()}">
+            <h2 class="detail__heading">Photos</h2>
+            <div class="photo-grid photo-grid--preview">
+                <img th:each="url : ${preview.photoUrls}" th:src="${url}"
+                     alt="Listing photo" loading="lazy">
+            </div>
+        </div>
+
+        <div class="preview-block" th:if="${!preview.terms.isEmpty()}">
+            <h2 class="detail__heading">Handover terms</h2>
+            <dl class="terms">
+                <div class="terms__row" th:each="term : ${preview.terms}">
+                    <dt class="terms__label" th:text="${term.label}">Owner informed</dt>
+                    <dd class="terms__value" th:text="${term.value}">Yes</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="preview-block">
+            <h2 class="detail__heading">Move-in cost</h2>
+            <dl class="cost-card__lines">
+                <div class="cost-line" th:each="line : ${preview.costLines}"
+                     th:classappend="${line.isTotal} ? ' cost-line--total' : ''">
+                    <dt th:text="${line.label}">First month's rent</dt>
+                    <dd th:text="${line.amount}">&#8377;32,000</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="preview-block">
+            <h2 class="detail__heading">What is NOT on this page</h2>
+            <!--/* Stated explicitly at the moment it matters most: the leaver is
+                   about to publish, and this is where the privacy promise stops
+                   being marketing copy and becomes something they can check. */-->
+            <ul class="preview-absent">
+                <li>Your phone number</li>
+                <li>Your full address</li>
+                <li>Your building or society name</li>
+                <li>The location data your phone stored inside each photo</li>
+                <li>Your exact location &mdash; the map shows a 500&nbsp;m circle placed a few hundred metres away</li>
+            </ul>
+        </div>
+    </section>
+
+    <div class="wizard__nav">
+        <a class="btn btn--ghost" th:href="@{/list/{id}/6(id=${draft.id})}">Back to photos</a>
+
+        <form method="post" th:action="@{/list/{id}/publish(id=${draft.id})}">
+            <button type="submit" class="btn btn--primary"
+                    th:disabled="${!missing.isEmpty()}">Publish listing</button>
+        </form>
+    </div>
+
+    <p class="wizard__hint" style="text-align:center;">
+        Live for 14 days. You can extend, pause or take it down at any time.
+    </p>
+</main>
+
+</body>
+</html>
