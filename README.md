@@ -111,6 +111,63 @@ Then open <http://localhost:8080>.
 | `./gradlew --stop`       | Kill daemons (first thing to try when Gradle misbehaves) |
 | `./gradlew dependencies` | Print the resolved dependency tree             |
 
+## Data model and the privacy boundary
+
+The central constraint: **a phone number or exact address must never reach a
+public page.** That is enforced structurally, not by convention.
+
+Public and private data live in **separate tables**. Loading a listing to
+render it cannot put the exact coordinates in memory, because they are not in
+that table. Reaching them requires an explicit join written by someone who
+meant to write it.
+
+| Public            | Private             | Released when                  |
+|-------------------|---------------------|--------------------------------|
+| `users`           | `user_private`      | request reaches `CONNECTED`    |
+| `listings`        | `listing_private`   | request reaches `CONNECTED`    |
+
+Two details that are easy to get wrong:
+
+- `users.work_email_verified_at` is **public** (it is the trust badge shown to
+  strangers); `user_private.work_email` is **private**. Badge and address are
+  different facts with different audiences.
+- `listing_private.society_name` is private. A society name *is* an address:
+  publishing it would make the approximate circle decorative.
+
+### Approximate locations
+
+`listings.approx_location` is a point offset 120-300m from the truth,
+maintained by a trigger on `listing_private` so application code can neither
+forget it nor set it to the real coordinates.
+
+The offset is **deterministic** — derived from `md5(listing_id)`, so it is the
+same on every request. This is the security property: a per-request random
+offset would be defeated by loading the page repeatedly and averaging, because
+random noise cancels and the true point falls out. With one fixed offset there
+is only ever one sample.
+
+Search runs against `approx_location`, so the browse path never reads an exact
+location at all.
+
+### Contact release
+
+`interest_requests` is the **sole authority** for whether two users may read
+each other's phone number, and `status = 'CONNECTED'` is the only condition
+that permits it. There is deliberately no separate grants table: the release is
+symmetric, so a second table would be derived state that could disagree.
+
+### Conventions
+
+- Money is `INTEGER` whole rupees. Never floating point.
+- Timestamps are `TIMESTAMPTZ`, stored UTC. `TIMESTAMP` means different
+  instants to different readers.
+- Enums are `VARCHAR` + `CHECK`, not native Postgres `ENUM`: adding a value is
+  an ordinary migration, and it maps onto JPA `@Enumerated(EnumType.STRING)`.
+- Primary keys are UUID. Sequential ids leak row counts and let anyone walk
+  `1..N` to scrape the whole inventory.
+- Invariants belong in the database. A `CHECK` holds against a bug, a script,
+  or someone in `psql` at midnight; a comment holds against nothing.
+
 ## Project layout
 
 Packages are organised **by feature**, not by layer — everything for one
