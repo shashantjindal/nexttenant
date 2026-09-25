@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--/*
+  Shared listing card.
+
+  Used by the landing page and by search. Kept in one file because two copies
+  of a card drift within a fortnight: a badge gets added to one and not the
+  other, and nobody notices until a screenshot.
+
+  Takes a ListingCardDto, which carries no phone number, address or exact
+  location — so this markup could not leak one even if it tried.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<a th:fragment="card(card)"
+   class="listing-card"
+   th:href="@{/flats/{id}(id=${card.id})}"
+   href="#">
+
+    <span class="listing-card__badge" th:if="${card.zeroBrokerage}">Zero brokerage</span>
+
+    <div class="listing-card__rent">
+        <span th:text="${card.rent}">&#8377;32,000</span>
+        <small>per month</small>
+    </div>
+
+    <p class="listing-card__total">
+        <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
+    </p>
+
+    <div class="listing-card__where" th:text="${card.area}">Bandra West</div>
+    <div class="listing-card__station" th:if="${card.station != null}">
+        <span th:text="${card.walkTime}">8 min walk</span> from
+        <span th:text="${card.station}">Bandra</span>
+    </div>
+
+    <div class="listing-card__tags">
+        <span class="tag" th:if="${card.configuration}" th:text="${card.configuration}">2 BHK</span>
+        <span class="tag" th:if="${card.roomType}" th:text="${card.roomType}">Private room</span>
+        <span class="tag" th:if="${card.furnishing}" th:text="${card.furnishing}">Semi-furnished</span>
+        <span class="listing-card__available" th:if="${card.availableFrom}"
+              th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
+    </div>
+</a>
+
+</body>
+</html>

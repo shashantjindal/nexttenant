@@ -508,3 +508,159 @@
 }
 
 .btn--block { width: 100%; }
+
+/* ---- Search ------------------------------------------------------------ */
+
+.search { padding-block: var(--s-8) var(--s-12); }
+
+.search__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-6);
+}
+
+.search__title { font-size: var(--t-lg); font-weight: 600; }
+.search__range { color: var(--c-ink-3); font-weight: 400; font-size: var(--t-sm); }
+
+.search__sort select {
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    background: var(--c-surface);
+    font-size: var(--t-sm);
+}
+
+.search__layout { display: grid; gap: var(--s-6); }
+
+/* ---- Filter panel ------------------------------------------------------ */
+
+.filters {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+    align-self: start;
+}
+
+.filters__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--s-4);
+}
+
+.filters__title {
+    font-size: var(--t-base);
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.filters__count {
+    background: var(--c-brand);
+    color: var(--c-brand-ink);
+    font-size: var(--t-xs);
+    font-family: var(--font-body);
+    min-width: 20px;
+    height: 20px;
+    border-radius: var(--r-pill);
+    display: grid;
+    place-items: center;
+    padding-inline: 6px;
+}
+
+.filters__clear { font-size: var(--t-xs); }
+
+.filters__group {
+    border: none;
+    border-top: 1px solid var(--c-line);
+    margin: 0;
+    padding: var(--s-4) 0 0;
+}
+.filters__group:first-of-type { border-top: none; padding-top: 0; }
+
+.filters__group legend {
+    font-family: var(--font-display);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    color: var(--c-ink);
+    padding: 0;
+    margin-bottom: var(--s-3);
+}
+
+/* The 22 areas would otherwise push every other filter off the screen. */
+.filters__scroll { max-height: 220px; overflow-y: auto; padding-right: var(--s-2); }
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 5px 0;
+    font-size: var(--t-sm);
+    cursor: pointer;
+}
+.check input { accent-color: var(--c-brand); flex: 0 0 auto; }
+.check small { color: var(--c-ink-3); font-size: var(--t-xs); margin-left: auto; }
+
+.filters__range { display: flex; align-items: center; gap: var(--s-2); }
+.filters__range input {
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    font-size: 16px;
+}
+.filters__dash { color: var(--c-ink-3); }
+
+.filters__group input[type="date"] {
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    font-size: 16px;
+}
+
+.filters .btn--block { margin-top: var(--s-5); }
+
+/* ---- Result states ----------------------------------------------------- */
+
+.notice {
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+    margin-bottom: var(--s-5);
+}
+.notice--widened { background: var(--c-gold); color: var(--c-gold-ink); }
+.notice--relaxed { background: var(--c-brand-tint); color: var(--c-brand); }
+
+.notice__title { font-family: var(--font-display); font-weight: 600; margin: 0 0 var(--s-1); }
+.notice__body { font-size: var(--t-sm); margin: 0 0 var(--s-3); }
+
+.empty {
+    text-align: center;
+    padding: var(--s-16) var(--s-5);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+}
+.empty__title { font-family: var(--font-display); font-size: var(--t-lg); color: var(--c-ink); margin: 0 0 var(--s-2); }
+.empty__body { font-size: var(--t-sm); margin: 0 0 var(--s-5); }
+
+.results__more { display: grid; place-items: center; margin-top: var(--s-8); }
+
+.results__privacy {
+    text-align: center;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin-top: var(--s-8);
+}
+
+@media (min-width: 900px) {
+    /* Filters beside results, sticky so they stay reachable while scrolling
+       a long list. */
+    .search__layout { grid-template-columns: 280px 1fr; gap: var(--s-8); }
+    .filters { position: sticky; top: calc(var(--header-h) + var(--s-4)); }
+    .search__title { font-size: var(--t-xl); }
+}

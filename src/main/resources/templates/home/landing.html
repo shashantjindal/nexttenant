@@ -71,37 +71,12 @@
               a ListingCardDto, which carries no phone number, address or exact
               location — so this template could not leak one even by mistake.
             */-->
-            <a class="listing-card"
-               th:each="card : ${cards}"
-               th:href="@{/flats/{id}(id=${card.id})}"
-               href="#">
-
-                <span class="listing-card__badge"
-                      th:if="${card.zeroBrokerage}">Zero brokerage</span>
-
-                <div class="listing-card__rent">
-                    <span th:text="${card.rent}">&#8377;32,000</span>
-                    <small>per month</small>
-                </div>
-
-                <p class="listing-card__total">
-                    <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
-                </p>
-
-                <div class="listing-card__where" th:text="${card.area}">Bandra West</div>
-                <div class="listing-card__station">
-                    <span th:text="${card.walkTime}">8 min walk</span> from
-                    <span th:text="${card.station}">Bandra</span>
-                </div>
-
-                <div class="listing-card__tags">
-                    <span class="tag" th:text="${card.configuration}">2 BHK</span>
-                    <span class="tag" th:text="${card.roomType}">Private room</span>
-                    <span class="tag" th:text="${card.furnishing}">Semi-furnished</span>
-                    <span class="listing-card__available"
-                          th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
-                </div>
-            </a>
+            <!--/* th:each is nested INSIDE th:replace deliberately. Thymeleaf
+                     processes th:replace first, so putting both on one element
+                     replaces it before the loop runs and renders nothing. */-->
+                <th:block th:each="card : ${cards}">
+                    <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                </th:block>
         </div>
     </section>
 

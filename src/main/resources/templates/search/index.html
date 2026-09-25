@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Find a flat in Mumbai — HouseHunting</title></head>
+<body>
+
+<main id="content" class="page-width search">
+
+    <!-- ============ Header ============ -->
+    <div class="search__head">
+        <h1 class="search__title">
+            <span th:text="${results.totalCount}">340</span> flats
+            <span class="search__range" th:if="${rentRangeLabel}" th:text="'· ' + ${rentRangeLabel}">· ₹15,000 – ₹35,000</span>
+        </h1>
+
+        <!--/*
+          A GET form, so submitting writes every field into the URL. No
+          JavaScript is required for the core experience: filtering works with
+          scripting disabled, and the result is a shareable link.
+        */-->
+        <form class="search__sort" method="get" th:action="@{/flats}">
+            <!--/* Carry the current filters through when only the sort changes.
+                   The cursor is deliberately NOT carried: it is meaningless
+                   against a different ordering and would skip or repeat rows. */-->
+            <th:block th:each="a : ${form.area}">
+                <input type="hidden" name="area" th:value="${a}">
+            </th:block>
+            <input type="hidden" name="rentMin" th:value="${form.rentMin}" th:if="${form.rentMin}">
+            <input type="hidden" name="rentMax" th:value="${form.rentMax}" th:if="${form.rentMax}">
+            <input type="hidden" name="moveInBy" th:value="${form.moveInBy}" th:if="${form.moveInBy}">
+            <input type="hidden" name="lat" th:value="${form.lat}" th:if="${form.lat}">
+            <input type="hidden" name="lng" th:value="${form.lng}" th:if="${form.lng}">
+            <input type="hidden" name="radius" th:value="${form.radius}" th:if="${form.radius}">
+
+            <label class="sr-only" for="sort">Sort</label>
+            <select id="sort" name="sort" onchange="this.form.submit()">
+                <option th:each="option : ${sortOptions}"
+                        th:value="${option}"
+                        th:text="${option.label}"
+                        th:selected="${option == criteria.sort}">Newest</option>
+            </select>
+            <noscript><button type="submit" class="btn btn--secondary">Sort</button></noscript>
+        </form>
+    </div>
+
+    <div class="search__layout">
+
+        <!-- ============ Filter panel ============ -->
+        <aside class="filters">
+            <form method="get" th:action="@{/flats}" id="filter-form">
+
+                <div class="filters__head">
+                    <h2 class="filters__title">
+                        Filters
+                        <span class="filters__count" th:if="${filterCount > 0}"
+                              th:text="${filterCount}">3</span>
+                    </h2>
+                    <a class="filters__clear" th:href="@{/flats}" th:if="${filterCount > 0}">Clear all</a>
+                </div>
+
+                <input type="hidden" name="sort" th:value="${criteria.sort}">
+
+                <!-- Area -->
+                <fieldset class="filters__group">
+                    <legend>Area</legend>
+                    <div class="filters__scroll">
+                        <label class="check" th:each="a : ${allAreas}">
+                            <input type="checkbox" name="area" th:value="${a.name}"
+                                   th:checked="${form.hasArea(a.name)}">
+                            <span th:text="${a.name}">Bandra West</span>
+                            <small th:text="${a.nearestStation}">Bandra</small>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <!-- Rent -->
+                <fieldset class="filters__group">
+                    <legend>Rent per month</legend>
+                    <div class="filters__range">
+                        <label>
+                            <span class="sr-only">Minimum rent</span>
+                            <input type="text" name="rentMin" inputmode="numeric"
+                                   placeholder="Min" th:value="${form.rentMin}">
+                        </label>
+                        <span class="filters__dash">–</span>
+                        <label>
+                            <span class="sr-only">Maximum rent</span>
+                            <input type="text" name="rentMax" inputmode="numeric"
+                                   placeholder="Max" th:value="${form.rentMax}">
+                        </label>
+                    </div>
+                </fieldset>
+
+                <!-- Move-in -->
+                <fieldset class="filters__group">
+                    <legend>I can move in by</legend>
+                    <input type="date" name="moveInBy" th:value="${form.moveInBy}">
+                </fieldset>
+
+                <!-- Configuration -->
+                <fieldset class="filters__group">
+                    <legend>Configuration</legend>
+                    <label class="check" th:each="c : ${configurations}">
+                        <input type="checkbox" name="config" th:value="${c}"
+                               th:checked="${form.hasConfig(c.name())}">
+                        <span th:text="${c.label}">2 BHK</span>
+                    </label>
+                </fieldset>
+
+                <!-- Room type -->
+                <fieldset class="filters__group">
+                    <legend>Room type</legend>
+                    <label class="check" th:each="r : ${roomTypes}">
+                        <input type="checkbox" name="room" th:value="${r}"
+                               th:checked="${form.hasRoom(r.name())}">
+                        <span th:text="${r.label}">Private room</span>
+                    </label>
+                </fieldset>
+
+                <!-- Furnishing -->
+                <fieldset class="filters__group">
+                    <legend>Furnishing</legend>
+                    <label class="check" th:each="f : ${furnishings}">
+                        <input type="checkbox" name="furnishing" th:value="${f}"
+                               th:checked="${form.hasFurnishing(f.name())}">
+                        <span th:text="${f.label}">Semi-furnished</span>
+                    </label>
+                </fieldset>
+
+                <!-- Open to -->
+                <fieldset class="filters__group">
+                    <legend>Open to</legend>
+                    <label class="check">
+                        <input type="radio" name="gender" value=""
+                               th:checked="${form.gender == null or form.gender.isEmpty()}">
+                        <span>Any</span>
+                    </label>
+                    <label class="check" th:each="g : ${genders}" th:if="${g.name() != 'ANY'}">
+                        <input type="radio" name="gender" th:value="${g}"
+                               th:checked="${form.gender == g.name()}">
+                        <span th:text="${g.label}">Women only</span>
+                    </label>
+                </fieldset>
+
+                <!-- Must have -->
+                <fieldset class="filters__group">
+                    <legend>Must have</legend>
+                    <label class="check" th:each="am : ${amenities}">
+                        <input type="checkbox" name="amenity" th:value="${am.code}"
+                               th:checked="${form.hasAmenity(am.code)}">
+                        <span th:text="${am.label}">Lift</span>
+                    </label>
+                </fieldset>
+
+                <button type="submit" class="btn btn--primary btn--block">Show results</button>
+            </form>
+        </aside>
+
+        <!-- ============ Results ============ -->
+        <section class="results">
+
+            <!--/* The design does not just say "no results". It widens, and
+                   says so. Each banner corresponds to a real query that ran. */-->
+            <div class="notice notice--widened" th:if="${results.outcome.name() == 'WIDENED'}">
+                <p class="notice__title">No exact match, so we widened the radius</p>
+                <p class="notice__body">
+                    Showing flats within <strong th:text="${results.widenedToKm}">2.0 km</strong>.
+                </p>
+                <a class="btn btn--ghost" href="#filter-form">Edit filters</a>
+            </div>
+
+            <div class="notice notice--relaxed" th:if="${results.outcome.name() == 'RELAXED'}">
+                <p class="notice__title">Nearby alternatives</p>
+                <p class="notice__body">
+                    Nothing matched all your filters, so these are the closest flats
+                    without them.
+                </p>
+                <a class="btn btn--ghost" th:href="@{/flats}">Clear every filter</a>
+            </div>
+
+            <div class="empty" th:if="${results.isEmpty()}">
+                <p class="empty__title">Nothing at all, even wider</p>
+                <p class="empty__body">
+                    There are no live listings matching this. Try a different area,
+                    or save the search and we will tell you when one appears.
+                </p>
+                <a class="btn btn--secondary" th:href="@{/flats}">Clear every filter</a>
+            </div>
+
+            <div class="card-grid" th:unless="${results.isEmpty()}">
+                <!--/* th:each is nested INSIDE th:replace deliberately. Thymeleaf
+                     processes th:replace first, so putting both on one element
+                     replaces it before the loop runs and renders nothing. */-->
+                <th:block th:each="card : ${results.cards}">
+                    <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                </th:block>
+            </div>
+
+            <!--/* Cursor paging: the link carries the position of the last row
+                   shown, so the next page seeks straight to it. */-->
+            <div class="results__more" th:if="${results.hasNextPage()}">
+                <a class="btn btn--secondary"
+                   th:href="@{'/flats?' + ${baseQuery} + '&cursor=' + ${results.nextCursor}}">
+                    Load more
+                </a>
+            </div>
+
+            <p class="results__privacy" th:unless="${results.isEmpty()}">
+                Approximate locations only. The exact address is shared once you are connected.
+            </p>
+        </section>
+    </div>
+</main>
+
+</body>
+</html>

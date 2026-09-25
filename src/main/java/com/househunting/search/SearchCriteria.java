@@ -38,6 +38,9 @@ public record SearchCriteria(
 ) {
 
     public static final int DEFAULT_PAGE_SIZE = 20;
+
+    /** Used when a point is given without a radius. */
+    public static final int DEFAULT_RADIUS_METRES = 2000;
     private static final int MAX_PAGE_SIZE = 60;
 
     public SearchCriteria {
@@ -151,11 +154,20 @@ public record SearchCriteria(
         public Builder cursor(SearchCursor v) { this.cursor = v; return this; }
         public Builder maxResults(int v) { this.maxResults = v; return this; }
 
-        /** All three together, because a radius without a point is meaningless. */
-        public Builder location(double lat, double lng, int radiusMetres) {
+        /**
+         * All three together, because a radius without a point is meaningless.
+         *
+         * <p>Boxed and null-tolerant: these arrive from a URL, where any of
+         * them may be absent or unparseable. A partial location is treated as
+         * no location rather than as a half-applied filter.
+         */
+        public Builder location(Double lat, Double lng, Integer radiusMetres) {
+            if (lat == null || lng == null) {
+                return this;
+            }
             this.latitude = lat;
             this.longitude = lng;
-            this.radiusMetres = radiusMetres;
+            this.radiusMetres = radiusMetres == null ? DEFAULT_RADIUS_METRES : radiusMetres;
             return this;
         }
 
