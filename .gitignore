@@ -1,0 +1,34 @@
+# --- Build output (regenerable — never commit) ---
+build/
+out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- Gradle local state ---
+.gradle/
+
+# --- Secrets (NEVER commit — see .env.example for the shape) ---
+.env
+.env.local
+*.pem
+*.key
+application-local.yml
+
+# --- IDE ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/

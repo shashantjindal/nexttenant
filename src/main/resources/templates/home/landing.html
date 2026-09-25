@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- The xmlns:th declaration is not required at runtime, but it tells the IDE
+     what th:* attributes mean, so you get autocomplete and error highlighting. -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HouseHunting</title>
+    <style>
+        body {
+            margin: 0;
+            background: #FAFAF8;
+            color: #1C1917;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+        }
+        main { text-align: center; padding: 24px; }
+        h1 { font-size: 40px; margin: 0 0 8px; color: #7A3420; }
+        p  { color: #6B6560; margin: 0; }
+        .badge {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 6px 14px;
+            border: 1px solid #DAD7D0;
+            border-radius: 999px;
+            font-size: 13px;
+            color: #6B6560;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>HouseHunting</h1>
+        <p>Someone&rsquo;s moving out. Take their place.</p>
+
+        <!-- th:text replaces this element's content with the model attribute.
+             The text between the tags is a design-time placeholder: it shows
+             when the file is opened directly, and is discarded when rendered. -->
+        <span class="badge" th:text="${phase}">placeholder shown only in a raw browser</span>
+    </main>
+</body>
+</html>

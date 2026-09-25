@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: househunting
+
+  thymeleaf:
+    # Fail at STARTUP if the template directory is missing, rather than throwing
+    # a 500 the first time a user hits a page. Prefer loud and early.
+    check-template-location: true
+
+server:
+  port: 8080
+  error:
+    # Show the real exception message on error pages. Safe in development;
+    # we will turn this off for production, where it leaks internals.
+    include-message: always
+    include-binding-errors: always
+
+logging:
+  level:
+    # Our own code logs at DEBUG; everything else stays at INFO so the
+    # console is readable. Narrow, intentional logging beats a firehose.
+    com.househunting: DEBUG
