@@ -67,6 +67,12 @@ dependencies {
     // code review.
     runtimeOnly("org.postgresql:postgresql")
 
+    // ---- Spatial types ------------------------------------------------------
+    // PostGIS geography columns have no Java equivalent. hibernate-spatial
+    // teaches Hibernate to read and write JTS geometry types (Point, Polygon)
+    // against them; JTS itself arrives transitively.
+    implementation("org.hibernate.orm:hibernate-spatial")
+
     // ---- Schema migrations --------------------------------------------------
     // Since Flyway 10 the database-specific support is a separate artifact.
     // Without flyway-database-postgresql, startup fails with
