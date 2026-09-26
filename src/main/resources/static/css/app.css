@@ -188,13 +188,48 @@
 }
 
 .listing-card {
-    display: block;
+    /* position: relative is what makes the stretched .listing-card__link::after
+       resolve against the card rather than against the page. Without it the
+       "link" covers the whole viewport and a click anywhere opens the last
+       card that happened to render. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
     background: var(--c-surface);
     border: 1px solid var(--c-line);
     border-radius: var(--r-lg);
-    padding: var(--s-5);
+    /* No padding here any more — .listing-card__body owns it, so the cover
+       photo can be full-bleed by simply being a block child instead of by
+       negative margins that had to match a spacing token exactly. */
+    padding: 0;
+    /* Clips the photo's square corners to the card's rounded ones, so the
+       image needs no border-radius of its own to keep in sync. */
+    overflow: hidden;
     color: inherit;
     transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.listing-card__body {
+    padding: var(--s-5);
+    /* Fills the leftover height so cards in a row end level even when one has
+       an extra tag line. */
+    flex: 1 1 auto;
+}
+
+/* The stretched link: the anchor is a normal inline element in the flow, and
+   this pseudo-element is what is actually clickable across the whole card.
+   z-index 1 keeps it under the heart, which sits at 2. */
+.listing-card__link { color: inherit; text-decoration: none; }
+.listing-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+.listing-card__link:focus-visible::after {
+    outline: 2px solid var(--c-brand);
+    outline-offset: -3px;
+    border-radius: var(--r-lg);
 }
 .listing-card:hover {
     text-decoration: none;
@@ -591,7 +626,7 @@
     margin-bottom: var(--s-3);
 }
 
-/* The 22 areas would otherwise push every other filter off the screen. */
+/* Ninety-odd areas would otherwise push every other filter off the screen. */
 .filters__scroll { max-height: 220px; overflow-y: auto; padding-right: var(--s-2); }
 
 .check {
@@ -930,13 +965,101 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 
 /* ---- Photos ------------------------------------------------------------ */
 
-.listing-card__photo {
-    width: calc(100% + var(--s-10));
-    margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1) var(--s-4);
-    height: 170px;
-    object-fit: cover;
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
+/* The media block IS the card's width — no calc, nothing to keep in sync with
+   the body padding. It is the containing block for the badge and the heart,
+   which are positioned over the photo. */
+.listing-card__media {
+    position: relative;
     background: var(--c-surface-2);
+}
+
+.listing-card__photo {
+    display: block;          /* kills the inline-image baseline gap below it */
+    width: 100%;
+    /* aspect-ratio rather than a fixed height: the card reserves the right
+       space before the image loads, so nothing shifts when it arrives. A
+       fixed 170px did that too, but broke the 3:2 photos on a wide card. */
+    aspect-ratio: 3 / 2;
+    height: auto;
+    object-fit: cover;
+    background: var(--c-surface-2);
+}
+
+.listing-card__photo--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    background: repeating-linear-gradient(
+            45deg, var(--c-surface-2), var(--c-surface-2) 12px,
+            var(--c-surface) 12px, var(--c-surface) 24px);
+}
+
+/* The badge moves onto the photo now that there is one. */
+.listing-card__media .listing-card__badge {
+    position: absolute;
+    top: var(--s-3);
+    left: var(--s-3);
+    z-index: 2;
+    background: var(--c-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---- The heart --------------------------------------------------------- */
+
+.listing-card__save {
+    position: absolute;
+    top: var(--s-3);
+    right: var(--s-3);
+    /* Above the stretched link, or the click would open the listing instead
+       of saving it. */
+    z-index: 2;
+    margin: 0;
+    line-height: 0;
+}
+
+.listing-card__save-btn {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--c-line);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.listing-card__save-btn:hover { transform: scale(1.08); border-color: var(--c-brand); }
+.listing-card__save-btn:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; }
+
+.listing-card__save-btn svg {
+    width: 20px;
+    height: 20px;
+    /* Outline by default, filled when saved. Two states in one path, so the
+       markup does not need two icons that could drift apart. */
+    fill: none;
+    stroke: var(--c-ink-2);
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+}
+
+.listing-card__save-btn--on { background: var(--c-brand-tint); border-color: var(--c-brand); }
+.listing-card__save-btn--on svg { fill: var(--c-brand); stroke: var(--c-brand); }
+
+/* Available to screen readers, invisible on screen. Used for the heart's
+   label: an icon-only button with no accessible name is announced as
+   "button", which tells a screen-reader user nothing. */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 .photo-upload { display: grid; gap: var(--s-4); }
@@ -1144,3 +1267,207 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .reason strong { font-family: var(--font-display); font-weight: 600; color: var(--c-ink); font-size: var(--t-sm); }
 
 .request-row__status--danger { background: var(--c-brand-tint); color: var(--c-brand); font-weight: 600; }
+
+/* ---- Wishlist button in the header ------------------------------------- */
+
+.site-header__wishlist {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+.site-header__wishlist svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+}
+
+/* ---- Photo gallery on the listing page --------------------------------- */
+
+.gallery {
+    display: grid;
+    gap: var(--s-2);
+    margin-bottom: var(--s-6);
+}
+
+.gallery__main {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--c-surface-2);
+}
+.gallery__main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+/* Every frame is stacked in the same grid cell and revealed by :target, so
+   the gallery works with CSS alone. JavaScript upgrades it to arrow keys and
+   a counter, but a broken script must not leave the page with one photo. */
+.gallery__frame {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .18s ease;
+}
+.gallery__frame--on { opacity: 1; visibility: visible; }
+
+.gallery__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .9);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--c-ink);
+    z-index: 2;
+}
+.gallery__nav--prev { left: var(--s-3); }
+.gallery__nav--next { right: var(--s-3); }
+.gallery__nav:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; }
+
+.gallery__count {
+    position: absolute;
+    right: var(--s-3);
+    bottom: var(--s-3);
+    z-index: 2;
+    background: rgba(27, 25, 23, .72);
+    color: #fff;
+    font-size: var(--t-xs);
+    padding: 2px var(--s-2);
+    border-radius: var(--r-pill);
+}
+
+.gallery__strip {
+    display: flex;
+    gap: var(--s-2);
+    overflow-x: auto;
+    padding-bottom: var(--s-1);
+}
+.gallery__thumb {
+    flex: 0 0 auto;
+    width: 88px;
+    aspect-ratio: 3 / 2;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--c-surface-2);
+}
+.gallery__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery__thumb--on { border-color: var(--c-brand); }
+.gallery__thumb:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; }
+
+.gallery--empty {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 3 / 2;
+    border-radius: var(--r-lg);
+    color: var(--c-ink-3);
+    font-size: var(--t-sm);
+    background: repeating-linear-gradient(
+            45deg, var(--c-surface-2), var(--c-surface-2) 14px,
+            var(--c-surface) 14px, var(--c-surface) 28px);
+}
+
+/* ---- Toasts ------------------------------------------------------------ */
+
+.toasts {
+    /* fixed, so the message follows the viewport. The bug this replaces was
+       an inline banner at the top of a long page: you pressed a button three
+       screens down and the refusal appeared somewhere you were not looking. */
+    position: fixed;
+    top: var(--s-4);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: grid;
+    gap: var(--s-2);
+    width: min(520px, calc(100vw - var(--s-8)));
+    /* The container spans the width but must not swallow clicks on the page
+       behind it; each toast turns pointer events back on for itself. */
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+    box-shadow: 0 8px 24px rgba(27, 25, 23, .16);
+    animation: toast-in .2s ease-out;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.toast--leaving { opacity: 0; transform: translateY(-8px); }
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Anyone who has asked their system to reduce motion gets the toast without
+   the slide. It still appears; it just does not move. */
+@media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+    .toast--leaving { transform: none; }
+}
+
+.toast__icon {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: var(--t-xs);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.toast__text { margin: 0; font-size: var(--t-sm); color: var(--c-ink); }
+
+.toast__close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 2px;
+    color: var(--c-ink-3);
+}
+.toast__close:hover { color: var(--c-ink); }
+.toast__close:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; }
+
+.toast--error { border-color: var(--c-brand-tint-hard); background: var(--c-brand-tint); }
+.toast--error .toast__icon { background: var(--c-brand); color: #fff; }
+
+.toast--notice { border-color: var(--c-line-strong); }
+.toast--notice .toast__icon { background: var(--c-gold); color: var(--c-gold-ink); }
+
+/* A checkbox that qualifies the control above it rather than being one of a
+   list — the "later move-ins" tick under the date. */
+.check--inline { margin-top: var(--s-2); }
+
+.profile-card__action { margin: var(--s-4) 0 0; }
+
+.wizard__step--editing { color: var(--c-gold-ink); font-weight: 600; }

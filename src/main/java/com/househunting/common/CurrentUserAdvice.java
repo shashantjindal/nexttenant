@@ -24,4 +24,28 @@ public class CurrentUserAdvice {
         // Null when signed out; templates use th:if to branch.
         return user;
     }
+
+    /**
+     * The path and query of the current page, for "bring me back here" forms.
+     *
+     * <p>The heart on a listing card posts and redirects, and the redirect has
+     * to land on the page the heart was clicked from — including its filters
+     * and its scroll position in the URL. The template cannot work this out for
+     * itself: Thymeleaf 3.1 removed {@code #httpServletRequest} and the other
+     * direct servlet-API accessors precisely so that templates stop reaching
+     * into request internals.
+     *
+     * <p>Only the path and query are exposed, never the scheme or host. The
+     * value is echoed back as a redirect target, and a redirect target that can
+     * carry a host is an open redirect waiting to be found. The controller
+     * checks again that it starts with a single "/" — two checks, because this
+     * one is about what we hand out and that one is about what we accept, and
+     * either could be bypassed alone.
+     */
+    @ModelAttribute("currentPath")
+    public String currentPath(jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String query = request.getQueryString();
+        return query == null || query.isBlank() ? path : path + "?" + query;
+    }
 }

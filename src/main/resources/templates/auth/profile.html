@@ -10,7 +10,6 @@
             Only your first name is ever shown to other people.
         </p>
 
-        <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
 
         <form th:action="@{/login/profile}" method="post" class="auth__form">
             <label class="field">

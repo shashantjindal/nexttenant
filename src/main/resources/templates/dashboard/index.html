@@ -6,8 +6,6 @@
 
 <main id="content" class="page-width section">
 
-    <p class="auth__notice" th:if="${notice}" th:text="${notice}">notice</p>
-    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
 
     <div class="section__head">
         <h1 class="section__title"
@@ -98,6 +96,19 @@
                         <a class="btn btn--ghost" th:href="@{/flats/{id}(id=${l.id})}"
                            th:if="${l.status.name() == 'LIVE'}">View</a>
 
+                        <!--/* The button that was never wired. It reopens the
+                               same six-step wizard against the published
+                               listing; ListingDraftService decides which
+                               statuses may be edited, so this list and that
+                               one cannot disagree — a RENTED or TAKEN_DOWN
+                               listing simply has no Edit button and would be
+                               refused anyway if the URL were typed. */-->
+                        <a class="btn btn--ghost"
+                           th:if="${l.status.name() == 'LIVE'
+                                   or l.status.name() == 'PAUSED'
+                                   or l.status.name() == 'EXPIRED'}"
+                           th:href="@{/list/{id}/1(id=${l.id})}">Edit</a>
+
                         <form method="post" th:if="${l.canExtend()}"
                               th:action="@{/listings/{id}/extend(id=${l.id})}">
                             <button type="submit" class="btn btn--ghost">Extend 14 days</button>
@@ -148,6 +159,18 @@
 
             <p class="profile-card__done" th:if="${profile.isComplete()}">
                 Everything done. Your listing carries every badge we offer.
+            </p>
+
+            <!--/* The one missing item that has a screen behind it. Listing
+                   "Verify a work email" with nowhere to click was the dead end
+                   in the todo list: a prompt to do something the product gave
+                   you no way to do. */-->
+            <p class="profile-card__action">
+                <a class="btn btn--secondary" th:href="@{/verify-work-email}"
+                   th:text="${profile.workEmailVerified}
+                            ? 'Manage your work email' : 'Verify your work email'">
+                    Verify your work email
+                </a>
             </p>
         </div>
     </section>

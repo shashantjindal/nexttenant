@@ -23,14 +23,29 @@ public class ListingSearchService {
     private static final Logger log = LoggerFactory.getLogger(ListingSearchService.class);
 
     /**
-     * Each rung doubles roughly, and stops at 10km.
+     * Each rung doubles, and the climb stops at 10km.
      *
      * <p>Beyond that "nearby" stops being true: in Mumbai traffic, 15km can be
      * an hour, and showing a Thane flat to someone searching Colaba is not
      * helpful, it is noise. A search that returns nothing is a better answer
      * than one that returns the wrong thing confidently.
+     *
+     * <p><b>These are multipliers of the ORIGINAL radius</b>, which is the bug
+     * that used to live here. The ladder was {2, 4, 8}, so a 50m search could
+     * only ever reach 400m — nowhere near the 10km ceiling the comment above
+     * promised. Past 400m it stopped widening and fell through to dropping
+     * filters instead, which keeps the location but throws away every other
+     * constraint: "nothing within 50m, so here is an unfurnished shared room
+     * in Thane". Widening distance first and only then relaxing filters is the
+     * whole design, and it was being skipped.
+     *
+     * <p>It passed its test for two years' worth of commits because the dev
+     * seed happened to be dense enough that 400m around Bandra always caught
+     * something. Reducing the seed from 14 listings per area to 4 is what
+     * exposed it — a reminder that a test whose fixture is "whatever the seeder
+     * produced" is testing the seeder as much as the code.
      */
-    private static final int[] WIDENING_LADDER = {2, 4, 8};
+    private static final int[] WIDENING_LADDER = {2, 4, 8, 16, 32, 64, 128, 256};
     private static final int MAX_RADIUS_METRES = 10_000;
 
     private final ListingSearchRepository repository;

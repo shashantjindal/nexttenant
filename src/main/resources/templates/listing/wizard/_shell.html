@@ -5,20 +5,45 @@
   "Save and exit" is a plain link, not a button that saves. Each step already
   persisted on submit, so there is nothing left to save — which is the whole
   point of saving per step rather than accumulating answers in the session.
+
+  ---------------------------------------------------------------------------
+  TWO MODES.
+
+  These six screens now do two jobs: walking through a new listing, and editing
+  one that is already published. The fields are identical and the wording must
+  not be.
+
+  A progress bar on an edit is a lie — it implies five things are still
+  outstanding when nothing is. "Continue" is worse: it suggests the change is
+  not committed yet, when in fact the step saved the moment it was submitted,
+  and somebody who closes the tab believing otherwise has already made the
+  change they think they abandoned.
+
+  `editing` comes from WizardController.addCommon, which asks the draft service
+  rather than inspecting the status here. Which statuses count as "published"
+  is a rule, and rules do not belong in a template.
 */-->
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
 <div th:fragment="head(step, totalSteps, title, lede)" class="wizard__head">
-    <div class="wizard__progress" aria-hidden="true">
+
+    <!--/* Progress only means something on the way through the first time. */-->
+    <div class="wizard__progress" aria-hidden="true" th:unless="${editing}">
         <span class="wizard__bar"
               th:style="'width:' + ${step * 100 / totalSteps} + '%'"></span>
     </div>
 
     <div class="wizard__meta">
-        <span class="wizard__step"
+        <span class="wizard__step" th:unless="${editing}"
               th:text="'Step ' + ${step} + ' of ' + ${totalSteps}">Step 1 of 6</span>
-        <a class="wizard__exit" th:href="@{/dashboard}">Save and exit</a>
+
+        <span class="wizard__step wizard__step--editing" th:if="${editing}">
+            Editing a published listing &middot; changes save as you go
+        </span>
+
+        <a class="wizard__exit" th:href="@{/dashboard}"
+           th:text="${editing} ? 'Done' : 'Save and exit'">Save and exit</a>
     </div>
 
     <h1 class="wizard__title" th:text="${title}">Where is the flat?</h1>
@@ -31,8 +56,14 @@
        th:href="@{/list/{id}/{prev}(id=${draft.id}, prev=${step - 1})}">Back</a>
     <span th:unless="${step > 1}"></span>
 
-    <button type="submit" class="btn btn--primary"
+    <!--/* While editing, the last step goes back to the live listing rather
+           than to a preview: there is nothing to preview, it is already out
+           there. */-->
+    <button type="submit" class="btn btn--primary" th:unless="${editing}"
             th:text="${step == 6} ? 'Preview listing' : 'Continue'">Continue</button>
+
+    <button type="submit" class="btn btn--primary" th:if="${editing}"
+            th:text="${step == 6} ? 'Save and view listing' : 'Save and continue'">Save</button>
 </div>
 
 </body>

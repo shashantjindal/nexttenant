@@ -13,7 +13,6 @@
         Two confirmed reports and the account is removed.
     </p>
 
-    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
 
     <form method="post" th:action="@{/flats/{id}/report(id=${listing.id})}" class="wizard__form">
         <fieldset class="wizard__group">

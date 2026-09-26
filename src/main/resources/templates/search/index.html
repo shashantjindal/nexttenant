@@ -28,6 +28,8 @@
             <input type="hidden" name="rentMin" th:value="${form.rentMin}" th:if="${form.rentMin}">
             <input type="hidden" name="rentMax" th:value="${form.rentMax}" th:if="${form.rentMax}">
             <input type="hidden" name="moveInBy" th:value="${form.moveInBy}" th:if="${form.moveInBy}">
+            <input type="hidden" name="flexibleMoveIn" value="1"
+                   th:if="${form.wantsLaterMoveIns()}">
             <input type="hidden" name="lat" th:value="${form.lat}" th:if="${form.lat}">
             <input type="hidden" name="lng" th:value="${form.lng}" th:if="${form.lng}">
             <input type="hidden" name="radius" th:value="${form.radius}" th:if="${form.radius}">
@@ -107,6 +109,25 @@
                 <fieldset class="filters__group">
                     <legend>I can move in by</legend>
                     <input type="date" name="moveInBy" th:value="${form.moveInBy}">
+
+                    <!--/* Without this the date is a hard wall: a room that
+                           frees up a week after your date is invisible, even
+                           though a week is nothing when you are the one
+                           moving. Ticking it pushes the cutoff out by
+                           SearchForm.FLEXIBLE_GRACE_DAYS.
+
+                           The value is "1" rather than the HTML default "on"
+                           only so the URL reads flexibleMoveIn=1. An unticked
+                           checkbox submits nothing at all, which is why the
+                           form treats absent and blank the same. */-->
+                    <label class="check check--inline">
+                        <input type="checkbox" name="flexibleMoveIn" value="1"
+                               th:checked="${form.wantsLaterMoveIns()}">
+                        <span>I'm fine with later move-ins too</span>
+                    </label>
+                    <p class="filters__hint" th:if="${form.wantsLaterMoveIns()}">
+                        Also showing rooms free up to six weeks after that date.
+                    </p>
                 </fieldset>
 
                 <!-- Configuration -->
@@ -204,7 +225,7 @@
                      processes th:replace first, so putting both on one element
                      replaces it before the loop runs and renders nothing. */-->
                 <th:block th:each="card : ${results.cards}">
-                    <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                    <th:block th:replace="~{fragments/listing-card :: card(${card}, ${savedIds != null and savedIds.contains(card.id)})}"></th:block>
                 </th:block>
             </div>
 

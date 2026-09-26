@@ -129,18 +129,105 @@ class WizardTest {
                 .andExpect(status().isNotFound());
     }
 
-    @Test
-    @DisplayName("a published listing is no longer editable through the wizard")
-    void publishedListingLeavesTheWizard() throws Exception {
+    // ---- Editing a published listing --------------------------------------
+
+    private UUID publishedListing() throws Exception {
         UUID id = completeAllSteps();
         mockMvc.perform(post("/list/" + id + "/publish")
                 .with(authentication(as(owner))).with(csrf()));
+        assertThat(listings.findById(id).orElseThrow().getStatus())
+                .isEqualTo(ListingStatus.LIVE);
+        return id;
+    }
 
-        // requireOwnedDraft filters on status = DRAFT, so a live listing is
-        // not reachable here at all. Editing a live listing will be a separate,
-        // deliberate flow.
+    @Test
+    @DisplayName("the owner can reopen and change a published listing")
+    void publishedListingIsEditable() throws Exception {
+        UUID id = publishedListing();
+
+        // This used to 404: requireOwnedDraft filtered on status = DRAFT, so
+        // the "Edit" button on the dashboard led nowhere for every listing
+        // anybody had actually published.
         mockMvc.perform(get("/list/" + id + "/3").with(authentication(as(owner))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(step(id, 3, owner)
+                        .param("monthlyRent", "35000").param("deposit", "70000"))
+                .andExpect(status().is3xxRedirection());
+
+        Listing edited = listings.findById(id).orElseThrow();
+        assertThat(edited.getMonthlyRentInr()).isEqualTo(35000);
+        // Still live, and still the SAME publication. Re-running publish()
+        // would reset published_at and expires_at, silently pushing the listing
+        // back to the top of "Newest" and granting a fresh fortnight — fixing
+        // a typo is not republishing.
+        assertThat(edited.getStatus()).isEqualTo(ListingStatus.LIVE);
+    }
+
+    @Test
+    @DisplayName("editing does not restart the publication clock")
+    void editingKeepsTheOriginalPublication() throws Exception {
+        UUID id = publishedListing();
+        Listing before = listings.findById(id).orElseThrow();
+        java.time.Instant publishedAt = before.getPublishedAt();
+        java.time.Instant expiresAt = before.getExpiresAt();
+
+        mockMvc.perform(step(id, 3, owner)
+                .param("monthlyRent", "31000").param("deposit", "62000"));
+        // The button at the end of the edit flow posts publish; it must be a
+        // no-op on something already live.
+        mockMvc.perform(post("/list/" + id + "/publish")
+                .with(authentication(as(owner))).with(csrf()));
+
+        Listing after = listings.findById(id).orElseThrow();
+        assertThat(after.getPublishedAt()).isEqualTo(publishedAt);
+        assertThat(after.getExpiresAt()).isEqualTo(expiresAt);
+    }
+
+    @Test
+    @DisplayName("a published listing cannot be edited into an incomplete one")
+    void editCannotBreakALiveListing() throws Exception {
+        UUID id = publishedListing();
+
+        // Clearing the rent on a LIVE listing would violate
+        // listings_live_complete_ck. The application refuses FIRST, because a
+        // constraint violation marks the transaction rollback-only and cannot
+        // be caught and turned into a message — the request would die at commit
+        // with an error naming neither the field nor the page.
+        mockMvc.perform(step(id, 3, owner).param("monthlyRent", "").param("deposit", ""))
+                .andExpect(status().is3xxRedirection());
+
+        Listing unchanged = listings.findById(id).orElseThrow();
+        assertThat(unchanged.getMonthlyRentInr()).isEqualTo(32000);
+        assertThat(unchanged.getStatus()).isEqualTo(ListingStatus.LIVE);
+    }
+
+    @Test
+    @DisplayName("a draft may still be left incomplete — that is what a draft is")
+    void draftsMayBeIncomplete() throws Exception {
+        UUID id = startDraft(owner);
+
+        // The same POST that is refused on a live listing is fine here. The
+        // rule is about what may be PUBLISHED, not about what may be typed.
+        mockMvc.perform(step(id, 3, owner).param("monthlyRent", "").param("deposit", ""))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(listings.findById(id).orElseThrow().getMonthlyRentInr()).isNull();
+    }
+
+    @Test
+    @DisplayName("a stranger still cannot edit a published listing")
+    void publishedListingIsStillOwned() throws Exception {
+        UUID id = publishedListing();
+
+        // Widening which statuses are editable must not widen WHO may edit
+        // them. 404, not 403 — a 403 would confirm the listing exists.
+        mockMvc.perform(get("/list/" + id + "/3").with(authentication(as(stranger))))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(step(id, 3, stranger).param("monthlyRent", "1"))
+                .andExpect(status().isNotFound());
+
+        assertThat(listings.findById(id).orElseThrow().getMonthlyRentInr()).isEqualTo(32000);
     }
 
     // ---- The happy path ---------------------------------------------------
@@ -307,5 +394,50 @@ class WizardTest {
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
         javax.imageio.ImageIO.write(image, "jpeg", out);
         return out.toByteArray();
+    }
+
+    // ---- Rendering --------------------------------------------------------
+
+    /**
+     * Every wizard page must actually parse.
+     *
+     * <p>This test exists because of a bug it would have caught on day one.
+     * {@code step1.html} contained a malformed Thymeleaf expression — a nested
+     * {@code ${...}} inside a ternary branch — and nothing failed, because
+     * Thymeleaf compiles a template lazily on FIRST RENDER. Every other test
+     * here POSTed to the steps and read the redirect; none of them ever asked
+     * for the HTML. The template was broken for as long as it existed and the
+     * suite was green throughout.
+     *
+     * <p>The lesson generalises past this one file: a template is code that is
+     * only compiled when something looks at it, so "the handler works" and
+     * "the page renders" are two different claims and need two different
+     * assertions.
+     */
+    @Test
+    @DisplayName("every wizard step renders, empty and populated")
+    void everyStepRenders() throws Exception {
+        UUID id = startDraft(owner);
+
+        for (int n = 1; n <= 6; n++) {
+            mockMvc.perform(get("/list/" + id + "/" + n).with(authentication(as(owner))))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(get("/list/" + id + "/preview").with(authentication(as(owner))))
+                .andExpect(status().isOk());
+
+        // Now with data, which takes the other branch of every null check —
+        // in particular the dropped map pin, whose null guard was the bug.
+        mockMvc.perform(step(id, 1, owner)
+                .param("areaName", "Bandra West").param("station", "Bandra")
+                .param("walkMinutes", "8").param("floor", "7").param("hasLift", "true")
+                .param("latitude", "19.0596").param("longitude", "72.8295"));
+
+        for (int n = 1; n <= 6; n++) {
+            mockMvc.perform(get("/list/" + id + "/" + n).with(authentication(as(owner))))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(get("/list/" + id + "/preview").with(authentication(as(owner))))
+                .andExpect(status().isOk());
     }
 }

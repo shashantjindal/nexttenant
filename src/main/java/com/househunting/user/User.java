@@ -137,6 +137,17 @@ public class User {
         this.workEmailVerifiedAt = Instant.now();
     }
 
+    /**
+     * Takes the badge back off.
+     *
+     * <p>Needed because people change jobs. Without it the badge would be a
+     * one-way claim that outlives the fact it was asserting, and the address
+     * behind it would sit in the database forever with nothing to justify it.
+     */
+    public void unverifyWorkEmail() {
+        this.workEmailVerifiedAt = null;
+    }
+
     public void touchLastSeen() {
         this.lastSeenAt = Instant.now();
     }

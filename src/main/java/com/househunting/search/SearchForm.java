@@ -30,6 +30,7 @@ public record SearchForm(
         String rentMin,
         String rentMax,
         String moveInBy,
+        String flexibleMoveIn,
         List<String> config,
         List<String> room,
         List<String> furnishing,
@@ -56,7 +57,7 @@ public record SearchForm(
                 .station(blankToNull(station))
                 .rentMin(parseInt(rentMin))
                 .rentMax(parseInt(rentMax))
-                .moveInBy(parseDate(moveInBy))
+                .moveInBy(effectiveMoveInBy())
                 .configurations(parseEnums(config, Configuration.class))
                 .roomTypes(parseEnums(room, RoomType.class))
                 .furnishings(parseEnums(furnishing, Furnishing.class))
@@ -82,6 +83,7 @@ public record SearchForm(
         addIfPresent(parts, "rentMin", rentMin);
         addIfPresent(parts, "rentMax", rentMax);
         addIfPresent(parts, "moveInBy", moveInBy);
+        addIfPresent(parts, "flexibleMoveIn", flexibleMoveIn);
         config.forEach(c -> parts.add("config=" + encode(c)));
         room.forEach(r -> parts.add("room=" + encode(r)));
         furnishing.forEach(f -> parts.add("furnishing=" + encode(f)));
@@ -92,6 +94,60 @@ public record SearchForm(
         addIfPresent(parts, "radius", radius);
         addIfPresent(parts, "sort", sort);
         return String.join("&", parts);
+    }
+
+    /**
+     * How much later than the stated date a flexible searcher will look.
+     *
+     * <p>Six weeks. Short enough that the results are still about the move
+     * being planned; long enough to catch the notice periods that actually
+     * shift a handover — a month's notice given a fortnight late.
+     */
+    public static final int FLEXIBLE_GRACE_DAYS = 45;
+
+    /**
+     * Whether "I'm fine with later move-ins" is ticked.
+     *
+     * <p>NOT named {@code isFlexibleMoveIn}. That name collides with the record
+     * component {@code flexibleMoveIn} as far as property resolution is
+     * concerned: SpEL prefers an {@code isX()} boolean getter over the record
+     * accessor of the same name, so a template writing
+     * {@code ${form.flexibleMoveIn}} silently got the boolean instead of the
+     * string — and a hidden field meant to carry the raw parameter through
+     * rendered {@code value="true"}. It still worked, which is what makes it
+     * the bad kind of bug: harmless today, baffling the day somebody needs the
+     * actual submitted value.
+     *
+     * <p>A distinct name means the two are two things, and each is reached by
+     * asking for it.
+     */
+    public boolean wantsLaterMoveIns() {
+        return flexibleMoveIn != null && !flexibleMoveIn.isBlank();
+    }
+
+    /**
+     * The date the search actually filters on.
+     *
+     * <p><b>Why this lives here and not in SearchCriteria.</b> The hard filter
+     * is unchanged — still "available on or before some date". The checkbox
+     * does not add a new kind of condition; it changes which date that is. So
+     * it is a property of how the panel is read, which is this class's whole
+     * job, and the search layer stays exactly as it was. Adding a
+     * {@code flexible} flag to SearchCriteria would have pushed a presentation
+     * choice down into SQL, where the next person to read the query would have
+     * to work out what six weeks meant.
+     *
+     * <p>The trade-off, stated plainly: {@code criteria.moveInBy()} is no
+     * longer the date the visitor typed. Anything that wants to show the date
+     * back to them must read it from the form — which the panel does, because
+     * the panel is rendered from the form.
+     */
+    public LocalDate effectiveMoveInBy() {
+        LocalDate stated = parseDate(moveInBy);
+        if (stated == null) {
+            return null;
+        }
+        return wantsLaterMoveIns() ? stated.plusDays(FLEXIBLE_GRACE_DAYS) : stated;
     }
 
     /** True if the panel shows anything other than defaults. */

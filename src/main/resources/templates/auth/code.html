@@ -10,8 +10,6 @@
             Sent to <strong th:text="${maskedPhone}">+91 ***** 43210</strong>
         </p>
 
-        <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
-        <p class="auth__notice" th:if="${notice}" th:text="${notice}">notice</p>
 
         <form th:action="@{/login/code}" method="post" class="auth__form">
             <label class="field">

@@ -73,7 +73,14 @@ public final class GeoPoints {
     public static boolean isWithinMumbai(Point point) {
         double lat = latitudeOf(point);
         double lng = longitudeOf(point);
-        return lat >= 18.85 && lat <= 19.35
-                && lng >= 72.75 && lng <= 73.10;
+        // Widened in V10 to cover the metropolitan region rather than the
+        // island city: Panvel, Kalyan and Kharghar are all east of the old
+        // 73.10 edge, and a flat there was being rejected as "not in Mumbai".
+        //
+        // A wider box is still a useful check. The failures it exists to catch
+        // are gross ones — swapped axes put latitude near 72, a dropped minus
+        // sign lands in the southern hemisphere — and both remain far outside.
+        return lat >= 18.80 && lat <= 19.45
+                && lng >= 72.75 && lng <= 73.25;
     }
 }

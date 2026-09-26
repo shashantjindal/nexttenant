@@ -94,6 +94,25 @@ househunting:
     storage: ${HOUSEHUNTING_PHOTO_STORAGE:local}
     local-dir: ${HOUSEHUNTING_PHOTO_DIR:./data/photos}
 
+  maps:
+    # Google Maps JavaScript API key. Blank by default, which makes every map
+    # fall back to Leaflet with OpenStreetMap tiles — so a fresh clone runs
+    # with working maps and nothing to sign up for.
+    #
+    # To switch to Google:
+    #   1. Cloud Console -> enable "Maps JavaScript API" on a project with
+    #      billing attached. There is a monthly free allowance; past it, loads
+    #      are charged.
+    #   2. Create an API key.
+    #   3. RESTRICT IT. Application restrictions -> HTTP referrers, listing
+    #      http://localhost:8080/* and your real domain. API restrictions ->
+    #      Maps JavaScript API only. The key is visible in the page source
+    #      because the API runs in the browser; the referrer restriction, not
+    #      secrecy, is what stops a copied key being usable elsewhere.
+    #   4. Set GOOGLE_MAPS_API_KEY in the environment. Do not paste it here —
+    #      this file is committed.
+    google-api-key: ${GOOGLE_MAPS_API_KEY:}
+
   otp:
     # HMAC key for hashing codes. The default below is committed, therefore
     # public, therefore not a secret — OtpSecretCheck refuses to start with it

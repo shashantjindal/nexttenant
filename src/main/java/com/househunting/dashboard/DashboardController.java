@@ -47,7 +47,15 @@ public class DashboardController {
 
     @GetMapping("/shortlist")
     public String shortlist(@AuthenticationPrincipal AuthenticatedUser user, Model model) {
-        model.addAttribute("cards", shortlists.shortlistedListings(user.id()));
+        java.util.List<com.househunting.listing.dto.ListingCardDto> cards =
+                shortlists.shortlistedListings(user.id());
+        model.addAttribute("cards", cards);
+        // Every card on this page is saved by definition — that is what the
+        // page is — so the hearts are all filled, and clicking one unsaves it
+        // and drops it from the list on the next render.
+        model.addAttribute("savedIds", cards.stream()
+                .map(com.househunting.listing.dto.ListingCardDto::id)
+                .collect(java.util.stream.Collectors.toSet()));
         return "dashboard/shortlist";
     }
 

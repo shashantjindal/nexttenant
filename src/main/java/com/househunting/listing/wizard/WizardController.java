@@ -79,7 +79,22 @@ public class WizardController {
         switch (step) {
             case 1 -> {
                 model.addAttribute("areas", areas.findAllActive());
-                drafts.privateFor(id).ifPresent(p -> model.addAttribute("priv", p));
+                drafts.privateFor(id).ifPresent(p -> {
+                    model.addAttribute("priv", p);
+                    // The pin coordinates are unpacked HERE rather than in the
+                    // template. A template that calls T(GeoPoints).latitudeOf()
+                    // needs a null guard wrapped round it, and a null guard in
+                    // Thymeleaf is a ternary — which is exactly the construct
+                    // that was malformed and crashed this page. Putting two
+                    // plain Doubles on the model removes the need for any
+                    // expression at all.
+                    if (p.getExactLocation() != null) {
+                        model.addAttribute("pinLat",
+                                com.househunting.geo.GeoPoints.latitudeOf(p.getExactLocation()));
+                        model.addAttribute("pinLng",
+                                com.househunting.geo.GeoPoints.longitudeOf(p.getExactLocation()));
+                    }
+                });
             }
             case 2 -> {
                 model.addAttribute("configurations", Configuration.values());
@@ -273,6 +288,44 @@ public class WizardController {
         model.addAttribute("draft", draft);
         model.addAttribute("step", step);
         model.addAttribute("totalSteps", TOTAL_STEPS);
+
+        // The same six screens serve two jobs now: walking through a new
+        // listing, and editing one that is already published. The wording has
+        // to say which — "Continue" and a progress bar are right for the first
+        // and actively misleading for the second, where nothing is pending and
+        // every change has already been saved.
+        model.addAttribute("editing", drafts.isPublished(draft));
+    }
+
+    /**
+     * Turns a refused edit into a message on the page it came from.
+     *
+     * <p>A published listing may not be left incomplete — see
+     * {@code ListingDraftService.refuseIfLiveAndIncomplete}. When that fires
+     * the transaction has already rolled back, so nothing was saved and the
+     * database still holds the previous values.
+     *
+     * <p>One handler rather than a try/catch in each of the five step POSTs.
+     * Five copies of the same recovery is five chances to get one of them
+     * wrong, and the one that is wrong will be the step nobody edits often.
+     *
+     * <p>It redirects to the same URL instead of rendering the step directly,
+     * which matters more than it looks: each step's GET populates its own
+     * dropdowns — areas, enums, the photo list — and rendering the view from
+     * here would mean duplicating whichever of those the failed step needed.
+     * The error survives the redirect as a flash attribute, which the layout
+     * shows as a toast.
+     */
+    @org.springframework.web.bind.annotation.ExceptionHandler(
+            ListingDraftService.IncompleteListingException.class)
+    public String onIncompleteEdit(ListingDraftService.IncompleteListingException e,
+                                   jakarta.servlet.http.HttpServletRequest request,
+                                   org.springframework.web.servlet.mvc.support.RedirectAttributes redirect) {
+        redirect.addFlashAttribute("error",
+                "A published listing cannot be left without "
+                        + String.join(", ", e.getMissing())
+                        + ". That change was not saved.");
+        return "redirect:" + request.getRequestURI();
     }
 
     /** POST-redirect-GET, so a refresh does not resubmit the step. */

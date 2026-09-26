@@ -70,7 +70,13 @@
 
     <div class="wizard__nav">
         <a class="btn btn--ghost" th:href="@{/list/{id}/5(id=${draft.id})}">Back</a>
-        <a class="btn btn--primary" th:href="@{/list/{id}/preview(id=${draft.id})}">Preview listing</a>
+
+        <!--/* Editing something already published: there is nothing to preview,
+               it is already out there. Send them to the real page instead. */-->
+        <a class="btn btn--primary" th:unless="${editing}"
+           th:href="@{/list/{id}/preview(id=${draft.id})}">Preview listing</a>
+        <a class="btn btn--primary" th:if="${editing}"
+           th:href="@{/flats/{id}(id=${draft.id})}">View your listing</a>
     </div>
 </main>
 

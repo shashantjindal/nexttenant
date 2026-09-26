@@ -231,6 +231,22 @@ class ListingSearchTest {
     }
 
     @Test
+    @DisplayName("the radius keeps climbing rather than giving up and dropping filters")
+    void wideningClimbsPastTheOldCeiling() {
+        // 20m contains nothing anywhere in Mumbai. The ladder multiplies the
+        // ORIGINAL radius, and used to stop at 8x — so this would have reached
+        // 160m, found nothing, and fallen through to RELAXED: same place, every
+        // other filter discarded. Widening distance first is the design, and
+        // this asserts the climb actually goes somewhere.
+        SearchResults results = search.search(criteria()
+                .location(LAT, LNG, 20).build());
+
+        assertThat(results.outcome()).isEqualTo(SearchOutcome.WIDENED);
+        assertThat(results.widenedToMetres()).isGreaterThan(20 * 8);
+        assertThat(results.cards()).isNotEmpty();
+    }
+
+    @Test
     @DisplayName("an impossible filter falls back to dropping filters, not to nothing")
     void filtersAreRelaxed() {
         SearchResults results = search.search(criteria()

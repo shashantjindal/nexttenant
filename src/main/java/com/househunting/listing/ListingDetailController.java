@@ -25,12 +25,26 @@ public class ListingDetailController {
     private final ListingDetailService details;
     private final ListingRepository listings;
     private final com.househunting.shortlist.ShortlistService shortlists;
+    private final com.househunting.photo.PhotoService photos;
 
     public ListingDetailController(ListingDetailService details, ListingRepository listings,
-                                   com.househunting.shortlist.ShortlistService shortlists) {
+                                   com.househunting.shortlist.ShortlistService shortlists,
+                                   com.househunting.photo.PhotoService photos) {
         this.details = details;
         this.listings = listings;
         this.shortlists = shortlists;
+        this.photos = photos;
+    }
+
+    /**
+     * One image in the gallery.
+     *
+     * <p>Two URLs, not one: the strip shows thumbnails and the viewer shows the
+     * full image, and letting the browser downscale a 1600px JPEG into a 90px
+     * thumbnail wastes most of the bytes on a phone — which is where this page
+     * is mostly read.
+     */
+    public record GalleryPhoto(String full, String thumb) {
     }
 
     @GetMapping("/flats/{id}")
@@ -49,13 +63,33 @@ public class ListingDetailController {
 
         details.recordView(listingId);
 
+        // servableFor() returns only photos whose processing finished, so an
+        // image whose EXIF has not been discarded cannot appear here.
+        model.addAttribute("photos", photos.servableFor(listingId).stream()
+                .map(p -> new GalleryPhoto("/photos/" + p.getId(), "/photos/" + p.getId() + "/thumb"))
+                .toList());
+
+        List<ListingCardDto> similar = similarTo(listing);
         model.addAttribute("listing", listing);
-        model.addAttribute("similar", similarTo(listing));
+        model.addAttribute("similar", similar);
+        model.addAttribute("savedIds",
+                shortlists.savedAmong(viewer == null ? null : viewer.id(), similar));
         // Null when signed out, so the heart renders as a prompt to log in
         // rather than as a control that silently does nothing.
         model.addAttribute("shortlisted",
                 viewer != null && shortlists.isShortlisted(viewer.id(), listingId));
         model.addAttribute("signedIn", viewer != null);
+
+        // Owners see their own listing all the time — from the dashboard, from
+        // a shared link, after publishing. Offering them "Request contact" and
+        // then refusing with "This is your own listing" is a dead end the page
+        // could have avoided showing. Read from the entity rather than the DTO
+        // because the DTO carries no owner id, and it should not start to: it
+        // is the object handed to a public template.
+        model.addAttribute("isOwner", viewer != null
+                && listings.findById(listingId)
+                        .map(l -> l.isOwnedBy(viewer.id()))
+                        .orElse(false));
 
         return "listing/detail";
     }
@@ -76,8 +110,19 @@ public class ListingDetailController {
                 .stream()
                 .filter(other -> !other.getId().equals(listing.id()))
                 .limit(SIMILAR_COUNT)
-                .map(other -> ListingCardDto.from(other, null))
+                // Was passing null for the cover, so every "similar room" card
+                // rendered without a photo while the identical card on search
+                // had one. At most three lookups, after limit() — not thirty,
+                // which is why the limit comes first.
+                .map(other -> ListingCardDto.from(other, coverThumbUrl(other.getId())))
                 .toList();
+    }
+
+    private String coverThumbUrl(UUID listingId) {
+        return photos.servableFor(listingId).stream()
+                .findFirst()
+                .map(p -> "/photos/" + p.getId() + "/thumb")
+                .orElse(null);
     }
 
     /**

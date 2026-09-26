@@ -2,52 +2,120 @@
 <!--/*
   Shared listing card.
 
-  Used by the landing page and by search. Kept in one file because two copies
-  of a card drift within a fortnight: a badge gets added to one and not the
-  other, and nobody notices until a screenshot.
+  Used by the landing page, search, the shortlist and "similar rooms". Kept in
+  one file because two copies of a card drift within a fortnight: a badge gets
+  added to one and not the other, and nobody notices until a screenshot.
 
   Takes a ListingCardDto, which carries no phone number, address or exact
   location — so this markup could not leak one even if it tried.
+
+  ---------------------------------------------------------------------------
+  STRUCTURE, and why it changed.
+
+  This was one <a> with padding, and the cover photo bled out of that padding
+  using width: calc(100% + 40px) with -20px side margins. That arithmetic is
+  correct only while the card's padding is exactly half of --s-10; change
+  either token and the image sits off-centre, which is the misalignment in the
+  screenshot. Geometry that depends on two unrelated tokens agreeing is
+  geometry that will be wrong again.
+
+  Now the card is an <article> with NO padding, holding two blocks: __media,
+  which is full-bleed because it simply is the card's width, and __body, which
+  carries the padding. No calc, nothing to keep in sync.
+
+  The second reason for the change is the heart. A card used to be a single
+  <a>, and a <form> may not be nested inside an <a> — the HTML parser closes
+  the anchor when it meets the form, and the rest of the card falls outside
+  the link. So the anchor is now one element inside the card, stretched over
+  the whole card by .listing-card__link::after, with the heart sitting above
+  it on the z axis.
+
+  Parameters:
+    card  — a ListingCardDto
+    saved — whether the current viewer has this shortlisted. Passed in rather
+            than looked up here, because one query per page beats one per card
+            and only the calling page knows the whole set.
 */-->
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<a th:fragment="card(card)"
-   class="listing-card"
-   th:href="@{/flats/{id}(id=${card.id})}"
-   href="#">
+<article th:fragment="card(card, saved)" class="listing-card">
 
-    <!--/* The cover photo, when the listing has one. loading="lazy" matters on
-           a search page showing twenty cards: without it the browser fetches
-           every image immediately, including the eighteen below the fold. */-->
-    <img class="listing-card__photo" th:if="${card.coverPhotoUrl}"
-         th:src="${card.coverPhotoUrl}" alt="" loading="lazy">
+    <div class="listing-card__media">
+        <!--/* loading="lazy" matters on a search page showing twenty cards:
+               without it the browser fetches every image immediately,
+               including the eighteen below the fold. */-->
+        <img class="listing-card__photo" th:if="${card.coverPhotoUrl}"
+             th:src="${card.coverPhotoUrl}" alt="" loading="lazy" decoding="async">
 
-    <span class="listing-card__badge" th:if="${card.zeroBrokerage}">Zero brokerage</span>
+        <!--/* A listing with no photos still needs to occupy the same height,
+               or a grid row containing one collapses and every card beside it
+               jumps. */-->
+        <div class="listing-card__photo listing-card__photo--empty"
+             th:unless="${card.coverPhotoUrl}" aria-hidden="true">
+            <span>No photos yet</span>
+        </div>
 
-    <div class="listing-card__rent">
-        <span th:text="${card.rent}">&#8377;32,000</span>
-        <small>per month</small>
+        <span class="listing-card__badge" th:if="${card.zeroBrokerage}">Zero brokerage</span>
+
+        <!--/* The heart. A POST, because it changes state: a GET heart gets
+               triggered by link prefetching and quietly shortlists things
+               nobody clicked. */-->
+        <form class="listing-card__save" method="post" th:if="${currentUser != null}"
+              th:action="@{/listings/{id}/shortlist(id=${card.id})}">
+            <input type="hidden" name="returnTo" th:value="${currentPath}">
+            <button type="submit"
+                    th:classappend="${saved} ? ' listing-card__save-btn--on' : ''"
+                    class="listing-card__save-btn"
+                    th:attr="aria-pressed=${saved} ? 'true' : 'false',
+                             title=${saved} ? 'Remove from wishlist' : 'Save to wishlist'">
+                <span class="visually-hidden"
+                      th:text="${saved} ? 'Remove from wishlist' : 'Save to wishlist'">Save</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 21s-7.5-4.6-9.6-9A5.2 5.2 0 0 1 12 6.6 5.2 5.2 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z"/>
+                </svg>
+            </button>
+        </form>
+
+        <a class="listing-card__save listing-card__save-btn" th:if="${currentUser == null}"
+           th:href="@{/login}" title="Log in to save this room">
+            <span class="visually-hidden">Log in to save this room</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 21s-7.5-4.6-9.6-9A5.2 5.2 0 0 1 12 6.6 5.2 5.2 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z"/>
+            </svg>
+        </a>
     </div>
 
-    <p class="listing-card__total">
-        <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
-    </p>
+    <div class="listing-card__body">
+        <div class="listing-card__rent">
+            <span th:text="${card.rent}">&#8377;32,000</span>
+            <small>per month</small>
+        </div>
 
-    <div class="listing-card__where" th:text="${card.area}">Bandra West</div>
-    <div class="listing-card__station" th:if="${card.station != null}">
-        <span th:text="${card.walkTime}">8 min walk</span> from
-        <span th:text="${card.station}">Bandra</span>
-    </div>
+        <p class="listing-card__total">
+            <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
+        </p>
 
-    <div class="listing-card__tags">
-        <span class="tag" th:if="${card.configuration}" th:text="${card.configuration}">2 BHK</span>
-        <span class="tag" th:if="${card.roomType}" th:text="${card.roomType}">Private room</span>
-        <span class="tag" th:if="${card.furnishing}" th:text="${card.furnishing}">Semi-furnished</span>
-        <span class="listing-card__available" th:if="${card.availableFrom}"
-              th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
+        <!--/* The stretched link. Its text is the area name, so a screen
+               reader announces "Bandra West, link" rather than "link". */-->
+        <a class="listing-card__link" th:href="@{/flats/{id}(id=${card.id})}" href="#">
+            <span class="listing-card__where" th:text="${card.area}">Bandra West</span>
+        </a>
+
+        <div class="listing-card__station" th:if="${card.station != null}">
+            <span th:text="${card.walkTime}">8 min walk</span> from
+            <span th:text="${card.station}">Bandra</span>
+        </div>
+
+        <div class="listing-card__tags">
+            <span class="tag" th:if="${card.configuration}" th:text="${card.configuration}">2 BHK</span>
+            <span class="tag" th:if="${card.roomType}" th:text="${card.roomType}">Private room</span>
+            <span class="tag" th:if="${card.furnishing}" th:text="${card.furnishing}">Semi-furnished</span>
+            <span class="listing-card__available" th:if="${card.availableFrom}"
+                  th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
+        </div>
     </div>
-</a>
+</article>
 
 </body>
 </html>

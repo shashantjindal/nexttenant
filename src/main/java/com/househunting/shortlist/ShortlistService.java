@@ -98,6 +98,23 @@ public class ShortlistService {
                 .list());
     }
 
+    /**
+     * The same question, phrased the way a page asks it.
+     *
+     * <p>Every page that renders cards needs exactly this: "of the cards I am
+     * about to show, which are already saved?" Putting the id extraction here
+     * rather than in four controllers means four controllers cannot each get
+     * it subtly different, and a signed-out viewer (null userId) falls through
+     * to the empty set without any of them remembering to check.
+     */
+    @Transactional(readOnly = true)
+    public Set<UUID> savedAmong(UUID userId, List<ListingCardDto> cards) {
+        if (userId == null || cards == null || cards.isEmpty()) {
+            return Set.of();
+        }
+        return shortlistedAmong(userId, cards.stream().map(ListingCardDto::id).toList());
+    }
+
     @Transactional(readOnly = true)
     public boolean isShortlisted(UUID userId, UUID listingId) {
         if (userId == null) {

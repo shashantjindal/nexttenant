@@ -21,7 +21,7 @@
 
     <div class="card-grid" th:unless="${cards.isEmpty()}">
         <th:block th:each="card : ${cards}">
-            <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+            <th:block th:replace="~{fragments/listing-card :: card(${card}, ${savedIds != null and savedIds.contains(card.id)})}"></th:block>
         </th:block>
     </div>
 </main>

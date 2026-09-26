@@ -108,8 +108,11 @@ docker compose up -d
 .\gradlew bootRun
 ```
 
-The first start applies all migrations and seeds 308 listings across 22 Mumbai
-areas, which takes about twenty seconds. Later starts skip the seed.
+The first start applies all migrations and seeds about 390 listings across 98
+Mumbai localities, each with three or four photographs. That takes **a minute or
+two** — the photos are drawn and then pushed through the real upload pipeline,
+EXIF stripping and all, so a bug in it shows up in dev rather than waiting for a
+real upload. It logs its progress. Later starts skip the seed entirely.
 
 Then open <http://localhost:8080>.
 
@@ -208,6 +211,35 @@ Remove-Item -Recurse -Force .\data\photos
 | Gradle behaving strangely | `.\gradlew --stop`, then retry |
 | Template change not showing | Templates are served from `build\resources`. Stop and restart |
 | No OTP in the terminal | The 30-second resend cooldown. Try a different number |
+| No verification email | Same idea — it prints to the terminal under `EMAIL (not actually sent)` |
+| Maps look like OpenStreetMap | No Google key is set. See below |
+
+## Google Maps
+
+Maps fall back to Leaflet and OpenStreetMap when no key is configured, so a
+fresh clone runs with working maps and nothing to sign up for. To use Google:
+
+1. In Google Cloud Console, enable **Maps JavaScript API** on a project with
+   billing attached. There is a monthly free allowance; past it, map loads are
+   charged.
+2. Create an API key.
+3. **Restrict it.** Application restrictions → HTTP referrers, listing
+   `http://localhost:8080/*` and your real domain. API restrictions → Maps
+   JavaScript API only. The key is visible in the page source, because the API
+   runs in the browser — the referrer restriction, not secrecy, is what stops a
+   copied key working anywhere else.
+4. Set it in the environment rather than in `application.yml`, which is
+   committed:
+
+```
+$env:GOOGLE_MAPS_API_KEY = "your-key-here"
+.\gradlew bootRun
+```
+
+Two maps switch over: the approximate-location circle on a listing page, and
+the draggable pin in wizard step 1. The pin is the one that benefits most —
+somebody is looking for their own building, and Mumbai society names and
+building footprints are far better covered in Google's data.
 
 ## Useful commands
 
@@ -296,7 +328,7 @@ capability lives in one folder, so a feature can be read or removed as a unit.
 ```
 com.househunting
 ├── HouseHuntingApplication.java   scan root — do not move
-├── area/          the 22 Mumbai localities, and fuzzy autocomplete
+├── area/          the 98 Mumbai localities, and fuzzy autocomplete
 ├── auth/          phone OTP, sessions, security config
 ├── common/        Rupees, Hashing, RelativeTime
 ├── dashboard/     the signed-in dashboard
@@ -309,9 +341,11 @@ com.househunting
 ├── moderation/    reports, the two-strikes rule, admin queue
 ├── photo/         upload, EXIF stripping, storage
 ├── request/       interest requests and ContactRelease
+├── mail/          EmailSender, and the console one used in dev
 ├── search/        filters, keyset paging, radius widening
 ├── shortlist/     the heart on a card
-└── user/          User and UserPrivate
+├── user/          User and UserPrivate
+└── workemail/     work email verification, and the badge behind it
 ```
 
 Templates mirror the same shape under `src/main/resources/templates`.

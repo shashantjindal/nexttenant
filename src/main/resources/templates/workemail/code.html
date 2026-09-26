@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Enter your code — HouseHunting</title></head>
+<body>
+<main id="content" class="page-width auth">
+    <div class="auth__card">
+        <h1 class="auth__title">Enter the code</h1>
+        <p class="auth__sub">
+            Sent to <strong th:text="${maskedEmail}">a****a@corp.com</strong>.
+            It may take a minute, and corporate filters sometimes put it in spam.
+        </p>
+
+        <form th:action="@{/verify-work-email/code}" method="post" class="auth__form">
+            <label class="field">
+                <span class="field__label">Six-digit code</span>
+                <!--/* inputmode numeric brings up the number pad on a phone;
+                       autocomplete one-time-code lets iOS and Android offer
+                       the code straight from the notification. */-->
+                <input type="text"
+                       name="code"
+                       inputmode="numeric"
+                       autocomplete="one-time-code"
+                       pattern="[0-9]{6}"
+                       maxlength="6"
+                       placeholder="123456"
+                       required
+                       autofocus>
+            </label>
+
+            <button type="submit" class="btn btn--primary btn--block">Verify</button>
+        </form>
+
+        <form th:action="@{/verify-work-email/resend}" method="post" class="auth__form">
+            <button type="submit" class="btn btn--ghost btn--block">Send it again</button>
+        </form>
+
+        <p class="auth__fine">
+            <a th:href="@{/verify-work-email}">Use a different address</a>
+        </p>
+    </div>
+</main>
+</body>
+</html>

@@ -9,7 +9,6 @@
                        'This is exactly what someone looking sees',
                        'Your phone number is not on this page and never will be.')}"></div>
 
-    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
 
     <div class="notice notice--relaxed" th:if="${!missing.isEmpty()}">
         <p class="notice__title">Still needed before this can go live</p>

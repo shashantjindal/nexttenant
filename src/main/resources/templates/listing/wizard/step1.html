@@ -9,7 +9,6 @@
                        'Where is the flat?',
                        'We only ever show an approximate circle publicly.')}"></div>
 
-    <p class="auth__error" th:if="${error}" th:text="${error}" role="alert">error</p>
 
     <form method="post" th:action="@{/list/{id}/1(id=${draft.id})}" class="wizard__form">
 
@@ -58,19 +57,21 @@
               database trigger that recomputes the public jittered point. No Java
               code performs that calculation, so none can skip it.
             */-->
+            <!--/*
+              pinLat / pinLng are put on the model by WizardController, already
+              null-checked there. The Elvis operator ?: supplies the empty
+              string when they are absent — one expression inside one ${},
+              which is the only shape Thymeleaf accepts. A nested ${...} inside
+              a ternary branch is a parse error, and because templates compile
+              lazily on first render it is a parse error nothing notices until
+              somebody actually opens the page.
+            */-->
             <div id="pin-map"
                  class="wizard__map"
-                 th:attr="data-lat=${priv != null and priv.exactLocation != null}
-                                   ? ${T(com.househunting.geo.GeoPoints).latitudeOf(priv.exactLocation)} : '',
-                          data-lng=${priv != null and priv.exactLocation != null}
-                                   ? ${T(com.househunting.geo.GeoPoints).longitudeOf(priv.exactLocation)} : ''"></div>
+                 th:attr="data-lat=${pinLat} ?: '', data-lng=${pinLng} ?: ''"></div>
 
-            <input type="hidden" name="latitude" id="pin-lat"
-                   th:value="${priv != null and priv.exactLocation != null}
-                             ? ${T(com.househunting.geo.GeoPoints).latitudeOf(priv.exactLocation)} : ''">
-            <input type="hidden" name="longitude" id="pin-lng"
-                   th:value="${priv != null and priv.exactLocation != null}
-                             ? ${T(com.househunting.geo.GeoPoints).longitudeOf(priv.exactLocation)} : ''">
+            <input type="hidden" name="latitude" id="pin-lat" th:value="${pinLat} ?: ''">
+            <input type="hidden" name="longitude" id="pin-lng" th:value="${pinLng} ?: ''">
 
             <p class="wizard__hint" id="pin-status" aria-live="polite"></p>
         </fieldset>
@@ -116,9 +117,18 @@
         <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
     </form>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script th:src="@{/js/pin-map.js}" defer></script>
+    <!--/* Google when a key is configured, Leaflet otherwise. See detail.html
+           for why our script loads before the async Google loader. */-->
+    <th:block th:if="${maps.hasGoogle()}">
+        <script th:src="@{/js/pin-map-google.js}"></script>
+        <script th:src="${maps.loaderUrl('hhInitPinMap')}" async></script>
+    </th:block>
+
+    <th:block th:unless="${maps.hasGoogle()}">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+        <script th:src="@{/js/pin-map.js}" defer></script>
+    </th:block>
 </main>
 
 </body>

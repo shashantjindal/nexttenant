@@ -39,6 +39,19 @@
         </nav>
 
         <div class="site-header__actions">
+            <!--/* The wishlist gets its own header button rather than living
+                   inside the dashboard. Saving a room is the single most
+                   common thing anyone does here, and something people do
+                   before they are ready to do anything else — burying the
+                   place those saves land behind another page makes the heart
+                   feel like it did nothing. */-->
+            <a class="btn btn--ghost site-header__wishlist" th:if="${currentUser != null}"
+               th:href="@{/shortlist}" title="Your wishlist">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 21s-7.5-4.6-9.6-9A5.2 5.2 0 0 1 12 6.6 5.2 5.2 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z"/>
+                </svg>
+                <span>Wishlist</span>
+            </a>
             <a class="btn btn--ghost" th:if="${currentUser != null}"
                th:href="@{/requests}">Requests</a>
             <a class="btn btn--ghost" th:if="${currentUser == null}"
@@ -49,6 +62,44 @@
         </div>
     </div>
 </header>
+
+<!--/*
+  Toasts.
+
+  Every page used to carry its own <p class="auth__error"> near the top of its
+  <main>. Fourteen copies of the same two lines, each able to drift, and on a
+  long page the message sat above the fold while the button that produced it
+  was three screens down — so an action could be refused and look as though
+  nothing had happened at all.
+
+  One region in the layout, fed by the same `error` and `notice` model
+  attributes as before. Controllers did not change: RedirectAttributes flash
+  attributes land in the model, which is where this reads them.
+
+  Two deliberate differences between the two kinds:
+
+    role="alert" vs role="status" — alert interrupts a screen reader, status
+    waits for a pause. An error is worth interrupting for; "Request sent" is
+    not.
+
+    Errors do NOT auto-dismiss. A confirmation can disappear, because if it is
+    missed nothing is lost. An error that vanishes after four seconds is an
+    error somebody will never find out about, and they will retry the action
+    that failed.
+*/-->
+<div class="toasts" id="toasts">
+    <div class="toast toast--error" th:if="${error}" role="alert">
+        <span class="toast__icon" aria-hidden="true">!</span>
+        <p class="toast__text" th:text="${error}">Something went wrong</p>
+        <button type="button" class="toast__close" data-toast-close aria-label="Dismiss">&times;</button>
+    </div>
+
+    <div class="toast toast--notice" th:if="${notice}" role="status" data-toast-auto>
+        <span class="toast__icon" aria-hidden="true">&#10003;</span>
+        <p class="toast__text" th:text="${notice}">Done</p>
+        <button type="button" class="toast__close" data-toast-close aria-label="Dismiss">&times;</button>
+    </div>
+</div>
 
 <!--/* Replaced by the page's own <main>. */-->
 <main id="content" th:replace="${content}">
@@ -65,6 +116,8 @@
         </p>
     </div>
 </footer>
+
+<script th:src="@{/js/toasts.js}" src="/js/toasts.js" defer></script>
 
 </body>
 </html>

@@ -81,8 +81,67 @@ public class ListingDraftService {
     public Listing requireOwnedDraft(UUID listingId, UUID userId) {
         return listings.findById(listingId)
                 .filter(l -> l.isOwnedBy(userId))
-                .filter(l -> l.getStatus() == ListingStatus.DRAFT)
+                .filter(l -> EDITABLE.contains(l.getStatus()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Which statuses the wizard will open.
+     *
+     * <p>This used to be DRAFT alone, which is why "Edit" was a dead button on
+     * every published listing — the handler answered 404 for the owner's own
+     * live flat.
+     *
+     * <p>RENTED and TAKEN_DOWN are excluded, for different reasons. A rented
+     * listing is a finished story, and editing one would mean the numbers
+     * somebody agreed to can be rewritten afterwards. A taken-down listing may
+     * have been taken down by MODERATION — letting the owner edit and relist it
+     * would turn a removal into a speed bump.
+     */
+    private static final java.util.Set<ListingStatus> EDITABLE = java.util.EnumSet.of(
+            ListingStatus.DRAFT, ListingStatus.LIVE,
+            ListingStatus.PAUSED, ListingStatus.EXPIRED);
+
+    /**
+     * Refuses an edit that would leave a LIVE listing incomplete.
+     *
+     * <p>{@code listings_live_complete_ck} already forbids this at the database
+     * level, and that is the real guarantee. But hitting it is not an option:
+     * a constraint violation marks the transaction rollback-only, so it cannot
+     * be caught and turned into a message — the request dies at commit time
+     * with an error naming neither the field nor the page. (We learned exactly
+     * this in the work-email flow.)
+     *
+     * <p>So the application refuses first, by throwing its own exception before
+     * anything is flushed. The transaction rolls back cleanly, the edit is
+     * discarded, and the owner is told which field they just emptied.
+     *
+     * <p>Called after the change has been applied to the in-memory entity and
+     * before the save — that is the only point at which "what would this look
+     * like if I saved it?" can be answered.
+     */
+    /**
+     * Moves the wizard marker, but only while the listing is still a draft.
+     *
+     * <p>{@code wizardStep} means "where did you stop", and the dashboard shows
+     * it as "You stopped at step 3 of 6" on unfinished listings. Bumping it
+     * while somebody edits a published listing would be recording progress
+     * through a wizard they are not walking.
+     */
+    private void advanceIfDraft(Listing listing, int step) {
+        if (listing.getStatus() == ListingStatus.DRAFT) {
+            listing.advanceWizardTo(step);
+        }
+    }
+
+    private void refuseIfLiveAndIncomplete(Listing listing) {
+        if (listing.getStatus() != ListingStatus.LIVE) {
+            return;
+        }
+        List<String> missing = missingForPublication(listing);
+        if (!missing.isEmpty()) {
+            throw new IncompleteListingException(missing);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -108,7 +167,8 @@ public class ListingDraftService {
                              String societyName, String fullAddress) {
         Listing draft = requireOwnedDraft(listingId, userId);
         draft.setLocationDetails(areaName, station, walkMinutes, floor, hasLift);
-        draft.advanceWizardTo(2);
+        advanceIfDraft(draft, 2);
+        refuseIfLiveAndIncomplete(draft);
         listings.saveAndFlush(draft);
 
         ListingPrivate priv = listingPrivates.findById(listingId)
@@ -142,7 +202,8 @@ public class ListingDraftService {
         draft.setFlatDetails(configuration, roomType, handoverType, existingFlatmates, furnishing);
         draft.setAmenities(amenities);
         draft.setPerks(perks);
-        draft.advanceWizardTo(3);
+        advanceIfDraft(draft, 3);
+        refuseIfLiveAndIncomplete(draft);
         listings.save(draft);
     }
 
@@ -154,7 +215,8 @@ public class ListingDraftService {
                           boolean maintenanceIncluded, int brokerage, int buyout) {
         Listing draft = requireOwnedDraft(listingId, userId);
         draft.setMoney(rent, deposit, maintenance, maintenanceIncluded, brokerage, buyout);
-        draft.advanceWizardTo(4);
+        advanceIfDraft(draft, 4);
+        refuseIfLiveAndIncomplete(draft);
         listings.save(draft);
     }
 
@@ -170,7 +232,8 @@ public class ListingDraftService {
         Listing draft = requireOwnedDraft(listingId, userId);
         draft.setHandoverTerms(ownerInformed, depositPaidTo, registeredAgreement,
                 agreementHandling, noticePeriodDays, bachelorsAllowed);
-        draft.advanceWizardTo(5);
+        advanceIfDraft(draft, 5);
+        refuseIfLiveAndIncomplete(draft);
         listings.save(draft);
     }
 
@@ -187,7 +250,8 @@ public class ListingDraftService {
         draft.setFlatmateRules(ageMin, ageMax, gender, professions,
                 nonVeg, pets, smoking, guests, note);
         draft.setAvailableFrom(availableFrom);
-        draft.advanceWizardTo(6);
+        advanceIfDraft(draft, 6);
+        refuseIfLiveAndIncomplete(draft);
         listings.save(draft);
     }
 
@@ -212,8 +276,24 @@ public class ListingDraftService {
             throw new IncompleteListingException(missing);
         }
 
+        // Already live? The owner came here by editing a published listing and
+        // pressing the button at the end of the flow. Every step already saved
+        // itself, so there is nothing left to do — and calling publish() would
+        // reset published_at and expires_at, quietly moving the listing back to
+        // the top of "Newest" and giving it a fresh fortnight. Editing a typo
+        // is not republishing.
+        if (draft.getStatus() == ListingStatus.LIVE) {
+            return;
+        }
+
         draft.publish(clock.instant(), LIVE_DAYS);
         listings.save(draft);
+    }
+
+    /** Whether this listing is an edit of something already published. */
+    @Transactional(readOnly = true)
+    public boolean isPublished(Listing listing) {
+        return listing.getStatus() != ListingStatus.DRAFT;
     }
 
     /** What still needs filling in, phrased for a person rather than a log. */

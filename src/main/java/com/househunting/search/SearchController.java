@@ -2,11 +2,14 @@ package com.househunting.search;
 
 import com.househunting.area.Area;
 import com.househunting.area.AreaRepository;
+import com.househunting.auth.AuthenticatedUser;
 import com.househunting.common.Rupees;
 import com.househunting.listing.Configuration;
 import com.househunting.listing.FlatmateGender;
 import com.househunting.listing.Furnishing;
 import com.househunting.listing.RoomType;
+import com.househunting.shortlist.ShortlistService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,17 +33,24 @@ public class SearchController {
 
     private final ListingSearchService search;
     private final AreaRepository areas;
+    private final ShortlistService shortlists;
 
-    public SearchController(ListingSearchService search, AreaRepository areas) {
+    public SearchController(ListingSearchService search, AreaRepository areas,
+                            ShortlistService shortlists) {
         this.search = search;
         this.areas = areas;
+        this.shortlists = shortlists;
     }
 
     @GetMapping("/flats")
-    public String results(@ModelAttribute SearchForm form, Model model) {
+    public String results(@ModelAttribute SearchForm form,
+                          @AuthenticationPrincipal AuthenticatedUser user,
+                          Model model) {
         SearchCriteria criteria = form.toCriteria();
         SearchResults results = search.search(criteria);
 
+        model.addAttribute("savedIds",
+                shortlists.savedAmong(user == null ? null : user.id(), results.cards()));
         model.addAttribute("form", form);
         model.addAttribute("results", results);
         model.addAttribute("criteria", criteria);

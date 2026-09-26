@@ -17,6 +17,53 @@
         <!-- ================= Main column ================= -->
         <div class="detail__main">
 
+            <!--/* ================= Photos =================
+              Every frame is rendered into the page and stacked; the script
+              toggles which one carries --on. Rendering only the first and
+              swapping the src would be less markup, but it means every photo
+              after the first is fetched at the moment somebody clicks, which
+              on a Mumbai 4G connection is a visible wait on every tap.
+
+              There is no lightbox. The gallery is already the width of the
+              column on a phone, which is where this page is mostly read, and
+              a lightbox is a focus trap to build and get wrong.
+            */-->
+            <section class="gallery" th:if="${!photos.isEmpty()}" id="gallery"
+                     th:attr="data-count=${photos.size()}">
+                <div class="gallery__main">
+                    <div class="gallery__frame" th:each="photo, i : ${photos}"
+                         th:classappend="${i.first} ? ' gallery__frame--on' : ''"
+                         th:attr="data-index=${i.index}">
+                        <img th:src="${photo.full}" alt=""
+                             th:attr="loading=${i.first} ? 'eager' : 'lazy'" decoding="async">
+                    </div>
+
+                    <!--/* Hidden until the script runs: without JavaScript
+                           these buttons do nothing, and a control that does
+                           nothing is worse than no control. */-->
+                    <button type="button" class="gallery__nav gallery__nav--prev"
+                            hidden data-gallery-prev aria-label="Previous photo">&#8249;</button>
+                    <button type="button" class="gallery__nav gallery__nav--next"
+                            hidden data-gallery-next aria-label="Next photo">&#8250;</button>
+
+                    <span class="gallery__count" data-gallery-count
+                          th:text="'1 / ' + ${photos.size()}">1 / 5</span>
+                </div>
+
+                <div class="gallery__strip" th:if="${photos.size() > 1}">
+                    <button type="button" class="gallery__thumb" th:each="photo, i : ${photos}"
+                            th:classappend="${i.first} ? ' gallery__thumb--on' : ''"
+                            th:attr="data-gallery-go=${i.index},
+                                     aria-label='Photo ' + ${i.count}">
+                        <img th:src="${photo.thumb}" alt="" loading="lazy" decoding="async">
+                    </button>
+                </div>
+            </section>
+
+            <div class="gallery gallery--empty" th:if="${photos.isEmpty()}">
+                No photos on this listing yet
+            </div>
+
             <!-- Header -->
             <header class="detail__header">
                 <div class="detail__badges">
@@ -181,7 +228,7 @@
                 <h2 class="detail__heading">Similar rooms nearby</h2>
                 <div class="card-grid">
                     <th:block th:each="card : ${similar}">
-                        <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                        <th:block th:replace="~{fragments/listing-card :: card(${card}, ${savedIds != null and savedIds.contains(card.id)})}"></th:block>
                     </th:block>
                 </div>
             </section>
@@ -226,13 +273,28 @@
                     </div>
                 </dl>
 
-                <a class="btn btn--primary btn--block"
-                   th:href="@{/flats/{id}/request(id=${listing.id})}">Request contact</a>
+                <!--/* The owner gets the controls they actually want here.
+                       Showing them "Request contact" and then refusing with
+                       "This is your own listing" was a dead end the page had
+                       enough information to avoid. */-->
+                <th:block th:if="${isOwner}">
+                    <a class="btn btn--primary btn--block"
+                       th:href="@{/list/{id}/1(id=${listing.id})}">Edit this listing</a>
+                    <a class="btn btn--ghost btn--block" th:href="@{/dashboard}">Your dashboard</a>
+                    <p class="cost-card__note">
+                        This is your listing. This is how other people see it.
+                    </p>
+                </th:block>
 
-                <p class="cost-card__note">
-                    Your contact is shared only if
-                    <span th:text="${listing.leaverFirstName}">Priya</span> accepts.
-                </p>
+                <th:block th:unless="${isOwner}">
+                    <a class="btn btn--primary btn--block"
+                       th:href="@{/flats/{id}/request(id=${listing.id})}">Request contact</a>
+
+                    <p class="cost-card__note">
+                        Your contact is shared only if
+                        <span th:text="${listing.leaverFirstName}">Priya</span> accepts.
+                    </p>
+                </th:block>
             </div>
 
             <!-- The person leaving: PUBLIC profile only -->
@@ -264,9 +326,29 @@
         </aside>
     </div>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script th:src="@{/js/approx-map.js}" defer></script>
+    <!--/*
+      Map provider, chosen by whether a Google key is configured. See
+      MapsProperties: a missing key falls back to Leaflet rather than leaving
+      a blank rectangle, because a map that vanishes because of an unset
+      environment variable is much harder to diagnose than one that renders
+      the wrong tiles.
+
+      Our script is loaded WITHOUT async/defer and BEFORE the Google loader,
+      because the loader calls window.hhInitApproxMap the moment it is ready.
+      Deferring ours would be a race we would lose intermittently — the worst
+      kind of bug to be handed.
+    */-->
+    <th:block th:if="${maps.hasGoogle()}">
+        <script th:src="@{/js/approx-map-google.js}"></script>
+        <script th:src="${maps.loaderUrl('hhInitApproxMap')}" async></script>
+    </th:block>
+
+    <th:block th:unless="${maps.hasGoogle()}">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+        <script th:src="@{/js/approx-map.js}" defer></script>
+    </th:block>
+    <script th:src="@{/js/gallery.js}" defer></script>
 </main>
 
 </body>

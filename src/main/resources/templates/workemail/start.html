@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Verify your work email — HouseHunting</title></head>
+<body>
+<main id="content" class="page-width auth">
+    <div class="auth__card">
+
+        <!--/* Already done: show the state and the way out, not the form.
+               Re-offering a form for something already finished is how people
+               end up verifying twice and wondering which one counted. */-->
+        <th:block th:if="${verified}">
+            <h1 class="auth__title">Work email verified</h1>
+            <p class="auth__sub">
+                Your listings carry the badge. We never show the address itself —
+                only that you have one.
+            </p>
+            <p class="auth__sub" th:if="${maskedExisting}">
+                Verified at <strong th:text="${maskedExisting}">a****a@corp.com</strong>
+            </p>
+
+            <form th:action="@{/verify-work-email/remove}" method="post" class="auth__form">
+                <button type="submit" class="btn btn--secondary btn--block">
+                    Remove it
+                </button>
+            </form>
+            <p class="auth__fine">
+                Changed jobs? Remove this and verify the new address. The old one is
+                deleted, not kept.
+            </p>
+        </th:block>
+
+        <th:block th:unless="${verified}">
+            <h1 class="auth__title">Verify your work email</h1>
+            <p class="auth__sub">
+                It puts a "Work email verified" badge on your listings, which makes
+                people far likelier to reply.
+            </p>
+
+            <form th:action="@{/verify-work-email}" method="post" class="auth__form">
+                <label class="field">
+                    <span class="field__label">Work email address</span>
+                    <input type="email"
+                           name="email"
+                           th:value="${email}"
+                           inputmode="email"
+                           autocomplete="email"
+                           maxlength="254"
+                           placeholder="you@company.com"
+                           required
+                           autofocus>
+                </label>
+
+                <button type="submit" class="btn btn--primary btn--block">Send code</button>
+            </form>
+
+            <!--/* Both halves stated. "We show a badge" is the benefit; "we
+                   never show the address" is the thing somebody is actually
+                   worried about when asked for their work email on a flat
+                   site, and leaving it unsaid does not stop them worrying. */-->
+            <p class="auth__fine">
+                We send a six-digit code to that address. The address itself is never
+                shown to anybody — not on your listing, not to people who contact you.
+                Only the badge is public.
+            </p>
+            <p class="auth__fine">
+                It has to be a company address. A free one — Gmail, Outlook, Yahoo —
+                takes ninety seconds to create, so it would prove nothing.
+            </p>
+        </th:block>
+    </div>
+</main>
+</body>
+</html>
