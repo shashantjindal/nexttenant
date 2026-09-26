@@ -30,6 +30,7 @@
             <th:block th:each="a : ${form.area}">
                 <input type="hidden" name="area" th:value="${a}">
             </th:block>
+            <input type="hidden" name="nearby" value="1" th:if="${form.wantsNearbyAreas()}">
             <input type="hidden" name="rentMin" th:value="${form.rentMin}" th:if="${form.rentMin}">
             <input type="hidden" name="rentMax" th:value="${form.rentMax}" th:if="${form.rentMax}">
             <input type="hidden" name="moveInBy" th:value="${form.moveInBy}" th:if="${form.moveInBy}">
@@ -127,6 +128,34 @@
                             <small th:text="${a.sublocality} ? ${a.parentName} : ${a.nearestStation}">Bandra</small>
                         </label>
                     </div>
+
+                    <!--/*
+                      Widens the ticked areas to their neighbours — centre to
+                      centre, about one locality over. See
+                      AreaRepository.expandToNearby for what that measures and
+                      what it does not: a large locality whose centre is 3.5km
+                      away is excluded even where its near edge touches yours.
+
+                      The label says "nearby areas" rather than "within 3 km"
+                      for exactly that reason. Promising a distance we are not
+                      measuring would be worse than being vague.
+
+                      It sits INSIDE the Area fieldset because on its own it
+                      does nothing — with no area ticked there is nothing to be
+                      near, and the search layer treats it as inert rather than
+                      as "everywhere".
+                    */-->
+                    <label class="check check--inline">
+                        <input type="checkbox" name="nearby" value="1"
+                               th:checked="${form.wantsNearbyAreas()}">
+                        <span>Also show nearby areas</span>
+                    </label>
+                    <p class="filters__hint" th:if="${form.wantsNearbyAreas() and !form.area.isEmpty()}">
+                        Including areas about 3 km around the ones you picked.
+                    </p>
+                    <p class="filters__hint" th:if="${form.wantsNearbyAreas() and form.area.isEmpty()}">
+                        Pick an area above for this to do anything.
+                    </p>
                 </fieldset>
 
                 <!-- Rent -->

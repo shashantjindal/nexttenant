@@ -20,6 +20,16 @@ import java.util.List;
  */
 public record SearchCriteria(
         List<String> areas,
+
+        /*
+         * Whether the areas should be widened to their neighbours.
+         *
+         * It lives beside `areas` because it is not a filter of its own — on
+         * its own it does nothing at all. It changes what the area list MEANS,
+         * which is why the expansion happens once at the entrance to the
+         * search rather than inside the query.
+         */
+        boolean includeNearbyAreas,
         String station,
         Integer rentMin,
         Integer rentMax,
@@ -68,7 +78,7 @@ public record SearchCriteria(
 
     /** Empty criteria: browse everything, newest first. */
     public static SearchCriteria empty() {
-        return new SearchCriteria(null, null, null, null, null, null, null, null,
+        return new SearchCriteria(null, false, null, null, null, null, null, null, null,
                 null, null, null, null, null, SortOrder.NEWEST, null, DEFAULT_PAGE_SIZE);
     }
 
@@ -100,14 +110,14 @@ public record SearchCriteria(
 
     /** Used by the widen-the-radius fallback. */
     public SearchCriteria withRadius(int newRadiusMetres) {
-        return new SearchCriteria(areas, station, rentMin, rentMax, moveInBy,
+        return new SearchCriteria(areas, includeNearbyAreas, station, rentMin, rentMax, moveInBy,
                 configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,
                 latitude, longitude, newRadiusMetres, sort, cursor, maxResults);
     }
 
     /** Used by the last-resort fallback: keep the place, drop the narrowing. */
     public SearchCriteria locationOnly() {
-        return new SearchCriteria(null, null, null, null, null, null, null, null,
+        return new SearchCriteria(null, false, null, null, null, null, null, null, null,
                 null, null, latitude, longitude, radiusMetres, sort, null, maxResults);
     }
 
@@ -121,13 +131,13 @@ public record SearchCriteria(
      * business talking to the database.
      */
     public SearchCriteria withAreas(List<String> newAreas) {
-        return new SearchCriteria(newAreas, station, rentMin, rentMax, moveInBy,
+        return new SearchCriteria(newAreas, includeNearbyAreas, station, rentMin, rentMax, moveInBy,
                 configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,
                 latitude, longitude, radiusMetres, sort, cursor, maxResults);
     }
 
     public SearchCriteria withCursor(SearchCursor newCursor) {
-        return new SearchCriteria(areas, station, rentMin, rentMax, moveInBy,
+        return new SearchCriteria(areas, includeNearbyAreas, station, rentMin, rentMax, moveInBy,
                 configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,
                 latitude, longitude, radiusMetres, sort, newCursor, maxResults);
     }
@@ -139,6 +149,7 @@ public record SearchCriteria(
      */
     public static final class Builder {
         private List<String> areas;
+        private boolean includeNearbyAreas;
         private String station;
         private Integer rentMin;
         private Integer rentMax;
@@ -156,6 +167,7 @@ public record SearchCriteria(
         private int maxResults = DEFAULT_PAGE_SIZE;
 
         public Builder areas(List<String> v) { this.areas = v; return this; }
+        public Builder includeNearbyAreas(boolean v) { this.includeNearbyAreas = v; return this; }
         public Builder station(String v) { this.station = v; return this; }
         public Builder rentMin(Integer v) { this.rentMin = v; return this; }
         public Builder rentMax(Integer v) { this.rentMax = v; return this; }
@@ -187,7 +199,7 @@ public record SearchCriteria(
         }
 
         public SearchCriteria build() {
-            return new SearchCriteria(areas, station, rentMin, rentMax, moveInBy,
+            return new SearchCriteria(areas, includeNearbyAreas, station, rentMin, rentMax, moveInBy,
                     configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,
                     latitude, longitude, radiusMetres, sort, cursor, maxResults);
         }

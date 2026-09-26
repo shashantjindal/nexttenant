@@ -18,9 +18,40 @@ class SearchFormTest {
 
     /** Builds a form the way Spring's binder would, with everything else empty. */
     private static SearchForm form(String moveInBy, String flexible) {
-        return new SearchForm(List.of(), null, null, null, moveInBy, flexible,
+        return new SearchForm(List.of(), null, null, null, null, moveInBy, flexible,
                 List.of(), List.of(), List.of(), null, List.of(),
                 null, null, null, null, null);
+    }
+
+    /** As above, but for the area side of the panel. */
+    private static SearchForm areaForm(List<String> areas, String nearby) {
+        return new SearchForm(areas, nearby, null, null, null, null, null,
+                List.of(), List.of(), List.of(), null, List.of(),
+                null, null, null, null, null);
+    }
+
+    // ---- Nearby areas -----------------------------------------------------
+
+    @Test
+    @DisplayName("the nearby tick reaches the criteria")
+    void nearbyReachesTheCriteria() {
+        assertThat(areaForm(List.of("Chembur"), "1").toCriteria().includeNearbyAreas()).isTrue();
+        assertThat(areaForm(List.of("Chembur"), null).toCriteria().includeNearbyAreas()).isFalse();
+        // An unticked checkbox submits nothing; a hand-edited URL can leave it
+        // blank. Both mean the same thing.
+        assertThat(areaForm(List.of("Chembur"), "").wantsNearbyAreas()).isFalse();
+    }
+
+    @Test
+    @DisplayName("the nearby tick survives a sort change")
+    void nearbySurvivesTheQueryStringRoundTrip() {
+        // The sort control and "Load more" rebuild the query string from the
+        // form. A filter that dropped out of that rebuild would show up as
+        // "my results changed when I sorted them".
+        String query = areaForm(List.of("Chembur"), "1").toQueryStringWithoutCursor();
+
+        assertThat(query).contains("area=Chembur");
+        assertThat(query).contains("nearby=1");
     }
 
     // ---- The move-in date -------------------------------------------------

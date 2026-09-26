@@ -48,12 +48,42 @@ public class ListingSearchService {
     private static final int[] WIDENING_LADDER = {2, 4, 8, 16, 32, 64, 128, 256};
     private static final int MAX_RADIUS_METRES = 10_000;
 
-    /** Expands any locality in the criteria into itself plus its sublocalities. */
+    /**
+     * How far "nearby areas" reaches, centre to centre.
+     *
+     * <p>Three kilometres is roughly one locality over in Mumbai — Andheri
+     * West to Jogeshwari West, Chembur to Govandi. Far enough to be worth
+     * ticking, close enough that the results are still a plausible commute
+     * from the same station.
+     */
+    private static final int NEARBY_METRES = 3000;
+
+    /**
+     * Widens the area list before anything is queried.
+     *
+     * <p>Two expansions, and the ORDER matters. Nearby runs first, over the
+     * areas actually ticked, then children are added for the whole resulting
+     * set. The other way round would ask "what is near Diamond Garden" for
+     * every sublocality of every ticked locality — the same answer computed
+     * thirteen times, because a sublocality is measured from its parent's
+     * centre anyway.
+     *
+     * <p>Done once here rather than inside the fallback ladder below, which
+     * reuses these criteria several times over.
+     */
     private SearchCriteria criteria(SearchCriteria requested) {
         if (requested.areas().isEmpty()) {
+            // "Nearby" on its own is not a filter. With nothing ticked there
+            // is nothing to be near, and the checkbox is inert rather than
+            // quietly meaning "everywhere".
             return requested;
         }
-        return requested.withAreas(areas.expandWithChildren(requested.areas()));
+
+        List<String> names = requested.areas();
+        if (requested.includeNearbyAreas()) {
+            names = areas.expandToNearby(names, NEARBY_METRES);
+        }
+        return requested.withAreas(areas.expandWithChildren(names));
     }
 
     private final ListingSearchRepository repository;

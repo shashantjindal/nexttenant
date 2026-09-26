@@ -122,6 +122,77 @@ class AreaHierarchyTest {
         assertThat(expanded).doesNotHaveDuplicates();
     }
 
+    // ---- Nearby -----------------------------------------------------------
+
+    @Test
+    @DisplayName("nearby reaches the next locality over, and not across the city")
+    void nearbyReachesNeighbours() {
+        List<String> nearby = areas.expandToNearby(List.of("Andheri West"), 3000);
+
+        // Itself first — being near yourself is zero metres, and dropping the
+        // original would turn "also show nearby" into "show only nearby".
+        assertThat(nearby).contains("Andheri West");
+        // Its own sublocalities share its centre, so they are trivially inside
+        // any radius.
+        assertThat(nearby).contains("Versova", "Lokhandwala");
+        // And the localities genuinely beside it.
+        assertThat(nearby).contains("Jogeshwari West");
+
+        // Not the far side of Mumbai. This is the assertion that would catch a
+        // missing unit conversion — ST_DWithin on a geography takes METRES,
+        // and a version of this that passed 3000 degrees would return every
+        // area in the table.
+        assertThat(nearby).doesNotContain("Colaba", "Thane West", "Panvel");
+        assertThat(nearby.size()).isLessThan((int) areas.countActive());
+    }
+
+    @Test
+    @DisplayName("a wider radius reaches strictly more")
+    void nearbyGrowsWithTheRadius() {
+        List<String> near = areas.expandToNearby(List.of("Chembur"), 2000);
+        List<String> far = areas.expandToNearby(List.of("Chembur"), 8000);
+
+        // Monotonic, which is the property worth pinning: it is what makes the
+        // number on the checkbox a dial rather than a magic value.
+        assertThat(far).containsAll(near);
+        assertThat(far.size()).isGreaterThan(near.size());
+    }
+
+    @Test
+    @DisplayName("nearby measures from a sublocality's parent centre")
+    void nearbyUsesTheInheritedCentre() {
+        // Diamond Garden has no centre of its own, so "near Diamond Garden"
+        // has to mean "near Chembur". Without the COALESCE the centre would be
+        // null, ST_DWithin would return nothing, and the tick would silently
+        // narrow the search instead of widening it.
+        assertThat(areas.expandToNearby(List.of("Diamond Garden"), 3000))
+                .contains("Diamond Garden", "Chembur");
+    }
+
+    @Test
+    @DisplayName("several areas widen around each of them")
+    void nearbyHandlesAMultiSelect() {
+        List<String> both = areas.expandToNearby(List.of("Chembur", "Borivali West"), 3000);
+
+        // The reason this is an area-to-area query rather than a radius search
+        // over listings: the panel is a multi-select, and a radius takes one
+        // point.
+        assertThat(both).contains("Chembur", "Borivali West");
+        assertThat(both).containsAnyElementsOf(areas.expandToNearby(List.of("Chembur"), 3000));
+        assertThat(both).containsAnyElementsOf(areas.expandToNearby(List.of("Borivali West"), 3000));
+    }
+
+    @Test
+    @DisplayName("an unknown name narrows to nothing rather than widening to everything")
+    void nearbyToleratesRubbish() {
+        // The failure mode that matters: if a name matches no row, `picked` is
+        // empty, the join produces nothing, and an unguarded version would
+        // return an empty list — which downstream would read as "no area
+        // filter" and show every flat in Mumbai.
+        assertThat(areas.expandToNearby(List.of("Atlantis"), 3000)).containsExactly("Atlantis");
+        assertThat(areas.expandToNearby(List.of(), 3000)).isEmpty();
+    }
+
     // ---- The two-level rule -----------------------------------------------
 
     @Test

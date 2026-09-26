@@ -26,6 +26,7 @@ import java.util.Optional;
  */
 public record SearchForm(
         List<String> area,
+        String nearby,
         String station,
         String rentMin,
         String rentMax,
@@ -54,6 +55,7 @@ public record SearchForm(
     public SearchCriteria toCriteria() {
         return new SearchCriteria.Builder()
                 .areas(clean(area))
+                .includeNearbyAreas(wantsNearbyAreas())
                 .station(blankToNull(station))
                 .rentMin(parseInt(rentMin))
                 .rentMax(parseInt(rentMax))
@@ -79,6 +81,7 @@ public record SearchForm(
     public String toQueryStringWithoutCursor() {
         List<String> parts = new ArrayList<>();
         area.forEach(a -> parts.add("area=" + encode(a)));
+        addIfPresent(parts, "nearby", nearby);
         addIfPresent(parts, "station", station);
         addIfPresent(parts, "rentMin", rentMin);
         addIfPresent(parts, "rentMax", rentMax);
@@ -121,6 +124,19 @@ public record SearchForm(
      * <p>A distinct name means the two are two things, and each is reached by
      * asking for it.
      */
+    /**
+     * Whether "also show nearby areas" is ticked.
+     *
+     * <p>Named for what it asks rather than after the {@code nearby}
+     * parameter, for the same reason as {@link #wantsLaterMoveIns()} below: an
+     * {@code isNearby()} would shadow the record accessor in property
+     * resolution, and a template asking for {@code ${form.nearby}} would
+     * silently get the boolean instead of the submitted string.
+     */
+    public boolean wantsNearbyAreas() {
+        return nearby != null && !nearby.isBlank();
+    }
+
     public boolean wantsLaterMoveIns() {
         return flexibleMoveIn != null && !flexibleMoveIn.isBlank();
     }

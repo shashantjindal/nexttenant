@@ -168,6 +168,72 @@ public class AreaRepository {
     }
 
     /**
+     * Adds every area whose centre is within {@code metres} of a named one.
+     *
+     * <p><b>What this measures, and what it does not.</b> It compares area
+     * CENTRE to area CENTRE. "Andheri West is within 3km of Jogeshwari West"
+     * means their centres are — not that any particular flat is. A large
+     * locality whose centre sits 3.5km away is excluded even where its near
+     * edge touches yours, and a small one 2.9km away is included whole.
+     *
+     * <p>The alternative would be a true radius search over listing locations,
+     * which is more accurate and already exists in this codebase — it is what
+     * happens when somebody picks an area from the autocomplete instead of
+     * ticking checkboxes. It is not used here because it takes ONE point, and
+     * this panel lets you tick five areas at once. Answering "near any of
+     * these five" as a spatial query means five queries or a union; answering
+     * it as "which areas are near any of these" is one query over ~200 rows of
+     * reference data.
+     *
+     * <p>So the trade is deliberate: a coarser notion of nearby, in exchange
+     * for one that composes with a multi-select. The label on the checkbox
+     * says "nearby areas" rather than "within 3km of your flat" for exactly
+     * this reason.
+     *
+     * <p>The COALESCE mirrors {@link #SELECT}: a sublocality with no centre of
+     * its own is measured from its parent's.
+     */
+    public List<String> expandToNearby(List<String> names, int metres) {
+        if (names == null || names.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> nearby = jdbc.sql("""
+                        WITH resolved AS (
+                            SELECT a.name,
+                                   COALESCE(a.centroid, p.centroid) AS centre
+                            FROM areas a
+                            LEFT JOIN areas p ON p.id = a.parent_id
+                            WHERE a.active
+                        ),
+                        picked AS (
+                            SELECT centre FROM resolved WHERE lower(name) = ANY(:names)
+                        )
+                        SELECT DISTINCT r.name
+                        FROM resolved r
+                        JOIN picked pk ON ST_DWithin(r.centre, pk.centre, :metres)
+                        """)
+                .param("names", names.stream().map(String::toLowerCase).toArray(String[]::new))
+                .param("metres", metres)
+                .query(String.class)
+                .list();
+
+        if (nearby.isEmpty()) {
+            // No match in the table at all — an old bookmark, a hand-edited
+            // URL. Hand the names back unchanged so the search narrows to
+            // nothing rather than silently widening to everything.
+            return names;
+        }
+
+        // The caller's own areas first, then the neighbours. Order is not
+        // functionally important — it becomes one array in an = ANY — but a
+        // stable order keeps a logged query readable.
+        var combined = new java.util.LinkedHashSet<>(names);
+        combined.addAll(nearby);
+        return List.copyOf(combined);
+    }
+
+    /**
      * Fuzzy autocomplete over area, sublocality and station names.
      *
      * <p>{@code %} is pg_trgm's similarity operator: it compares the sets of
