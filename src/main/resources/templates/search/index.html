@@ -8,8 +8,13 @@
 
     <!-- ============ Header ============ -->
     <div class="search__head">
+        <!--/* "1 flats" is the sort of thing that reads as nobody having
+               looked at the page. The ternary is in the template rather than
+               a helper because this is presentation and nothing else needs
+               it — the moment a second place does, it becomes a method. */-->
         <h1 class="search__title">
-            <span th:text="${results.totalCount}">340</span> flats
+            <span th:text="${results.totalCount}">340</span>
+            <span th:text="${results.totalCount == 1} ? 'flat' : 'flats'">flats</span>
             <span class="search__range" th:if="${rentRangeLabel}" th:text="'· ' + ${rentRangeLabel}">· ₹15,000 – ₹35,000</span>
         </h1>
 
@@ -51,13 +56,27 @@
         <aside class="filters">
             <form method="get" th:action="@{/flats}" id="filter-form">
 
+                <!--/*
+                  "Show results" appears twice, top and bottom, and that is
+                  deliberate rather than untidy. The panel is taller than a
+                  screen once the area list is open, so whichever end you
+                  finish at, the button you need is the one you cannot see.
+                  Scrolling back to find it is the entire friction.
+
+                  Two submit buttons in one form both submit it; the first is
+                  also what Enter activates, which is the one at the top — the
+                  right answer for somebody who has just typed into a field.
+                */-->
                 <div class="filters__head">
                     <h2 class="filters__title">
                         Filters
                         <span class="filters__count" th:if="${filterCount > 0}"
                               th:text="${filterCount}">3</span>
                     </h2>
-                    <a class="filters__clear" th:href="@{/flats}" th:if="${filterCount > 0}">Clear all</a>
+                    <div class="filters__head-actions">
+                        <a class="filters__clear" th:href="@{/flats}" th:if="${filterCount > 0}">Clear all</a>
+                        <button type="submit" class="btn btn--primary btn--sm">Show results</button>
+                    </div>
                 </div>
 
                 <input type="hidden" name="sort" th:value="${criteria.sort}">
@@ -76,13 +95,36 @@
                         <p class="filters__hint" id="area-hint" aria-live="polite"></p>
                     </div>
 
-                    <div class="filters__scroll" id="area-list">
+                    <!--/*
+                      Every area is rendered, localities AND the sublocalities
+                      inside them — about two hundred labels. area-filter.js
+                      hides the sublocalities as soon as it runs, so the list
+                      opens as eighty-odd localities and typing "diamond"
+                      reveals Diamond Garden.
+
+                      Rendering them and hiding them, rather than fetching them
+                      when searched: the whole set is a few kilobytes of
+                      reference data that changes once a year, and a checkbox
+                      that arrives over the network is a checkbox that is
+                      missing when the network is slow.
+
+                      With JavaScript off nothing is hidden and all two hundred
+                      are listed — long, but every one of them works.
+                    */-->
+                    <div class="filters__scroll" id="area-list"
+                         th:attr="data-area-count=${allAreas.size()}">
                         <label class="check" th:each="a : ${allAreas}"
-                               th:attr="data-name=${a.name}, data-station=${a.nearestStation}">
+                               th:attr="data-name=${a.name},
+                                        data-station=${a.nearestStation},
+                                        data-parent=${a.parentName} ?: '',
+                                        data-sub=${a.sublocality} ? 'true' : 'false'">
                             <input type="checkbox" name="area" th:value="${a.name}"
                                    th:checked="${form.hasArea(a.name)}">
                             <span th:text="${a.name}">Bandra West</span>
-                            <small th:text="${a.nearestStation}">Bandra</small>
+                            <!--/* A sublocality's second line names its
+                                   locality, not its station: "Diamond Garden —
+                                   Chembur" is what tells you where it is. */-->
+                            <small th:text="${a.sublocality} ? ${a.parentName} : ${a.nearestStation}">Bandra</small>
                         </label>
                     </div>
                 </fieldset>

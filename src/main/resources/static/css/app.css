@@ -13,6 +13,26 @@
 
 /* ---- Utilities --------------------------------------------------------- */
 
+/*
+ * The hidden attribute, made to actually hide things.
+ *
+ * Browsers style [hidden] as display: none in the USER-AGENT stylesheet, which
+ * loses to any author rule that sets display — including the innocuous
+ * `.check { display: flex }` a few hundred lines below. The result is markup
+ * that says hidden, JavaScript that sets hidden, dev tools that report hidden,
+ * and an element sitting there in plain view.
+ *
+ * That is exactly what broke the area filter's search box: it correctly hid
+ * eighty-three of eighty-four labels and not one of them went away.
+ *
+ * !important is the right tool here and one of the few places it is. The
+ * attribute is not a style suggestion, it is a statement that the element is
+ * not currently relevant — there is no case where something else should win.
+ */
+[hidden] {
+    display: none !important;
+}
+
 .page-width {
     max-width: var(--page-max);
     margin-inline: auto;
@@ -1479,3 +1499,26 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     transform: scale(.97);
     transition: opacity .2s ease, transform .2s ease;
 }
+
+/* ---- Filter panel: the two "Show results" buttons ---------------------- */
+
+.filters__head-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    /* The heading can wrap on a narrow panel; the actions must not be pushed
+       off the edge with it. */
+    flex: 0 0 auto;
+}
+
+/* A compact primary, for the header. The full-width one at the foot of the
+   panel keeps the standard size — it is the end of a task, and a bigger
+   target is right there. */
+.btn--sm {
+    padding: 6px var(--s-3);
+    font-size: var(--t-xs);
+}
+
+/* A sublocality reads as belonging to the row above it rather than as a peer
+   of the localities around it. */
+.check[data-sub="true"] span { padding-left: var(--s-2); }

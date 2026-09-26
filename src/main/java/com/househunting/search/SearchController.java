@@ -58,7 +58,11 @@ public class SearchController {
 
         // The filter panel's options. Supplied from the enums so the panel
         // cannot drift out of step with what the database will accept.
-        model.addAttribute("allAreas", areas.findTopLevel());
+        // Everything, localities and sublocalities alike. The panel renders them
+        // all and area-filter.js hides the sublocalities until they are searched
+        // for — see the comment in search/index.html. findTopLevel() is still
+        // right for anywhere that wants a short list.
+        model.addAttribute("allAreas", areas.findAllActive());
         model.addAttribute("configurations", Configuration.values());
         model.addAttribute("roomTypes", RoomType.values());
         model.addAttribute("furnishings", Furnishing.values());

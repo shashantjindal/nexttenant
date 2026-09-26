@@ -11,6 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +50,76 @@ class SearchPageTest {
         assertThat(countCards(html)).isEqualTo(SearchCriteria.DEFAULT_PAGE_SIZE);
         assertThat(html).contains("flats");
         assertThat(html).contains("Approximate locations only");
+    }
+
+    @Test
+    @DisplayName("the area panel carries every area, marked so it can be filtered")
+    void areaPanelCarriesSublocalities() throws Exception {
+        String html = html("/flats");
+
+        // The whole list ships with the page and area-filter.js hides the
+        // sublocalities until they are searched for. If they were not here,
+        // typing "diamond" would find nothing however good the script was.
+        assertThat(html).contains("data-name=\"Chembur\"");
+        assertThat(html).contains("data-name=\"Diamond Garden\"");
+
+        // The flag the script filters on. A sublocality whose data-sub was
+        // wrong would sit in the default list, and eighty-four localities
+        // would become two hundred entries.
+        assertThat(html).contains("data-parent=\"Chembur\"");
+        assertThat(html).containsPattern("data-name=\"Diamond Garden\",?\\s*[^>]*data-sub=\"true\"");
+    }
+
+    @Test
+    @DisplayName("Show results appears at both ends of the filter panel")
+    void showResultsAppearsTwice() throws Exception {
+        String html = html("/flats");
+
+        // The panel is taller than a screen once the area list is open, so
+        // whichever end you finish at, the button you need is the one off
+        // screen. Counting them is crude but it is the thing that regresses:
+        // somebody tidies up "the duplicate button" and the complaint returns.
+        assertThat(html.split("Show results", -1).length - 1).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("the heading's number and its noun always agree")
+    void headingPluralisationAgrees() throws Exception {
+        // Asserting "no 1 flats" against a hardcoded area passes trivially the
+        // day the seed puts two listings there — green forever while never
+        // rendering the branch it exists to check. And the seed cannot be
+        // asked for an area with exactly one listing, because it gives every
+        // area four.
+        //
+        // So this asserts the RULE instead, across several searches: whatever
+        // number the heading shows, the word after it must match. That is true
+        // for every case, cannot pass vacuously, and catches the singular the
+        // moment any of these searches returns one.
+        for (String url : List.of(
+                "/flats",
+                "/flats?area=Chembur",
+                "/flats?rentMax=9000",
+                "/flats?rentMin=1&rentMax=2")) {
+
+            String heading = headingOf(html(url));
+            assertThat(heading).as(url).isNotNull();
+
+            long count = Long.parseLong(heading.replaceAll("\\D+", ""));
+            String noun = heading.contains("flats") ? "flats" : "flat";
+
+            assertThat(noun).as("%s showed %d", url, count)
+                    .isEqualTo(count == 1 ? "flat" : "flats");
+        }
+    }
+
+    /** The "340 flats" line, whitespace squashed. */
+    private static String headingOf(String html) {
+        Matcher m = Pattern.compile(
+                "<h1 class=\"search__title\">(.*?)</h1>", Pattern.DOTALL).matcher(html);
+        if (!m.find()) {
+            return null;
+        }
+        return m.group(1).replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
     }
 
     @Test
