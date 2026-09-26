@@ -31,7 +31,7 @@
             </div>
             <div>
                 <a class="btn btn--secondary" th:href="@{/list}" href="/list">List your flat</a>
-                <small class="hero__action-note">Find someone to take your place &middot; Free &middot; 6 minutes</small>
+                <small class="hero__action-note">Find someone to take your place </small>
             </div>
         </div>
     </section>
@@ -75,7 +75,7 @@
                      processes th:replace first, so putting both on one element
                      replaces it before the loop runs and renders nothing. */-->
                 <th:block th:each="card : ${cards}">
-                    <th:block th:replace="~{fragments/listing-card :: card(${card})}"></th:block>
+                    <th:block th:replace="~{fragments/listing-card :: card(${card}, ${savedIds != null and savedIds.contains(card.id)})}"></th:block>
                 </th:block>
         </div>
     </section>
