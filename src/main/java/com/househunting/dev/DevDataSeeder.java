@@ -167,19 +167,22 @@ public class DevDataSeeder implements CommandLineRunner {
     private final ListingPrivateRepository listingPrivates;
     private final AreaRepository areas;
     private final com.househunting.photo.PhotoService photos;
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     public DevDataSeeder(UserRepository users,
                          UserPrivateRepository userPrivates,
                          ListingRepository listings,
                          ListingPrivateRepository listingPrivates,
                          AreaRepository areas,
-                         com.househunting.photo.PhotoService photos) {
+                         com.househunting.photo.PhotoService photos,
+                         org.springframework.jdbc.core.simple.JdbcClient jdbc) {
         this.users = users;
         this.userPrivates = userPrivates;
         this.listings = listings;
         this.listingPrivates = listingPrivates;
         this.areas = areas;
         this.photos = photos;
+        this.jdbc = jdbc;
     }
 
     @Override
@@ -187,14 +190,31 @@ public class DevDataSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (listings.count() > 0) {
             log.info("Dev seed skipped: {} listings already present", listings.count());
+            // Analysed on the skip path too, not only after seeding. A database
+            // filled by an older build has no statistics for these tables, and
+            // the symptom is not an error — it is the planner quietly choosing
+            // worse plans than production would. Milliseconds on a few hundred
+            // rows, and it makes "the plan I see locally" mean something.
+            analyse();
             return;
         }
 
-        List<Area> allAreas = areas.findAllActive();
+        // Grouped rather than flat, so some listings can land in a sublocality.
+        //
+        // Looping over every area including sublocalities would put four
+        // listings in Diamond Garden and four in Chembur Colony — an even
+        // spread that is not how a neighbourhood looks, and that would make
+        // Chembur itself look empty. Looping over localities only would leave
+        // every sublocality unused, so nothing would demonstrate that ticking
+        // "Chembur" also finds a room in Diamond Garden.
+        //
+        // So: the quota stays per locality, and each listing in it picks either
+        // the locality or one of its sublocalities.
+        List<AreaRepository.AreaGroup> groups = areas.findGrouped();
         Random random = new Random(SEED);
         int phoneCounter = 1;
 
-        int total = allAreas.size() * LISTINGS_PER_AREA;
+        int total = groups.size() * LISTINGS_PER_AREA;
         long startedAt = System.currentTimeMillis();
 
         // Says how long this will take, because it takes a while — generating
@@ -204,21 +224,91 @@ public class DevDataSeeder implements CommandLineRunner {
         // for two minutes will assume the second.
         log.info("Seeding {} listings across {} areas, with photos. "
                         + "This takes a minute or two on a fresh database.",
-                total, allAreas.size());
+                total, groups.size());
 
         int done = 0;
-        for (Area area : allAreas) {
+        for (AreaRepository.AreaGroup group : groups) {
             for (int i = 0; i < LISTINGS_PER_AREA; i++) {
-                seedOne(area, random, phoneCounter++);
+                seedOne(placeWithin(group, random), random, phoneCounter++);
                 if (++done % 50 == 0) {
                     log.info("  seeded {}/{} listings", done, total);
                 }
             }
         }
 
+        analyse();
+
         log.info("Dev seed complete: {} live listings in {}s",
                 listings.countByStatus(com.househunting.listing.ListingStatus.LIVE),
                 (System.currentTimeMillis() - startedAt) / 1000);
+    }
+
+    /**
+     * Updates the planner's statistics for the tables just filled.
+     *
+     * <p>Seeding volume exists so that query plans mean something — with a
+     * dozen rows PostgreSQL ignores every index, because scanning one page
+     * beats any lookup. But the planner does not count rows; it reads
+     * STATISTICS, and those are gathered by autovacuum, which arrives minutes
+     * later and on its own schedule.
+     *
+     * <p>Until it does, a freshly seeded table looks empty to the planner. The
+     * test asserting that a radius search uses the GiST index failed for
+     * exactly this reason: the plan estimated one row and picked a cheaper
+     * index, seconds after 392 listings had been inserted. The data was there;
+     * the knowledge of it was not.
+     *
+     * <p>So: seed, then analyse, in that order, before anything asks for a
+     * plan.
+     */
+    private void analyse() {
+        log.info("Refreshing planner statistics");
+        jdbc.sql("ANALYZE listings, photos, listing_stats, users").update();
+    }
+
+    /**
+     * Picks the locality itself, or one of the places inside it.
+     *
+     * <p>Roughly half and half where sublocalities exist. Enough that a search
+     * for "Chembur" genuinely has to expand to find everything — which is the
+     * behaviour worth having in front of you while developing — without the
+     * locality name becoming rare.
+     *
+     * <p>The rent baseline is looked up by area NAME, and a sublocality has no
+     * entry in that map, so it falls through to the default. That is on
+     * purpose: inventing a separate rent level for Diamond Garden would be
+     * inventing a market.
+     */
+    /**
+     * The rent baseline for an area, falling back to its locality.
+     *
+     * <p>BASE_RENT is keyed by locality name and has no entry for a
+     * sublocality. Looking one up and taking the flat default would price a
+     * room in Central Park at Powai money and one in Pali Hill at Kurla money —
+     * rents that contradict the very area filter they are meant to make
+     * testable.
+     *
+     * <p>Inheriting the parent's number is right for a second reason: it is
+     * honest about what we know. Pali Hill genuinely is dearer than the rest of
+     * Bandra West, but we have no figure for it, and inventing one would be
+     * inventing a market rather than modelling it.
+     */
+    private static int baseRentFor(Area area) {
+        Integer own = BASE_RENT.get(area.name());
+        if (own != null) {
+            return own;
+        }
+        if (area.parentName() != null) {
+            return BASE_RENT.getOrDefault(area.parentName(), 22000);
+        }
+        return 22000;
+    }
+
+    private Area placeWithin(AreaRepository.AreaGroup group, Random random) {
+        if (!group.hasChildren() || random.nextBoolean()) {
+            return group.parent();
+        }
+        return group.children().get(random.nextInt(group.children().size()));
     }
 
     private void seedOne(Area area, Random random, int phoneCounter) {
@@ -244,7 +334,7 @@ public class DevDataSeeder implements CommandLineRunner {
 
         // Rent varies around the area's baseline, then by room type: a shared
         // room is cheaper than a master bedroom in the same flat.
-        int base = BASE_RENT.getOrDefault(area.name(), 22000);
+        int base = baseRentFor(area);
         double roomFactor = switch (roomType) {
             case SHARED_ROOM -> 0.62;
             case PRIVATE_ROOM -> 1.0;
@@ -282,8 +372,6 @@ public class DevDataSeeder implements CommandLineRunner {
                 (short) (random.nextInt(3) * 30),
                 random.nextInt(4) > 0);
         listing.setFlatmateRules(
-                (short) (20 + random.nextInt(5)),
-                (short) (28 + random.nextInt(10)),
                 randomOf(random, FlatmateGender.values()),
                 "Working professionals",
                 random.nextBoolean(), random.nextInt(4) == 0,

@@ -167,10 +167,6 @@
                         <dt class="terms__label">Flatmates staying on</dt>
                         <dd class="terms__value" th:text="${listing.existingFlatmates}">2</dd>
                     </div>
-                    <div class="terms__row" th:if="${listing.flatmateAgeRange}">
-                        <dt class="terms__label">Age range</dt>
-                        <dd class="terms__value" th:text="${listing.flatmateAgeRange}">22–32</dd>
-                    </div>
                     <div class="terms__row" th:if="${listing.flatmateProfessions}">
                         <dt class="terms__label">What they do</dt>
                         <dd class="terms__value" th:text="${listing.flatmateProfessions}">Working professionals</dd>
@@ -238,6 +234,8 @@
                        triggered by link prefetching and quietly shortlist
                        things nobody clicked. */-->
                 <form method="post" th:if="${signedIn}"
+                      data-shortlist data-shortlist-text
+                      data-saved-label="Saved &#9829;" data-unsaved-label="Save this room"
                       th:action="@{/listings/{id}/shortlist(id=${listing.id})}">
                     <input type="hidden" name="returnTo"
                            th:value="@{/flats/{id}(id=${listing.id})}">

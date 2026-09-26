@@ -48,14 +48,34 @@ public class ListingSearchService {
     private static final int[] WIDENING_LADDER = {2, 4, 8, 16, 32, 64, 128, 256};
     private static final int MAX_RADIUS_METRES = 10_000;
 
-    private final ListingSearchRepository repository;
+    /** Expands any locality in the criteria into itself plus its sublocalities. */
+    private SearchCriteria criteria(SearchCriteria requested) {
+        if (requested.areas().isEmpty()) {
+            return requested;
+        }
+        return requested.withAreas(areas.expandWithChildren(requested.areas()));
+    }
 
-    public ListingSearchService(ListingSearchRepository repository) {
+    private final ListingSearchRepository repository;
+    private final com.househunting.area.AreaRepository areas;
+
+    public ListingSearchService(ListingSearchRepository repository,
+                                com.househunting.area.AreaRepository areas) {
         this.repository = repository;
+        this.areas = areas;
     }
 
     @Transactional(readOnly = true)
-    public SearchResults search(SearchCriteria criteria) {
+    public SearchResults search(SearchCriteria requested) {
+        // Asking for a locality means asking for everything inside it. A
+        // listing in Diamond Garden stores "Diamond Garden", so without this a
+        // search for Chembur would miss it — and "the whole locality" would
+        // return fewer rooms than one street inside it.
+        //
+        // Done once, here, before any of the fallbacks below reuse the
+        // criteria. Doing it inside the ladder would re-expand on every rung.
+        SearchCriteria criteria = criteria(requested);
+
         // 1. As asked.
         List<SearchHit> hits = repository.search(criteria);
         if (!hits.isEmpty()) {

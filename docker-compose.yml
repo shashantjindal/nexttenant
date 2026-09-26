@@ -37,6 +37,12 @@ services:
       # Postgres internals to Git and to Windows filesystem permission issues.
       - db-data:/var/lib/postgresql/data
 
+      # Anything in this directory is executed by the postgres entrypoint the
+      # FIRST time the volume is created, and never again. Adding a script
+      # later therefore does nothing until `docker compose down -v`, which is
+      # the usual reason one of these appears not to work.
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+
     healthcheck:
       # A postgres container reports "running" several seconds before it accepts
       # connections. Without this, the app races the database on startup and

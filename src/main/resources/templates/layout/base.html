@@ -24,7 +24,12 @@
     <link rel="stylesheet" th:href="@{/css/tokens.css}" href="/css/tokens.css">
     <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
 </head>
-<body>
+<!--/* data-wishlist-page is present only on /shortlist. shortlist.js uses it
+       to drop a card when its heart is cleared, because on that page an
+       unsaved room no longer belongs. Set from the model rather than sniffed
+       from location.pathname in JavaScript, so the route lives in one place.
+       th:attr removes the attribute entirely when the value is null. */-->
+<body th:attr="data-wishlist-page=${wishlistPage}">
 
 <!--/* Keyboard users land here first; lets them jump past the nav. */-->
 <a class="skip-link" href="#content">Skip to content</a>
@@ -51,6 +56,12 @@
                     <path d="M12 21s-7.5-4.6-9.6-9A5.2 5.2 0 0 1 12 6.6 5.2 5.2 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z"/>
                 </svg>
                 <span>Wishlist</span>
+                <!--/* Updated in place by shortlist.js after a heart is
+                       toggled, so the count never disagrees with what the
+                       hearts on the page are showing. */-->
+                <span class="site-header__count" data-wishlist-count
+                      th:hidden="${wishlistCount == null or wishlistCount == 0}"
+                      th:text="${wishlistCount != null and wishlistCount > 0} ? ${wishlistCount} : ''">3</span>
             </a>
             <a class="btn btn--ghost" th:if="${currentUser != null}"
                th:href="@{/requests}">Requests</a>
@@ -118,6 +129,8 @@
 </footer>
 
 <script th:src="@{/js/toasts.js}" src="/js/toasts.js" defer></script>
+<script th:src="@{/js/shortlist.js}" src="/js/shortlist.js" defer></script>
+<script th:src="@{/js/forms.js}" src="/js/forms.js" defer></script>
 
 </body>
 </html>

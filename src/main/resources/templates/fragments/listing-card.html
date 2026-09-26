@@ -61,7 +61,11 @@
         <!--/* The heart. A POST, because it changes state: a GET heart gets
                triggered by link prefetching and quietly shortlists things
                nobody clicked. */-->
-        <form class="listing-card__save" method="post" th:if="${currentUser != null}"
+        <!--/* data-shortlist is what shortlist.js looks for. The form works
+               without it and without the script — it just reloads the page,
+               which is what it used to do and what this avoids. */-->
+        <form class="listing-card__save" method="post" data-shortlist
+              th:if="${currentUser != null}"
               th:action="@{/listings/{id}/shortlist(id=${card.id})}">
             <input type="hidden" name="returnTo" th:value="${currentPath}">
             <button type="submit"

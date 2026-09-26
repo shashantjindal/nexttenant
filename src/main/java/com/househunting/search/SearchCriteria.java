@@ -111,6 +111,21 @@ public record SearchCriteria(
                 null, null, latitude, longitude, radiusMetres, sort, null, maxResults);
     }
 
+    /**
+     * Replaces the area list, for the sublocality expansion.
+     *
+     * <p>Ticking "Chembur" has to match listings that name a place inside
+     * Chembur, and the listing stores "Diamond Garden". The expansion happens
+     * in {@code ListingSearchService}, where a repository is available, rather
+     * than in {@code SearchForm}, which is a pure reading of the URL and has no
+     * business talking to the database.
+     */
+    public SearchCriteria withAreas(List<String> newAreas) {
+        return new SearchCriteria(newAreas, station, rentMin, rentMax, moveInBy,
+                configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,
+                latitude, longitude, radiusMetres, sort, cursor, maxResults);
+    }
+
     public SearchCriteria withCursor(SearchCursor newCursor) {
         return new SearchCriteria(areas, station, rentMin, rentMax, moveInBy,
                 configurations, roomTypes, furnishings, flatmateGender, mustHaveAmenities,

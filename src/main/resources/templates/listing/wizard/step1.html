@@ -17,14 +17,46 @@
 
             <label class="field">
                 <span class="field__label">Area</span>
+                <!--/*
+                  Grouped, so somebody in Chembur can pick Diamond Garden
+                  rather than settling for "Chembur". The locality itself is
+                  the first option in its own group — most people want it, and
+                  a group header in HTML is not selectable.
+
+                  The grouping is computed in AreaRepository.findGrouped()
+                  rather than by comparing each row with the previous one here:
+                  an <optgroup> has to WRAP its options, and opening and
+                  closing tags from inside a loop produces invalid HTML the day
+                  somebody changes the sort.
+                */-->
                 <select name="areaName" required>
                     <option value="">Choose an area</option>
-                    <option th:each="a : ${areas}"
-                            th:value="${a.name}"
-                            th:text="${a.name} + ' · ' + ${a.nearestStation} + ' station'"
-                            th:selected="${a.name == draft.areaName}"
-                            th:attr="data-lat=${a.latitude}, data-lng=${a.longitude}">Bandra West</option>
+
+                    <th:block th:each="g : ${areaGroups}">
+                        <!--/* No sublocalities: a plain option, no group. */-->
+                        <option th:unless="${g.hasChildren()}"
+                                th:value="${g.parent.name}"
+                                th:text="${g.parent.name} + ' · ' + ${g.parent.nearestStation} + ' station'"
+                                th:selected="${g.parent.name == draft.areaName}"
+                                th:attr="data-lat=${g.parent.latitude}, data-lng=${g.parent.longitude}">Bandra West</option>
+
+                        <optgroup th:if="${g.hasChildren()}" th:label="${g.parent.name}">
+                            <option th:value="${g.parent.name}"
+                                    th:text="'All of ' + ${g.parent.name}"
+                                    th:selected="${g.parent.name == draft.areaName}"
+                                    th:attr="data-lat=${g.parent.latitude}, data-lng=${g.parent.longitude}">All of Chembur</option>
+                            <option th:each="c : ${g.children}"
+                                    th:value="${c.name}"
+                                    th:text="${c.name}"
+                                    th:selected="${c.name == draft.areaName}"
+                                    th:attr="data-lat=${c.latitude}, data-lng=${c.longitude}">Diamond Garden</option>
+                        </optgroup>
+                    </th:block>
                 </select>
+                <p class="wizard__hint">
+                    Cannot find yours? Pick the closest locality — the pin below is
+                    what actually places the flat.
+                </p>
             </label>
 
             <div class="field-row">

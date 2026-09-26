@@ -241,13 +241,12 @@ public class ListingDraftService {
 
     @Transactional
     public void saveRules(UUID listingId, UUID userId,
-                          Short ageMin, Short ageMax,
                           com.househunting.listing.FlatmateGender gender,
                           String professions,
                           Boolean nonVeg, Boolean pets, Boolean smoking, Boolean guests,
                           String note, java.time.LocalDate availableFrom) {
         Listing draft = requireOwnedDraft(listingId, userId);
-        draft.setFlatmateRules(ageMin, ageMax, gender, professions,
+        draft.setFlatmateRules(gender, professions,
                 nonVeg, pets, smoking, guests, note);
         draft.setAvailableFrom(availableFrom);
         advanceIfDraft(draft, 6);

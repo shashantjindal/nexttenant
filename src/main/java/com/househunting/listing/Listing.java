@@ -168,12 +168,6 @@ public class Listing {
 
     // ---- Flatmates and house rules ---------------------------------------
 
-    @Column(name = "flatmate_age_min")
-    private Short flatmateAgeMin;
-
-    @Column(name = "flatmate_age_max")
-    private Short flatmateAgeMax;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "flatmate_gender", length = 20)
     private FlatmateGender flatmateGender;
@@ -439,14 +433,6 @@ public class Listing {
         return bachelorsAllowed;
     }
 
-    public Short getFlatmateAgeMin() {
-        return flatmateAgeMin;
-    }
-
-    public Short getFlatmateAgeMax() {
-        return flatmateAgeMax;
-    }
-
     public FlatmateGender getFlatmateGender() {
         return flatmateGender;
     }
@@ -555,11 +541,9 @@ public class Listing {
         this.bachelorsAllowed = bachelorsAllowed;
     }
 
-    public void setFlatmateRules(Short ageMin, Short ageMax, FlatmateGender gender,
+    public void setFlatmateRules(FlatmateGender gender,
                                  String professions, Boolean nonVeg, Boolean pets,
                                  Boolean smoking, Boolean guests, String note) {
-        this.flatmateAgeMin = ageMin;
-        this.flatmateAgeMax = ageMax;
         this.flatmateGender = gender;
         this.flatmateProfessions = professions;
         this.nonVegAllowed = nonVeg;

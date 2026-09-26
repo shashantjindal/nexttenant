@@ -1,0 +1,16 @@
+-- Runs once, when the data volume is first created, as the househunting user.
+--
+-- A SECOND database, for the test suite.
+--
+-- Until this existed, `./gradlew test` wrote into the development database.
+-- That is not theoretical tidiness: WizardTest publishes real listings with
+-- 60x40 all-black fixture images, and those listings then appeared in search
+-- on localhost:8080 as live rooms with black photographs. Hours can go into
+-- "why is this image black" before anybody remembers the tests share the
+-- database.
+--
+-- A separate database, not a separate schema: PostGIS, pg_trgm and pgcrypto
+-- are installed per database by V1, and sharing them across schemas means
+-- search_path juggling in every connection. Two databases cost one line here
+-- and nothing at all afterwards.
+CREATE DATABASE househunting_test OWNER househunting;

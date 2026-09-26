@@ -1471,3 +1471,11 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .profile-card__action { margin: var(--s-4) 0 0; }
 
 .wizard__step--editing { color: var(--c-gold-ink); font-weight: 600; }
+
+/* A card being removed from the wishlist, on its way out. Matches the 200ms
+   in shortlist.js — if the two drift, the card vanishes mid-fade. */
+.listing-card--leaving {
+    opacity: 0;
+    transform: scale(.97);
+    transition: opacity .2s ease, transform .2s ease;
+}

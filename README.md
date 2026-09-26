@@ -108,8 +108,8 @@ docker compose up -d
 .\gradlew bootRun
 ```
 
-The first start applies all migrations and seeds about 390 listings across 98
-Mumbai localities, each with three or four photographs. That takes **a minute or
+The first start applies all migrations and seeds about 340 listings across 84
+Mumbai localities (and the sublocalities inside them), each with three or four photographs. That takes **a minute or
 two** — the photos are drawn and then pushed through the real upload pipeline,
 EXIF stripping and all, so a bug in it shows up in dev rather than waiting for a
 real upload. It logs its progress. Later starts skip the seed entirely.
@@ -241,6 +241,51 @@ the draggable pin in wizard step 1. The pin is the one that benefits most —
 somebody is looking for their own building, and Mumbai society names and
 building footprints are far better covered in Google's data.
 
+## Two databases
+
+The Postgres container holds two:
+
+| | Used by | Reset with |
+|---|---|---|
+| `househunting` | `.\gradlew bootRun` | `docker compose down -v` |
+| `househunting_test` | `.\gradlew test` | drop and recreate it (below) |
+
+They used to be one, and the tests wrote into the database you browse.
+`WizardTest` publishes real listings with 60×40 all-black fixture images, so
+those turned up in search on localhost:8080 as live rooms with black
+photographs — which takes a while to recognise as test data rather than a
+broken image pipeline.
+
+`househunting_test` is created by `docker/initdb/01-test-database.sql`, which
+Postgres runs **only when the data volume is first created**. If you already
+had a volume before this existed, `docker compose down -v` once.
+
+To reset just the test database without touching your dev data:
+
+```bash
+docker compose exec db psql -U househunting -d postgres -c "DROP DATABASE IF EXISTS househunting_test" -c "CREATE DATABASE househunting_test OWNER househunting"
+```
+
+The next `.\gradlew test` re-migrates and re-seeds it, which takes a couple of
+minutes once. After that it is reused.
+
+## Areas, and how deep they go
+
+`areas` is two levels: a **locality** (Chembur) and the **sublocalities**
+inside it (Diamond Garden, Chedda Nagar). A trigger enforces exactly two —
+there is no third.
+
+Filtering by a locality includes everything inside it, so a search for Chembur
+finds a room listed in Diamond Garden. The expansion happens in
+`AreaRepository.expandWithChildren`, not in SQL, so the search query still
+filters on one array of names.
+
+**Sublocality centroids are mostly null**, and fall back to the parent's. We
+can name them; we cannot geocode a hundred of them without a data source, and
+inventing coordinates would silently return the wrong rooms with nothing to
+flag it. Filling the column in is a pure data task — nothing in the code has
+to change.
+
 ## Useful commands
 
 PowerShell, from the project root.
@@ -328,7 +373,7 @@ capability lives in one folder, so a feature can be read or removed as a unit.
 ```
 com.househunting
 ├── HouseHuntingApplication.java   scan root — do not move
-├── area/          the 98 Mumbai localities, and fuzzy autocomplete
+├── area/          Mumbai localities and sublocalities, and fuzzy autocomplete
 ├── auth/          phone OTP, sessions, security config
 ├── common/        Rupees, Hashing, RelativeTime
 ├── dashboard/     the signed-in dashboard

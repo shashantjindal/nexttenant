@@ -141,7 +141,6 @@ public class ListingDetailService {
 
                 handoverTerms(l),
 
-                ageRange(l.getFlatmateAgeMin(), l.getFlatmateAgeMax()),
                 label(l.getFlatmateGender()),
                 l.getFlatmateProfessions(),
                 houseRules(l),
@@ -265,12 +264,6 @@ public class ListingDetailService {
         return floor + suffix + " floor";
     }
 
-    private static String ageRange(Short min, Short max) {
-        if (min == null || max == null) {
-            return null;
-        }
-        return min + "–" + max;
-    }
 
     /** UPPER_SNAKE codes become "Washing machine" for display. */
     private static List<String> prettify(List<String> codes) {

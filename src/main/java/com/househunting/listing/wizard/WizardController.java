@@ -78,7 +78,7 @@ public class WizardController {
 
         switch (step) {
             case 1 -> {
-                model.addAttribute("areas", areas.findAllActive());
+                model.addAttribute("areaGroups", areas.findGrouped());
                 drafts.privateFor(id).ifPresent(p -> {
                     model.addAttribute("priv", p);
                     // The pin coordinates are unpacked HERE rather than in the
@@ -161,7 +161,7 @@ public class WizardController {
         } catch (IllegalArgumentException e) {
             Listing draft = drafts.requireOwnedDraft(id, user.id());
             addCommon(model, draft, 1);
-            model.addAttribute("areas", areas.findAllActive());
+            model.addAttribute("areaGroups", areas.findGrouped());
             model.addAttribute("error", e.getMessage());
             return "listing/wizard/step1";
         }
@@ -226,8 +226,7 @@ public class WizardController {
     @PostMapping("/list/{id}/5")
     public String saveRules(@PathVariable UUID id,
                             @AuthenticationPrincipal AuthenticatedUser user,
-                            @RequestParam(required = false) Short flatmateAgeMin,
-                            @RequestParam(required = false) Short flatmateAgeMax,
+
                             @RequestParam(required = false) FlatmateGender flatmateGender,
                             @RequestParam(required = false) String flatmateProfessions,
                             @RequestParam(required = false) Boolean nonVegAllowed,
@@ -236,7 +235,7 @@ public class WizardController {
                             @RequestParam(required = false) Boolean guestsAllowed,
                             @RequestParam(required = false) String houseRulesNote,
                             @RequestParam(required = false) String availableFrom) {
-        drafts.saveRules(id, user.id(), flatmateAgeMin, flatmateAgeMax, flatmateGender,
+        drafts.saveRules(id, user.id(), flatmateGender,
                 flatmateProfessions, nonVegAllowed, petsAllowed, smokingAllowed,
                 guestsAllowed, houseRulesNote, parseDate(availableFrom));
         return next(id, 6);

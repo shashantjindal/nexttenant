@@ -58,7 +58,6 @@ public record ListingDetailDto(
         List<Term> terms,
 
         // ---- Flatmates and rules ----
-        String flatmateAgeRange,
         String flatmateGender,
         String flatmateProfessions,
         List<Term> houseRules,

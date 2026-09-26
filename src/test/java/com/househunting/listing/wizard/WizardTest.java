@@ -374,7 +374,6 @@ class WizardTest {
 
         mockMvc.perform(step(id, 5, owner)
                 .param("availableFrom", "2026-11-01")
-                .param("flatmateAgeMin", "22").param("flatmateAgeMax", "32")
                 .param("flatmateGender", "ANY"));
 
         // Step 6 is photos, and publication needs the minimum. Uploaded

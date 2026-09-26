@@ -56,6 +56,13 @@ public class DashboardController {
         model.addAttribute("savedIds", cards.stream()
                 .map(com.househunting.listing.dto.ListingCardDto::id)
                 .collect(java.util.stream.Collectors.toSet()));
+        // Marks the <body> so shortlist.js knows that clearing a heart here
+        // should remove the card rather than leave it sitting there unsaved.
+        //
+        // "true" and not "": Thymeleaf th:attr drops an attribute whose value
+        // is null OR the empty string, so an empty marker renders as no marker
+        // at all — and the only symptom is a feature quietly not happening.
+        model.addAttribute("wishlistPage", "true");
         return "dashboard/shortlist";
     }
 
@@ -103,6 +110,39 @@ public class DashboardController {
     }
 
     // ---- Shortlist --------------------------------------------------------
+
+    /**
+     * The heart, answered as JSON.
+     *
+     * <p>Two mappings on one path, separated by {@code produces}. Spring picks
+     * this one when the request's Accept header asks for JSON and the HTML one
+     * below otherwise — so the choice is made by the caller, declaratively,
+     * and neither method has to inspect headers itself.
+     *
+     * <p>The HTML version stays because it is the one that works. A plain form
+     * POST followed by a redirect needs no JavaScript at all; shortlist.js only
+     * intercepts it to avoid the reload. If the script fails to load, or a
+     * browser extension breaks it, the heart still saves the room — it just
+     * jumps the page back to the top, which is the behaviour being fixed here
+     * rather than the behaviour being replaced.
+     *
+     * @return whether the listing is shortlisted AFTER the toggle
+     */
+    @PostMapping(value = "/listings/{id}/shortlist",
+                 produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+    @org.springframework.web.bind.annotation.ResponseBody
+    public ShortlistState toggleShortlistAsJson(@PathVariable UUID id,
+                                                @AuthenticationPrincipal AuthenticatedUser user) {
+        return new ShortlistState(shortlists.toggle(user.id(), id),
+                shortlists.countFor(user.id()));
+    }
+
+    /**
+     * @param saved whether it is now on the wishlist
+     * @param total how many rooms are on it, for the header count
+     */
+    public record ShortlistState(boolean saved, long total) {
+    }
 
     @PostMapping("/listings/{id}/shortlist")
     public String toggleShortlist(@PathVariable UUID id,

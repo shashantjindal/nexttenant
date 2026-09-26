@@ -19,6 +19,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class CurrentUserAdvice {
 
+    private final com.househunting.shortlist.ShortlistService shortlists;
+
+    public CurrentUserAdvice(com.househunting.shortlist.ShortlistService shortlists) {
+        this.shortlists = shortlists;
+    }
+
     @ModelAttribute("currentUser")
     public AuthenticatedUser currentUser(@AuthenticationPrincipal AuthenticatedUser user) {
         // Null when signed out; templates use th:if to branch.
@@ -42,6 +48,25 @@ public class CurrentUserAdvice {
      * one is about what we hand out and that one is about what we accept, and
      * either could be bypassed alone.
      */
+    /**
+     * How many rooms are on the signed-in person's wishlist.
+     *
+     * <p>A count on the header button, so hearting something on a search page
+     * visibly lands somewhere. Without it the heart fills in and nothing else
+     * changes, which reads as "did that do anything?" — the complaint this is
+     * answering.
+     *
+     * <p>It is one indexed COUNT on a two-column join table, and only for
+     * signed-in visitors: anonymous requests, which are most of them, do no
+     * query at all. Worth stating plainly that this is a query per page render
+     * — if the header ever grows a second such badge, they should be fetched
+     * together rather than one advice method each.
+     */
+    @ModelAttribute("wishlistCount")
+    public Long wishlistCount(@AuthenticationPrincipal AuthenticatedUser user) {
+        return user == null ? null : shortlists.countFor(user.id());
+    }
+
     @ModelAttribute("currentPath")
     public String currentPath(jakarta.servlet.http.HttpServletRequest request) {
         String path = request.getRequestURI();

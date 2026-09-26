@@ -58,7 +58,7 @@ public class SearchController {
 
         // The filter panel's options. Supplied from the enums so the panel
         // cannot drift out of step with what the database will accept.
-        model.addAttribute("allAreas", areas.findAllActive());
+        model.addAttribute("allAreas", areas.findTopLevel());
         model.addAttribute("configurations", Configuration.values());
         model.addAttribute("roomTypes", RoomType.values());
         model.addAttribute("furnishings", Furnishing.values());

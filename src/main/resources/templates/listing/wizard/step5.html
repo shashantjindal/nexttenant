@@ -24,19 +24,6 @@
         <fieldset class="wizard__group">
             <legend>The flatmates</legend>
 
-            <div class="field-row">
-                <label class="field">
-                    <span class="field__label">Youngest</span>
-                    <input type="number" name="flatmateAgeMin" min="18" max="99"
-                           inputmode="numeric" th:value="${draft.flatmateAgeMin}">
-                </label>
-                <label class="field">
-                    <span class="field__label">Oldest</span>
-                    <input type="number" name="flatmateAgeMax" min="18" max="99"
-                           inputmode="numeric" th:value="${draft.flatmateAgeMax}">
-                </label>
-            </div>
-
             <label class="field">
                 <span class="field__label">What they do</span>
                 <input type="text" name="flatmateProfessions" maxlength="160"
