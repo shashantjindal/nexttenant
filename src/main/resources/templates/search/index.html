@@ -82,6 +82,23 @@
 
                 <input type="hidden" name="sort" th:value="${criteria.sort}">
 
+                <!--/*
+                  Everything below the heading scrolls; the heading does not.
+
+                  A wrapper rather than negative margins on a sticky heading:
+                  the panel is a flex column, the head is its fixed first
+                  child and this is the one that grows and scrolls. Bleeding a
+                  sticky heading out over the panel padding would work too,
+                  and would depend on that padding never changing — which is
+                  exactly how the listing card photo ended up misaligned.
+
+                  On phones none of this applies: the media query that makes
+                  the panel a bounded flex column starts at 900px, so below
+                  that this div is an ordinary one and the whole panel flows
+                  with the page.
+                */-->
+                <div class="filters__body">
+
                 <!-- Area -->
                 <fieldset class="filters__group">
                     <legend>Area</legend>
@@ -257,6 +274,7 @@
                 </fieldset>
 
                 <button type="submit" class="btn btn--primary btn--block">Show results</button>
+                </div>
             </form>
         </aside>
 

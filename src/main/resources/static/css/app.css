@@ -713,11 +713,68 @@
 }
 
 @media (min-width: 900px) {
-    /* Filters beside results, sticky so they stay reachable while scrolling
-       a long list. */
     .search__layout { grid-template-columns: 280px 1fr; gap: var(--s-8); }
-    .filters { position: sticky; top: calc(var(--header-h) + var(--s-4)); }
     .search__title { font-size: var(--t-xl); }
+
+    /*
+     * Filters beside results, pinned while a long list scrolls past.
+     *
+     * THE BUG THIS FIXES. `position: sticky` alone was not enough, and the way
+     * it failed is worth understanding because it looks like the opposite of a
+     * CSS problem.
+     *
+     * A sticky element pins when its top reaches the offset and releases when
+     * its CONTAINING BLOCK runs out. Here that block is the grid row, whose
+     * height is the results column — three and a half thousand pixels of
+     * listings. So the panel pinned at 80px and stayed at exactly 80px for the
+     * entire length of the results, then finally scrolled away at the very
+     * bottom of the page. "The filters don't scroll until the listings reach
+     * the end" is a precise description of correct sticky behaviour applied to
+     * the wrong-sized box.
+     *
+     * And because the panel was 1766px tall in a 900px viewport, its lower
+     * half — rent, move-in, configuration, must-have and the second Show
+     * results — sat below the fold with no way to reach it. A pinned element
+     * cannot be scrolled by scrolling the page; that is what pinning means.
+     *
+     * The fix is to stop it being taller than the space it is pinned into, and
+     * give it a scrollbar of its own.
+     */
+    .filters {
+        position: sticky;
+        top: calc(var(--header-h) + var(--s-4));
+
+        /* The header, plus an equal gap above and below the panel. */
+        max-height: calc(100vh - var(--header-h) - var(--s-8));
+
+        /* A column so the head can stay put while the rest scrolls. */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filters > form {
+        display: flex;
+        flex-direction: column;
+        /* Without min-height: 0 a flex item refuses to shrink below its
+           content size, so the form stays 1766px tall inside a max-height
+           parent and overflows it — the scrollbar appears on nothing. This
+           one declaration is the difference between the rule working and
+           appearing not to. */
+        min-height: 0;
+    }
+
+    /*
+     * Everything below the heading scrolls; the heading, and the Show results
+     * button in it, do not. That button is now always reachable however far
+     * down the filters you are, which is the other half of the same problem.
+     */
+    .filters__body {
+        overflow-y: auto;
+        min-height: 0;
+        /* Room for the scrollbar so it does not sit on top of the checkboxes. */
+        padding-right: var(--s-2);
+        margin-right: calc(var(--s-2) * -1);
+    }
 }
 
 /* Area search box inside the filter panel. Hidden until the script reveals it. */
@@ -862,7 +919,26 @@
 
 @media (min-width: 900px) {
     .detail__layout { grid-template-columns: 1fr 340px; gap: var(--s-10); align-items: start; }
-    .detail__aside { position: sticky; top: calc(var(--header-h) + var(--s-4)); }
+    /*
+     * Same guard as the search filter panel, for the same reason.
+     *
+     * This one LOOKS fine on a 900px-tall screen — the cost card, the leaver
+     * card and the safety card come to 788px, which fits with 32px to spare.
+     * On a 700px laptop it is 168px too tall, and because it is pinned that
+     * 168px cannot be scrolled to: the safety advice about not paying a
+     * deposit before visiting is simply not reachable, on the page whose whole
+     * job is to be careful.
+     *
+     * max-height costs nothing when the content already fits. It only becomes
+     * a scrollbar on the screens where the alternative was a silently
+     * truncated sidebar.
+     */
+    .detail__aside {
+        position: sticky;
+        top: calc(var(--header-h) + var(--s-4));
+        max-height: calc(100vh - var(--header-h) - var(--s-8));
+        overflow-y: auto;
+    }
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
     .detail__title { font-size: var(--t-2xl); }
     .detail__map { height: 340px; }
