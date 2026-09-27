@@ -20,12 +20,16 @@ there.
 - About **3 hours of work**, spread over **2 days** — some steps involve
   waiting for other people
 
-**Two waits you cannot rush**, which is why they come first:
+**Three waits you cannot rush**, which is why they come first:
 
 | Wait | How long |
 |---|---|
-| Amazon approving your email sending | a few hours to a day |
-| Your domain name spreading across the internet | 15 minutes to a few hours |
+| Verifying your domain email (§1.2b) | minutes to a couple of hours |
+| Amazon approving your email sending (§4.4) | a few hours to a day |
+| Nameservers and DNS spreading across the internet | 15 minutes to a few hours |
+
+The first one blocks the other two, so start it the moment you have bought the
+domain — before you so much as open AWS.
 
 Start both early and do everything else while they happen.
 
@@ -81,6 +85,46 @@ Any registrar works — GoDaddy, Namecheap, Cloudflare. This guide uses
 
 **You should now have:** a domain, visible under *My Products* (GoDaddy) or
 *Domain List* (Namecheap).
+
+---
+
+### 1.2b Verify your email — do this before anything else
+
+**Check your inbox now, including spam.** Your registrar has sent a message
+with a subject like *"Verify your email address"* or *"Immediate action
+required"*. **Click the link in it.**
+
+This is not an optional welcome email. ICANN's Registrar Accreditation
+Agreement requires registrars to confirm the registrant's email address within
+15 days of registration, and to **suspend the domain until they do**. A new
+domain is therefore often already suspended — the registrar calls it
+**Registrar Hold**, or *"pending RAA verification"*.
+
+While it is on hold:
+
+- the domain resolves to nothing
+- **you cannot change nameservers**, so §1.3 below simply refuses
+- after about 15 days it is suspended properly
+
+One click fixes it, and the hold usually lifts within a couple of hours.
+
+**Nothing needs to be uploaded.** RAA verification is an email confirmation, not
+an identity check — no PAN, no Aadhaar, no documents. (`.in` domains can
+separately ask for registrant details under NIXI rules, but that is a different
+notice and says so.)
+
+**If you cannot find the email**, note that it goes to the **registrant address
+on the domain**, which is not always your account login. Check under **Contact
+Information** on the domain, then either:
+
+1. use **Resend verification email** on that same screen, or
+2. edit the registrant email and save — re-entering the same address sends a
+   fresh one, and changing it to one you can actually read fixes the case where
+   the address on file is wrong, or
+3. ask support: *"Please resend the RAA verification email for nexttenant.in."*
+
+**You should now have:** a domain with no warning banner on it, and a
+nameservers screen that opens rather than refusing.
 
 ---
 
@@ -924,6 +968,12 @@ budget:
 ---
 
 # Troubleshooting
+
+**"This domain cannot have its nameservers updated" / "Registrar Hold" /
+"pending RAA Verification"**
+Your registrant email is unverified, so the registrar has suspended the domain.
+Click the link in the verification email they sent — see §1.2b. Nothing needs
+uploading; it is an email confirmation, not an identity check.
 
 **`ssh` says "Permission denied (publickey)"**
 The username is `ec2-user`, not `root` or your name. On Windows, run the
