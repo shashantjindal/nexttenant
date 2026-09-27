@@ -15,7 +15,37 @@
             <label class="field">
                 <span class="field__label">First name</span>
                 <input type="text" name="firstName" maxlength="40"
+                       th:value="${firstName}"
                        autocomplete="given-name" required autofocus>
+            </label>
+
+            <!--/*
+              The number is asked for HERE rather than on the login screen, so
+              a returning visitor types one field to sign in and never sees
+              this page again.
+
+              It is required, because the entire product is two people ending
+              up in one WhatsApp conversation — an account without a number
+              cannot take part in that, and collecting it later would mean
+              building a second prompt for the same fact.
+            */-->
+            <label class="field">
+                <span class="field__label">Mobile number</span>
+                <div class="field__phone">
+                    <span class="field__prefix">+91</span>
+                    <input type="tel"
+                           name="phone"
+                           th:value="${phone}"
+                           inputmode="numeric"
+                           autocomplete="tel-national"
+                           maxlength="15"
+                           placeholder="98765 43210"
+                           required>
+                </div>
+                <span class="field__hint">
+                    Shown only to someone whose request you have accepted.
+                    Never on a listing, never to a stranger.
+                </span>
             </label>
 
             <label class="field">

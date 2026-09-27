@@ -20,6 +20,7 @@ import java.time.Duration;
  * @param maxAttempts    guesses allowed per challenge before it is burned
  * @param maxSends       how many times one challenge may be (re)sent
  * @param perPhonePerHour  codes per number per window
+ * @param perEmailPerHour  codes per address per window
  * @param perIpPerHour     codes per IP per window
  * @param rateWindow     the counting window
  */
@@ -31,6 +32,7 @@ public record OtpProperties(
         int maxAttempts,
         int maxSends,
         int perPhonePerHour,
+        int perEmailPerHour,
         int perIpPerHour,
         Duration rateWindow
 ) {
@@ -50,6 +52,11 @@ public record OtpProperties(
         maxAttempts = maxAttempts > 0 ? maxAttempts : 5;
         maxSends = maxSends > 0 ? maxSends : 5;
         perPhonePerHour = perPhonePerHour > 0 ? perPhonePerHour : 5;
+
+        // Higher than the SMS budget on purpose: an email send costs a
+        // fraction of a text, so the limit is set by "how many codes could a
+        // confused person plausibly need" rather than by the bill.
+        perEmailPerHour = perEmailPerHour > 0 ? perEmailPerHour : 10;
         perIpPerHour = perIpPerHour > 0 ? perIpPerHour : 20;
         secret = secret != null && !secret.isBlank() ? secret : DEV_SECRET;
     }

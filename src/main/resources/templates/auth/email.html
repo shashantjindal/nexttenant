@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Log in — HouseHunting</title></head>
+<body>
+<main id="content" class="page-width auth">
+    <div class="auth__card">
+        <h1 class="auth__title">Log in or sign up</h1>
+        <p class="auth__sub">
+            One email address per account. No passwords, ever.
+        </p>
+
+
+        <!--/*
+          Thymeleaf adds the CSRF hidden field to every <form method="post">
+          automatically. Without it Spring rejects the request, which is the
+          protection working: an attacker's page can submit a form to our
+          server but cannot read the token out of our HTML.
+        */-->
+        <form th:action="@{/login/email}" method="post" class="auth__form">
+            <label class="field">
+                <span class="field__label">Email address</span>
+                <!--/*
+                  type="email" gives the mobile keyboard an @ key and lets the
+                  browser catch a missing one before a round trip. It is a
+                  convenience, not a check — LoginEmails validates server-side,
+                  because anything enforced only in the client is not enforced.
+                */-->
+                <input type="email"
+                       name="email"
+                       th:value="${email}"
+                       inputmode="email"
+                       autocomplete="email"
+                       maxlength="254"
+                       placeholder="you@example.com"
+                       required
+                       autofocus>
+            </label>
+
+            <button type="submit" class="btn btn--primary btn--block">Send code</button>
+        </form>
+
+        <p class="auth__fine">
+            We email one six-digit code. We ask for your mobile number after this,
+            so people you connect with can reach you on WhatsApp.
+        </p>
+    </div>
+</main>
+</body>
+</html>

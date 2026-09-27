@@ -30,8 +30,8 @@ package com.househunting.auth;
  */
 public sealed interface OtpResult {
 
-    /** Correct code. Carries the number so the caller can create or find the account. */
-    record Verified(String phoneE164) implements OtpResult {
+    /** Correct code. Carries the subject so the caller can create or find the account. */
+    record Verified(String subject) implements OtpResult {
     }
 
     /** Wrong code, budget remaining. */

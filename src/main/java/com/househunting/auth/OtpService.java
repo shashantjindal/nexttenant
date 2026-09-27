@@ -1,6 +1,7 @@
 package com.househunting.auth;
 
 import com.househunting.common.Hashing;
+import com.househunting.mail.EmailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,20 @@ import java.util.Optional;
 /**
  * Issues and checks one-time passcodes.
  *
- * <p>Takes an E.164 number from the caller and never persists it: only the
- * SHA-256 goes to the database. The plaintext lives in the caller's HTTP
- * session for the length of the flow, so an unauthenticated person's number is
- * never written down.
+ * <p>Takes a SUBJECT from the caller — an E.164 number or a normalised email
+ * address — and never persists it: only the SHA-256 goes to the database. The
+ * plaintext lives in the caller's HTTP session for the length of the flow, so
+ * an unauthenticated person's contact details are never written down.
+ *
+ * <p><b>One service for both channels.</b> Everything that makes a six-digit
+ * code safe lives here and in {@link OtpChallenge}: the HMAC under a server
+ * secret, the attempt cap, the resend cooldown, single use, two-dimensional
+ * rate limiting. A separate email implementation would mean a second copy of
+ * every one of those rules — and the second copy is the one that drifts,
+ * because it is the one nobody is looking at when the first is changed.
+ *
+ * <p>The only thing that varies by channel is delivery, and that is decided in
+ * one place: {@link #deliver}.
  */
 @Service
 public class OtpService {
@@ -27,6 +38,7 @@ public class OtpService {
     private final OtpChallengeRepository challenges;
     private final OtpRateLimiter rateLimiter;
     private final SmsSender sms;
+    private final EmailSender email;
     private final OtpProperties config;
 
     /**
@@ -41,11 +53,13 @@ public class OtpService {
     public OtpService(OtpChallengeRepository challenges,
                       OtpRateLimiter rateLimiter,
                       SmsSender sms,
+                      EmailSender email,
                       OtpProperties config,
                       Clock clock) {
         this.challenges = challenges;
         this.rateLimiter = rateLimiter;
         this.sms = sms;
+        this.email = email;
         this.config = config;
         this.clock = clock;
     }
@@ -53,23 +67,25 @@ public class OtpService {
     /**
      * Sends a code, creating a challenge or reusing the live one.
      *
-     * <p>Identical whether or not the number has an account. Branching would
+     * <p>Identical whether or not the subject has an account. Branching would
      * turn this endpoint into an account-existence oracle: an attacker could
-     * learn which numbers are registered simply by watching the responses.
+     * learn which addresses are registered simply by watching the responses.
      *
+     * @param subject   an E.164 number or a normalised email, per the purpose
      * @param ipAddress for the second rate-limit dimension
      * @throws OtpRateLimitedException if a limit or the resend cooldown applies
      */
     @Transactional
-    public OtpDispatch requestCode(String phoneE164, String ipAddress, OtpPurpose purpose) {
+    public OtpDispatch requestCode(String subject, String ipAddress, OtpPurpose purpose) {
         Instant now = clock.instant();
-        String phoneHash = Hashing.sha256Hex(phoneE164);
+        OtpChannel channel = purpose.channel();
+        String subjectHash = Hashing.sha256Hex(subject);
 
-        enforceRateLimits(phoneE164, ipAddress, now);
+        enforceRateLimits(subject, channel, ipAddress, now);
 
         Optional<OtpChallenge> existing = challenges
-                .findFirstByPhoneHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
-                        phoneHash, purpose)
+                .findFirstBySubjectHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
+                        subjectHash, purpose)
                 .filter(c -> !c.isExpired(now));
 
         String code = OtpCodes.generate();
@@ -92,21 +108,22 @@ public class OtpService {
             // of resends they can trigger.
             challenge.resend(codeHmac, now, config.codeValidity());
         } else {
-            challenge = new OtpChallenge(phoneHash, codeHmac, purpose, now,
+            challenge = new OtpChallenge(subjectHash, codeHmac, purpose, now,
                     config.codeValidity(), config.maxAttempts());
         }
 
         challenges.save(challenge);
 
-        sms.send(phoneE164, "%s is your HouseHunting code. It expires in %d minutes."
-                .formatted(code, config.codeValidity().toMinutes()));
+        deliver(channel, subject, code);
 
-        // Logs the challenge id, never the number or the code. A log line is
-        // readable by far more people than a handset is.
-        log.debug("OTP issued: challenge={} send={}", challenge.getId(), challenge.getSendCount());
+        // Logs the challenge id, never the subject or the code. A log line is
+        // readable by far more people than an inbox or a handset is.
+        log.debug("OTP issued: challenge={} channel={} send={}",
+                challenge.getId(), channel, challenge.getSendCount());
 
         return new OtpDispatch(
-                PhoneNumbers.mask(phoneE164),
+                channel.mask(subject),
+                channel,
                 config.resendCooldown(),
                 challenge.getExpiresAt());
     }
@@ -119,7 +136,7 @@ public class OtpService {
      * {@link OtpResult} for why that matters.
      */
     @Transactional
-    public OtpResult verify(String phoneE164, String submittedCode, OtpPurpose purpose) {
+    public OtpResult verify(String subject, String submittedCode, OtpPurpose purpose) {
         Instant now = clock.instant();
 
         // Reject the wrong shape before touching the database: no lookup, no
@@ -129,8 +146,8 @@ public class OtpService {
         }
 
         Optional<OtpChallenge> found = challenges
-                .findFirstByPhoneHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
-                        Hashing.sha256Hex(phoneE164), purpose);
+                .findFirstBySubjectHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
+                        Hashing.sha256Hex(subject), purpose);
 
         if (found.isEmpty()) {
             return new OtpResult.NoChallenge();
@@ -170,25 +187,74 @@ public class OtpService {
         challenge.consume(now);
         challenges.save(challenge);
 
-        return new OtpResult.Verified(phoneE164);
+        return new OtpResult.Verified(subject);
     }
+
+    // ---- Delivery ---------------------------------------------------------
+
+    /**
+     * The ONLY place the two channels differ.
+     *
+     * <p>A switch over {@link OtpChannel} rather than an {@code if}, so adding
+     * a channel later fails to compile here instead of silently sending
+     * nothing — a bug that looks exactly like "the code never arrived".
+     */
+    private void deliver(OtpChannel channel, String subject, String code) {
+        long minutes = config.codeValidity().toMinutes();
+
+        switch (channel) {
+            case SMS -> sms.send(subject,
+                    "%s is your HouseHunting code. It expires in %d minutes."
+                            .formatted(code, minutes));
+
+            // The code goes in the SUBJECT LINE as well as the body. Most
+            // people read it straight from the notification without opening
+            // anything, which is the closest email gets to the immediacy of a
+            // text message — and immediacy is the whole reason SMS was
+            // preferred in the first place.
+            case EMAIL -> email.send(subject,
+                    "%s is your HouseHunting sign-in code".formatted(code),
+                    emailBody(code, minutes));
+        }
+    }
+
+    private static String emailBody(String code, long minutes) {
+        return ("%s is your sign-in code for HouseHunting.\n"
+                + "\n"
+                + "It expires in %d minutes and can be used once.\n"
+                + "\n"
+                + "If you did not ask to sign in, you can ignore this email. "
+                + "Nobody can reach an account without this code.\n")
+                .formatted(code, minutes);
+    }
+
+    // ---- Rate limiting ----------------------------------------------------
 
     /**
      * Two dimensions, because each alone has a hole.
      *
-     * <p>Per-number stops one person being spammed, but an attacker cycling
-     * through a thousand numbers walks past it while running up a real SMS
-     * bill. Per-IP catches that, but a proxy pool defeats it and an office NAT
-     * would punish everyone behind it. Together they are awkward to evade
-     * without being expensive to a legitimate user.
+     * <p>Per-subject stops one person being spammed, but an attacker cycling
+     * through a thousand addresses walks past it while running up a real bill.
+     * Per-IP catches that, but a proxy pool defeats it and an office NAT would
+     * punish everyone behind it. Together they are awkward to evade without
+     * being expensive to a legitimate user.
+     *
+     * <p>The per-subject budget is keyed on {@link OtpChannel#rateLimitScope()},
+     * so email sends and SMS sends are counted in separate buckets. Sharing one
+     * would force the cheap channel to live inside the expensive channel's
+     * limit.
      */
-    private void enforceRateLimits(String phoneE164, String ipAddress, Instant now) {
+    private void enforceRateLimits(String subject, OtpChannel channel,
+                                   String ipAddress, Instant now) {
         Duration window = config.rateWindow();
 
-        int perPhone = rateLimiter.recordAndCount(RateLimitScope.PHONE, phoneE164, now, window);
-        if (perPhone > config.perPhonePerHour()) {
+        int perSubject = rateLimiter.recordAndCount(
+                channel.rateLimitScope(), subject, now, window);
+        if (perSubject > perSubjectLimit(channel)) {
             throw new OtpRateLimitedException(
-                    "Too many codes requested for this number. Try again later.",
+                    channel == OtpChannel.EMAIL
+                            ? "Too many codes requested for this address. Try again later."
+                            : "Too many codes requested for this number. Try again later.",
                     rateLimiter.timeUntilReset(now, window));
         }
 
@@ -200,6 +266,10 @@ public class OtpService {
                         rateLimiter.timeUntilReset(now, window));
             }
         }
+    }
+
+    private int perSubjectLimit(OtpChannel channel) {
+        return channel == OtpChannel.EMAIL ? config.perEmailPerHour() : config.perPhonePerHour();
     }
 
     /** Removes expired challenges and stale rate-limit windows. */

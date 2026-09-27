@@ -62,7 +62,8 @@ class LandingPageTest {
 
     private Listing plantListingWithKnownSecrets() {
         User leaver = users.save(new User("Testuser", Gender.FEMALE, AgeBracket.AGE_23_27));
-        userPrivates.save(new UserPrivate(leaver.getId(), SECRET_PHONE));
+        userPrivates.save(new UserPrivate(
+                leaver.getId(), "leaver-" + leaver.getId() + "@invalid.invalid", SECRET_PHONE));
 
         Listing listing = new Listing(leaver.getId());
         listing.setLocationDetails("Colaba", "Churchgate", (short) 9, (short) 9, true);

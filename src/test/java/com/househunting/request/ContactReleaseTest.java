@@ -83,13 +83,17 @@ class ContactReleaseTest {
         requesterPhone = REQUESTER_PHONE_PREFIX + "%05d".formatted(seq);
 
         leaver = users.save(new User("Priya", Gender.FEMALE, AgeBracket.AGE_23_27));
-        userPrivates.saveAndFlush(new UserPrivate(leaver.getId(), leaverPhone));
+        userPrivates.saveAndFlush(new UserPrivate(
+                leaver.getId(), "leaver-%05d@invalid.invalid".formatted(seq), leaverPhone));
 
         requester = users.save(new User("Rahul", Gender.MALE, AgeBracket.AGE_28_32));
-        userPrivates.saveAndFlush(new UserPrivate(requester.getId(), requesterPhone));
+        userPrivates.saveAndFlush(new UserPrivate(
+                requester.getId(), "requester-%05d@invalid.invalid".formatted(seq), requesterPhone));
 
         bystander = users.save(new User("Nosy", Gender.OTHER, AgeBracket.AGE_23_27));
-        userPrivates.saveAndFlush(new UserPrivate(bystander.getId(),
+        userPrivates.saveAndFlush(new UserPrivate(
+                bystander.getId(),
+                "bystander-%05d@invalid.invalid".formatted(seq),
                 "+9198333" + "%05d".formatted(seq)));
 
         listing = new Listing(leaver.getId());

@@ -14,14 +14,14 @@ import java.util.UUID;
 public interface OtpChallengeRepository extends JpaRepository<OtpChallenge, UUID> {
 
     /**
-     * The newest live challenge for a number.
+     * The newest live challenge for a subject.
      *
      * <p>Newest wins: if someone requested a code twice, the second supersedes
      * the first. Matching an older one would let a code the user has already
      * replaced still work.
      */
-    Optional<OtpChallenge> findFirstByPhoneHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
-            String phoneHash, OtpPurpose purpose);
+    Optional<OtpChallenge> findFirstBySubjectHashAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
+            String subjectHash, OtpPurpose purpose);
 
     /**
      * Deletes expired challenges.
@@ -33,5 +33,5 @@ public interface OtpChallengeRepository extends JpaRepository<OtpChallenge, UUID
     @Query("DELETE FROM OtpChallenge c WHERE c.expiresAt < :cutoff")
     int deleteExpiredBefore(@Param("cutoff") Instant cutoff);
 
-    long countByPhoneHashAndConsumedAtIsNull(String phoneHash);
+    long countBySubjectHashAndConsumedAtIsNull(String subjectHash);
 }

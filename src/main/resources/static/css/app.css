@@ -511,8 +511,23 @@
     font-family: var(--font-display);
 }
 
+/* Sits UNDER the input, not above it: a hint that explains what will happen to
+   a value is read after typing, and placing it above pushes the field itself
+   further from its label. */
+.field__hint {
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    line-height: 1.5;
+}
+
+/* Every text-like input is listed explicitly rather than using a bare
+   `.field input`, so a future checkbox or radio inside a .field does not
+   inherit full-width padding and a border. type="email" joined the list when
+   sign-in moved to email — without it the login field rendered as an unstyled
+   browser default next to styled ones. */
 .field input[type="text"],
 .field input[type="tel"],
+.field input[type="email"],
 .field select {
     width: 100%;
     padding: var(--s-3) var(--s-4);

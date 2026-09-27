@@ -7,7 +7,7 @@
     <div class="auth__card">
         <h1 class="auth__title">Enter the code</h1>
         <p class="auth__sub">
-            Sent to <strong th:text="${maskedPhone}">+91 ***** 43210</strong>
+            Sent to <strong th:text="${maskedSubject}">a•••a@gmail.com</strong>
         </p>
 
 
@@ -16,10 +16,15 @@
                 <span class="sr-only">Six-digit code</span>
                 <!--/*
                   One input rather than the six boxes in the prototype, because
-                  autocomplete="one-time-code" is what makes iOS and Android
-                  offer the code from the SMS above the keyboard. Six separate
-                  inputs break that autofill, which costs far more in real use
-                  than the boxes gain in looks.
+                  autocomplete="one-time-code" is what lets a phone offer the
+                  code above the keyboard. Six separate inputs break that
+                  autofill, which costs far more in real use than the boxes
+                  gain in looks.
+
+                  The hint is kept now that codes arrive by email rather than
+                  SMS. Mobile mail clients honour it less reliably than the
+                  SMS path did, but it still works in some, and an attribute
+                  that sometimes helps and never hurts is worth keeping.
                 */-->
                 <input type="text"
                        name="code"
@@ -40,7 +45,7 @@
             <form th:action="@{/login/resend}" method="post">
                 <button type="submit" class="btn btn--ghost">Resend code</button>
             </form>
-            <a class="btn btn--ghost" th:href="@{/login}">Change number</a>
+            <a class="btn btn--ghost" th:href="@{/login}">Change email</a>
         </div>
 
         <p class="auth__fine">

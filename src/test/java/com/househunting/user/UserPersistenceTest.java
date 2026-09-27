@@ -32,6 +32,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class UserPersistenceTest {
 
+    /**
+     * A login address for rows whose subject is the PHONE number.
+     *
+     * <p>Shared across tests without collision because @DataJpaTest rolls each
+     * one back, so no two ever reach a committed user_private_email_uq.
+     */
+    private static final String EMAIL = "someone@invalid.invalid";
+
     @Autowired
     private TestEntityManager entityManager;
 
@@ -92,7 +100,7 @@ class UserPersistenceTest {
     @DisplayName("UserPrivate derives the phone hash so the pair can never disagree")
     void phoneHashIsDerived() {
         User user = userRepository.save(new User("Aisha", Gender.FEMALE, AgeBracket.AGE_18_22));
-        UserPrivate priv = new UserPrivate(user.getId(), "+919876543210");
+        UserPrivate priv = new UserPrivate(user.getId(), EMAIL, "+919876543210");
 
         // 64 lowercase hex characters, and equal to an independently computed
         // digest of the same input.
@@ -113,8 +121,8 @@ class UserPersistenceTest {
     @Test
     @DisplayName("the same number always produces the same hash, so lookups are stable")
     void hashIsDeterministic() {
-        UserPrivate a = new UserPrivate(UUID.randomUUID(), "+919876543210");
-        UserPrivate b = new UserPrivate(UUID.randomUUID(), "+919876543210");
+        UserPrivate a = new UserPrivate(UUID.randomUUID(), "a@invalid.invalid", "+919876543210");
+        UserPrivate b = new UserPrivate(UUID.randomUUID(), "b@invalid.invalid", "+919876543210");
 
         assertThat(a.getPhoneHash()).isEqualTo(b.getPhoneHash());
     }
@@ -122,7 +130,7 @@ class UserPersistenceTest {
     @Test
     @DisplayName("changing the number recomputes the hash in the same step")
     void changingNumberRecomputesHash() {
-        UserPrivate priv = new UserPrivate(UUID.randomUUID(), "+919876543210");
+        UserPrivate priv = new UserPrivate(UUID.randomUUID(), EMAIL, "+919876543210");
         String before = priv.getPhoneHash();
 
         priv.setPhoneE164("+919000000001");
@@ -136,16 +144,16 @@ class UserPersistenceTest {
     void rejectsMalformedPhoneNumbers() {
         UUID id = UUID.randomUUID();
 
-        assertThatThrownBy(() -> new UserPrivate(id, "9876543210"))
+        assertThatThrownBy(() -> new UserPrivate(id, EMAIL, "9876543210"))
                 .isInstanceOf(IllegalArgumentException.class);   // no +91
 
-        assertThatThrownBy(() -> new UserPrivate(id, "+915876543210"))
+        assertThatThrownBy(() -> new UserPrivate(id, EMAIL, "+915876543210"))
                 .isInstanceOf(IllegalArgumentException.class);   // starts with 5
 
-        assertThatThrownBy(() -> new UserPrivate(id, "+9198765432100"))
+        assertThatThrownBy(() -> new UserPrivate(id, EMAIL, "+9198765432100"))
                 .isInstanceOf(IllegalArgumentException.class);   // eleven digits
 
-        assertThatThrownBy(() -> new UserPrivate(id, "+91 98765 43210"))
+        assertThatThrownBy(() -> new UserPrivate(id, EMAIL, "+91 98765 43210"))
                 .isInstanceOf(IllegalArgumentException.class);   // not normalised
     }
 
@@ -154,7 +162,7 @@ class UserPersistenceTest {
     void exceptionMessageOmitsTheNumber() {
         // Exception messages reach log files, and a phone number in a log file
         // is exactly the leak UserPrivate exists to prevent.
-        assertThatThrownBy(() -> new UserPrivate(UUID.randomUUID(), "+915876543210"))
+        assertThatThrownBy(() -> new UserPrivate(UUID.randomUUID(), EMAIL, "+915876543210"))
                 .hasMessageNotContaining("5876543210");
     }
 

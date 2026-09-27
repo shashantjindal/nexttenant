@@ -30,6 +30,28 @@ public interface UserPrivateRepository extends JpaRepository<UserPrivate, UUID> 
     boolean existsByPhoneHash(String phoneHash);
 
     /**
+     * Look an account up by the SHA-256 of its login address.
+     *
+     * <p>The same reasoning as {@link #findByPhoneHash}: sign-in needs to know
+     * WHICH account an address belongs to, not what the address is, so the
+     * plaintext stays out of query logs and stack traces.
+     *
+     * <p>Addresses are normalised before hashing, so this is inherently
+     * case-insensitive — there is no {@code lower()} to forget.
+     */
+    Optional<UserPrivate> findByEmailHash(String emailHash);
+
+    /**
+     * Is this mobile number already on another account?
+     *
+     * <p>Asked before the profile step saves one, because the number is
+     * UNIQUE and unverified. Returns only a boolean and never the owner: a
+     * method that handed back whose account it is would be a pleasant way to
+     * look people up by phone number.
+     */
+    boolean existsByPhoneHashAndUserIdNot(String phoneHash, UUID userId);
+
+    /**
      * Is this work address already claimed, by anyone but the given account?
      *
      * <p>Returns nothing about WHOSE account it is, deliberately. The caller

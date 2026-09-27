@@ -131,6 +131,10 @@ househunting:
     # Two dimensions: per-number stops one person being spammed, per-IP stops
     # an attacker cycling numbers to run up the SMS bill.
     per-phone-per-hour: 5
+
+    # Email is the live login channel and costs a fraction of an SMS, so this
+    # is set by how many codes a confused person could plausibly need.
+    per-email-per-hour: 10
     per-ip-per-hour: 20
     rate-window: 1h
 

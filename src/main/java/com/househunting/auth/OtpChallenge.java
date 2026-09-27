@@ -20,9 +20,14 @@ import java.util.UUID;
  * those checks across a service produces the classic bug where one code path
  * forgets one of them, and the forgotten one is always the attempt cap.
  *
- * <p>Note the phone number is absent: only {@link #phoneHash} is stored, so the
- * database never holds a number for an unauthenticated person. The plaintext
- * lives in the HTTP session for the length of the flow.
+ * <p>Note the subject itself is absent: only {@link #subjectHash} is stored, so
+ * the database never holds a phone number or an email address for an
+ * unauthenticated person. The plaintext lives in the HTTP session for the
+ * length of the flow, and is gone the moment the flow ends.
+ *
+ * <p>"Subject" rather than "phone" because a challenge is a code issued to
+ * somebody; whether they are reached by SMS or by email is a delivery detail
+ * belonging to {@link OtpPurpose#channel()}, not to the stored row.
  */
 @Entity
 @Table(name = "otp_challenges")
@@ -32,8 +37,8 @@ public class OtpChallenge {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id = UUID.randomUUID();
 
-    @Column(name = "phone_hash", nullable = false, length = 64, updatable = false)
-    private String phoneHash;
+    @Column(name = "subject_hash", nullable = false, length = 64, updatable = false)
+    private String subjectHash;
 
     /** HMAC-SHA256 of the code under the server secret. Never the code itself. */
     @Column(name = "code_hmac", nullable = false, length = 64)
@@ -77,9 +82,9 @@ public class OtpChallenge {
     protected OtpChallenge() {
     }
 
-    public OtpChallenge(String phoneHash, String codeHmac, OtpPurpose purpose,
+    public OtpChallenge(String subjectHash, String codeHmac, OtpPurpose purpose,
                         Instant now, Duration validFor, int maxAttempts) {
-        this.phoneHash = Objects.requireNonNull(phoneHash, "phoneHash");
+        this.subjectHash = Objects.requireNonNull(subjectHash, "subjectHash");
         this.codeHmac = Objects.requireNonNull(codeHmac, "codeHmac");
         this.purpose = Objects.requireNonNull(purpose, "purpose");
         this.createdAt = now;
@@ -171,8 +176,8 @@ public class OtpChallenge {
         return id;
     }
 
-    public String getPhoneHash() {
-        return phoneHash;
+    public String getSubjectHash() {
+        return subjectHash;
     }
 
     public String getCodeHmac() {

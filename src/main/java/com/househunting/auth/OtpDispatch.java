@@ -4,18 +4,22 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * What the OTP screen needs to know after a code has been sent.
+ * What the code screen needs to know after a code has been sent.
  *
- * <p>Carries the MASKED number, never the real one. The screen has to show
- * which number the code went to — otherwise nobody can tell they mistyped it —
- * but showing all ten digits hands the number to anyone glancing at the screen.
+ * <p>Carries the MASKED subject, never the real one. The screen has to show
+ * where the code went — otherwise nobody can tell they mistyped it — but
+ * showing the whole address or number hands it to anyone glancing at the
+ * screen.
  *
- * @param maskedPhone     e.g. "+91 ***** 43210"
- * @param resendCooldown  how long before "Resend OTP" becomes available
- * @param expiresAt       when the code stops working
+ * @param maskedSubject  e.g. "a•••a@gmail.com" or "+91 ***** 43210"
+ * @param channel        how it was delivered, so the page can say "email" or
+ *                       "message" without guessing from the shape of the string
+ * @param resendCooldown how long before "Resend" becomes available
+ * @param expiresAt      when the code stops working
  */
 public record OtpDispatch(
-        String maskedPhone,
+        String maskedSubject,
+        OtpChannel channel,
         Duration resendCooldown,
         Instant expiresAt
 ) {

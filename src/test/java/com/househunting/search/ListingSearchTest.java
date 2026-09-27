@@ -36,6 +36,7 @@ class ListingSearchTest {
 
     @Autowired private ListingSearchService search;
     @Autowired private ListingSearchRepository repository;
+    @Autowired private com.househunting.area.AreaRepository areas;
 
     private SearchCriteria.Builder criteria() {
         return new SearchCriteria.Builder();
@@ -79,27 +80,61 @@ class ListingSearchTest {
     }
 
     @Test
-    @DisplayName("an area filter restricts to that area")
+    @DisplayName("an area filter restricts to that locality and the sublocalities inside it")
     void areaFilter() {
-        SearchResults results = search.search(criteria()
-                .areas(List.of("Bandra West", "Khar West")).build());
+        List<String> asked = List.of("Bandra West", "Khar West");
+        SearchResults results = search.search(criteria().areas(asked).build());
+
+        // Since V13 an area filter means "this locality AND everything inside
+        // it" — asking for Bandra West and being shown nothing in Pali Hill
+        // would be the bug, not the other way round. So the allowed set is
+        // computed the same way the search computes it, rather than hardcoded.
+        Set<String> allowed = new HashSet<>(areas.expandWithChildren(asked));
 
         assertThat(results.cards()).isNotEmpty();
-        assertThat(results.cards())
-                .allSatisfy(c -> assertThat(c.area()).isIn("Bandra West", "Khar West"));
+        assertThat(results.cards()).allSatisfy(c -> assertThat(c.area()).isIn(allowed));
+
+        // And the expansion is real: this would pass vacuously if the filter
+        // were simply being ignored.
+        assertThat(allowed).contains("Pali Hill");
+        assertThat(allowed).doesNotContain("Powai", "Colaba");
     }
 
     @Test
     @DisplayName("filters combine, narrowing rather than widening")
     void filtersCombine() {
-        long broad = search.search(criteria().areas(List.of("Powai")).build()).totalCount();
-        long narrow = search.search(criteria()
+        SearchResults broad = search.search(criteria().areas(List.of("Powai")).build());
+        SearchResults narrow = search.search(criteria()
                 .areas(List.of("Powai"))
                 .roomTypes(List.of(RoomType.PRIVATE_ROOM))
                 .furnishings(List.of(Furnishing.FULLY_FURNISHED))
-                .build()).totalCount();
+                .build());
 
-        assertThat(narrow).isLessThanOrEqualTo(broad);
+        // The claim only holds while the search is still answering the question
+        // it was asked. A narrow filter that matches nothing triggers the
+        // RELAXED fallback, which deliberately DROPS filters and can therefore
+        // return more rows than the broader search — that is the fallback
+        // working, not the filters failing to combine.
+        //
+        // The original version of this assertion did not check the outcome and
+        // passed only because the seed happened to leave enough matches. It
+        // started failing the moment sublocalities split Powai's listings
+        // across several area names, which is exactly the kind of latent
+        // assertion that fails a fortnight later and gets deleted rather than
+        // understood.
+        assertThat(broad.outcome()).isEqualTo(SearchOutcome.EXACT);
+
+        if (narrow.outcome() == SearchOutcome.EXACT) {
+            assertThat(narrow.totalCount()).isLessThanOrEqualTo(broad.totalCount());
+        } else {
+            // Nothing matched all three filters, so the ladder dropped some.
+            // The properties worth pinning then: the visitor gets rooms rather
+            // than a dead end, and the page can tell them the filters were
+            // relaxed — a larger count that claimed to be EXACT would be the
+            // real bug here.
+            assertThat(narrow.outcome()).isEqualTo(SearchOutcome.RELAXED);
+            assertThat(narrow.cards()).isNotEmpty();
+        }
     }
 
     @Test
@@ -233,16 +268,26 @@ class ListingSearchTest {
     @Test
     @DisplayName("the radius keeps climbing rather than giving up and dropping filters")
     void wideningClimbsPastTheOldCeiling() {
-        // 20m contains nothing anywhere in Mumbai. The ladder multiplies the
-        // ORIGINAL radius, and used to stop at 8x — so this would have reached
-        // 160m, found nothing, and fallen through to RELAXED: same place, every
-        // other filter discarded. Widening distance first is the design, and
-        // this asserts the climb actually goes somewhere.
+        // The ladder multiplies the ORIGINAL radius and used to stop at 8x, so
+        // a search that found nothing by then fell through to RELAXED: same
+        // place, every other filter discarded. Widening distance first is the
+        // design, and this asserts the climb actually goes somewhere.
+        //
+        // The starting radius has to be small enough that 8x STILL finds
+        // nothing, or the test proves nothing at all. It began at 20m, which
+        // stopped working the moment the seed grew dense enough to put a
+        // listing within 160m of Bandra station — the assertion passed for the
+        // wrong reason and then failed for the right one.
+        //
+        // 1m is chosen so the old ceiling is 8m. Nothing is within 8m of a
+        // station in any dataset, seeded or real, which makes this independent
+        // of how many listings happen to exist.
+        int radius = 1;
         SearchResults results = search.search(criteria()
-                .location(LAT, LNG, 20).build());
+                .location(LAT, LNG, radius).build());
 
         assertThat(results.outcome()).isEqualTo(SearchOutcome.WIDENED);
-        assertThat(results.widenedToMetres()).isGreaterThan(20 * 8);
+        assertThat(results.widenedToMetres()).isGreaterThan(radius * 8);
         assertThat(results.cards()).isNotEmpty();
     }
 

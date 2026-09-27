@@ -95,7 +95,8 @@ class WorkEmailTest {
      */
     private User newUser(String name, Gender gender, AgeBracket age) {
         User created = users.save(new User(name, gender, age));
-        userPrivates.save(new UserPrivate(created.getId(), phoneFor(created)));
+        userPrivates.save(new UserPrivate(
+                created.getId(), emailFor(created), phoneFor(created)));
         return created;
     }
 
@@ -116,6 +117,19 @@ class WorkEmailTest {
     private static String phoneFor(User created) {
         long digits = Math.floorMod(created.getId().getMostSignificantBits(), 1_000_000_000L);
         return "+919" + "%09d".formatted(digits);
+    }
+
+    /**
+     * A unique LOGIN address, derived from the id for the same reason.
+     *
+     * <p>Note this is the sign-in address, not the work address under test.
+     * They are different columns with different rules — user_private.email is
+     * the identity and may be a free provider; work_email is the badge and may
+     * not. A test that reused one for the other would pass while proving
+     * nothing about either.
+     */
+    private static String emailFor(User created) {
+        return "login-" + created.getId() + "@invalid.invalid";
     }
 
     private boolean verified() {

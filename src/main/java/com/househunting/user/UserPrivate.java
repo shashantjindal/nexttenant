@@ -44,6 +44,13 @@ public class UserPrivate {
     private static final Pattern E164_INDIA = Pattern.compile("^\\+91[6-9][0-9]{9}$");
 
     /**
+     * A shape check, matching user_private_email_ck in V14. Real validation is
+     * {@code LoginEmails}, at the edge; this stops a bug writing rubbish.
+     */
+    private static final Pattern EMAIL_SHAPE =
+            Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$");
+
+    /**
      * Shares the primary key of {@code users}. Not generated: this IS the
      * user's id, so the row cannot exist without its user.
      */
@@ -52,19 +59,47 @@ public class UserPrivate {
     private UUID userId;
 
     /**
+     * The login identity, normalised by {@code LoginEmails} before it gets
+     * here — trimmed and lower-cased, so one address has exactly one
+     * representation and {@code Me@Gmail.com} cannot become a second account.
+     *
+     * <p>Required. An account cannot exist without a verified address, because
+     * verifying one is what creates the account.
+     */
+    @Column(name = "email", nullable = false, length = 254)
+    private String email;
+
+    /**
+     * Derived from {@link #email}, never set by a caller.
+     *
+     * <p>Exists for the same reason {@link #phoneHash} does: account lookup and
+     * OTP rate limiting run against the hash, so those paths never handle the
+     * address itself.
+     */
+    @Column(name = "email_hash", nullable = false, length = 64)
+    private String emailHash;
+
+    /**
      * Normalised to E.164 (+919876543210) so one number has exactly one
      * representation. Without normalisation "9876543210", "+91 98765 43210"
      * and "09876543210" become three accounts for one person, and "one number,
      * one account" quietly stops being true.
+     *
+     * <p><strong>Nullable since V14.</strong> The account is created the moment
+     * an email is verified, which is before the profile step where the number
+     * is typed. It is also <em>unverified</em> — nothing has proved the person
+     * owns it — so {@link User#isPhoneVerified()} stays false until SMS
+     * verification exists. Anything that needs a proven number must ask the
+     * badge, not this column.
      */
-    @Column(name = "phone_e164", nullable = false, length = 16)
+    @Column(name = "phone_e164", length = 16)
     private String phoneE164;
 
     /**
      * Derived from {@link #phoneE164}, never set by a caller, so the two can
-     * never disagree.
+     * never disagree. Null exactly when the number is.
      */
-    @Column(name = "phone_hash", nullable = false, length = 64)
+    @Column(name = "phone_hash", length = 64)
     private String phoneHash;
 
     /**
@@ -87,18 +122,49 @@ public class UserPrivate {
     }
 
     /**
-     * @param userId    the id of the {@link User} this belongs to
-     * @param phoneE164 an already-normalised E.164 number
-     * @throws IllegalArgumentException if the number is not a valid Indian mobile
+     * @param userId the id of the {@link User} this belongs to
+     * @param email  an already-normalised, already-verified address
      */
-    public UserPrivate(UUID userId, String phoneE164) {
+    public UserPrivate(UUID userId, String email) {
         this.userId = Objects.requireNonNull(userId, "userId");
+        setEmail(email);
+    }
+
+    /**
+     * Both contact details at once, for callers that already have them.
+     *
+     * <p>Only the seeder and the tests are in that position. The real flow
+     * learns the address first and the number a screen later, which is why the
+     * two-argument constructor is the primary one.
+     */
+    public UserPrivate(UUID userId, String email, String phoneE164) {
+        this(userId, email);
         setPhoneE164(phoneE164);
+    }
+
+    /**
+     * Changing the address recomputes its hash in the same step, so the pair is
+     * updated atomically and cannot drift apart.
+     */
+    public void setEmail(String email) {
+        Objects.requireNonNull(email, "email");
+        String normalised = email.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!EMAIL_SHAPE.matcher(normalised).matches()) {
+            // Deliberately does NOT include the value, for the same reason as
+            // the phone check below.
+            throw new IllegalArgumentException("email must look like an address");
+        }
+        this.email = normalised;
+        this.emailHash = Hashing.sha256Hex(normalised);
     }
 
     /**
      * Changing the number recomputes the hash in the same step, so the pair is
      * updated atomically and cannot drift apart.
+     *
+     * <p>Setting a number does NOT verify it. {@code User.verifyPhone()} is a
+     * separate act, performed only when something has actually proved ownership
+     * — which today is nothing, so it is never called.
      */
     public void setPhoneE164(String phoneE164) {
         Objects.requireNonNull(phoneE164, "phoneE164");
@@ -111,6 +177,21 @@ public class UserPrivate {
         }
         this.phoneE164 = phoneE164;
         this.phoneHash = Hashing.sha256Hex(phoneE164);
+    }
+
+    /**
+     * Removes the number, clearing both halves of the pair together.
+     *
+     * <p>user_private_phone_pair_ck refuses a row with one and not the other,
+     * so clearing them separately would fail at flush time rather than here.
+     */
+    public void clearPhone() {
+        this.phoneE164 = null;
+        this.phoneHash = null;
+    }
+
+    public boolean hasPhone() {
+        return phoneE164 != null;
     }
 
     public void setWorkEmail(String workEmail) {
@@ -127,6 +208,15 @@ public class UserPrivate {
         return userId;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public String getEmailHash() {
+        return emailHash;
+    }
+
+    /** Null until the profile step collects it. Unverified even then. */
     public String getPhoneE164() {
         return phoneE164;
     }

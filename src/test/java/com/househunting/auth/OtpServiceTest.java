@@ -95,8 +95,8 @@ class OtpServiceTest {
         assertThat(sms().last().phoneE164()).isEqualTo(PHONE);
 
         // The screen shows enough to recognise the number, not enough to use it.
-        assertThat(dispatch.maskedPhone()).isEqualTo("+91 ***** 43210");
-        assertThat(dispatch.maskedPhone()).doesNotContain("98765");
+        assertThat(dispatch.maskedSubject()).isEqualTo("+91 ***** 43210");
+        assertThat(dispatch.maskedSubject()).doesNotContain("98765");
 
         OtpResult result = otp.verify(PHONE, sms().lastCode(), OtpPurpose.LOGIN);
 
@@ -112,7 +112,7 @@ class OtpServiceTest {
         // Scan every text column of both OTP tables for the number.
         Integer hits = jdbc.sql("""
                         SELECT count(*) FROM otp_challenges
-                        WHERE phone_hash LIKE ? OR code_hmac LIKE ?
+                        WHERE subject_hash LIKE ? OR code_hmac LIKE ?
                         """)
                 .param("%9876543210%")
                 .param("%9876543210%")

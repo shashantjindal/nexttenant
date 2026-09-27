@@ -316,16 +316,24 @@ public class DevDataSeeder implements CommandLineRunner {
                 NAMES[random.nextInt(NAMES.length)],
                 randomOf(random, Gender.MALE, Gender.FEMALE, Gender.OTHER, Gender.UNDISCLOSED),
                 randomOf(random, AgeBracket.values()));
-        leaver.verifyPhone();
+        // Deliberately NOT verifyPhone(). Since V14 a number is typed at the
+        // profile step and nothing proves it, so phone_verified_at is null for
+        // every real account. Seed data that set the badge would make dev look
+        // unlike production in exactly the place the badge is read.
+        //
         // One in three has the work-email badge, so the trust signal varies.
         if (random.nextInt(3) == 0) {
             leaver.verifyWorkEmail();
         }
         users.save(leaver);
 
-        // 9000-prefixed numbers are outside the ranges carriers assign, so no
-        // real person can receive a message if a dev sender is ever misconfigured.
-        userPrivates.save(new UserPrivate(leaver.getId(), "+9190000%05d".formatted(phoneCounter)));
+        // .invalid is the reserved TLD (RFC 2606) that can never resolve, so a
+        // misconfigured dev mail sender cannot reach a real inbox. 9000-prefixed
+        // numbers are outside the ranges carriers assign, for the same reason.
+        userPrivates.save(new UserPrivate(
+                leaver.getId(),
+                "seed-%05d@househunting.invalid".formatted(phoneCounter),
+                "+9190000%05d".formatted(phoneCounter)));
 
         Configuration configuration = randomOf(random, Configuration.values());
         RoomType roomType = randomOf(random, RoomType.PRIVATE_ROOM, RoomType.PRIVATE_ROOM,
