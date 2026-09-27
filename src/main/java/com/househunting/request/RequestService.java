@@ -5,6 +5,7 @@ import com.househunting.listing.ListingRepository;
 import com.househunting.listing.ListingStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -42,12 +43,23 @@ public class RequestService {
     private final JdbcClient jdbc;
     private final Clock clock;
 
+    /**
+     * Announces what happened, so notifications can be sent after the commit.
+     *
+     * <p>This class stays ignorant of email entirely: it publishes that a
+     * thing occurred and does not know or care who listens. Calling a mailer
+     * from inside these {@code @Transactional} methods would send messages
+     * about transactions that later roll back — see {@link RequestEvent}.
+     */
+    private final ApplicationEventPublisher events;
+
     public RequestService(InterestRequestRepository requests, ListingRepository listings,
-                          JdbcClient jdbc, Clock clock) {
+                          JdbcClient jdbc, Clock clock, ApplicationEventPublisher events) {
         this.requests = requests;
         this.listings = listings;
         this.jdbc = jdbc;
         this.clock = clock;
+        this.events = events;
     }
 
     /**
@@ -87,6 +99,8 @@ public class RequestService {
             InterestRequest request = requests.saveAndFlush(
                     new InterestRequest(listingId, requesterId, trimmed));
             bumpRequestCount(listingId);
+            events.publishEvent(new RequestEvent.Sent(
+                    request.getId(), listingId, requesterId, listing.getLeaverUserId()));
             return request;
         } catch (DataIntegrityViolationException e) {
             // Two submits raced. interest_requests_uq let exactly one through,
@@ -107,7 +121,11 @@ public class RequestService {
         InterestRequest request = requireLeaver(requestId, leaverId);
         request.accept(clock.instant());
         log.info("Request {} connected", requestId);
-        return requests.save(request);
+        InterestRequest saved = requests.save(request);
+
+        events.publishEvent(new RequestEvent.Accepted(
+                saved.getId(), saved.getListingId(), saved.getRequesterUserId(), leaverId));
+        return saved;
     }
 
     @Transactional
@@ -168,6 +186,30 @@ public class RequestService {
     @Transactional(readOnly = true)
     public long pendingCountFor(UUID leaverId) {
         return requests.countPendingFor(leaverId);
+    }
+
+    /** Answers this person has been given and has not looked at. */
+    @Transactional(readOnly = true)
+    public long answeredUnseenCountFor(UUID requesterId) {
+        return requests.countAnsweredUnseenFor(requesterId);
+    }
+
+    /**
+     * Marks every answer this person has been given as read.
+     *
+     * <p>Called when they open the requests page — where the answers are
+     * shown, so having looked at it is exactly what "seen" means.
+     *
+     * <p>Note this is invoked from a GET, which usually deserves suspicion:
+     * a state-changing GET can be triggered by a prefetch or a link preview,
+     * which is why accepting a request is a POST. The difference is what goes
+     * wrong. A prefetch that accepts a request connects two strangers; a
+     * prefetch that marks a notification read clears a badge slightly early,
+     * on a page the person was about to open anyway.
+     */
+    @Transactional
+    public int markAnswersSeen(UUID requesterId) {
+        return requests.markAnswersSeenFor(requesterId, clock.instant());
     }
 
     /** Drives the button state on a listing page: asked already, or not yet. */

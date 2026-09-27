@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Configuration;
  * Wiring for the mail package.
  */
 @Configuration
+@org.springframework.boot.context.properties.EnableConfigurationProperties(
+        com.househunting.common.SiteProperties.class)
 public class MailConfig {
 
     /**

@@ -44,6 +44,32 @@
         </a>
     </section>
 
+    <!-- ================= Somebody answered you =================
+      The other side of the same page. A person can be both at once — leaving
+      one flat while asking about another — which is why these are two
+      independent sections rather than one with a branch.
+
+      Different colour from the strip above, because they ask for different
+      things. That one is a job: somebody is waiting on you. This one is news,
+      and the job it implies (message them) happens somewhere else entirely.
+    -->
+    <section class="page-width" th:if="${counts.hasAnsweredUnseen()}">
+        <a class="waiting waiting--good" th:href="@{/requests}" href="/requests">
+            <span class="waiting__dot" aria-hidden="true"></span>
+            <span class="waiting__text">
+                <strong class="waiting__title"
+                        th:text="|You have ${counts.answeredUnseen} new ${counts.answeredNoun()}|">
+                    You have 2 new replies
+                </strong>
+                <span class="waiting__body">
+                    Someone answered your request. If they accepted, you can
+                    message each other now.
+                </span>
+            </span>
+            <span class="waiting__cta">See replies &rarr;</span>
+        </a>
+    </section>
+
     <!-- ================= Hero ================= -->
     <section class="hero page-width">
         <h1 class="hero__title">

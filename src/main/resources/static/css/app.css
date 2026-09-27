@@ -785,6 +785,22 @@
 
 .waiting:hover { border-color: var(--c-brand); }
 
+/*
+ * The requester's side: "somebody answered you".
+ *
+ * Gold rather than the brand tint, so the two strips are distinguishable at a
+ * glance when a person has both — which happens to anyone leaving one flat
+ * while asking about another, and that is a large share of this audience.
+ */
+.waiting--good {
+    background: var(--c-gold);
+    border-color: var(--c-gold-strong);
+}
+.waiting--good:hover { border-color: var(--c-gold-ink); }
+.waiting--good .waiting__dot { background: var(--c-gold-ink); }
+.waiting--good .waiting__body { color: var(--c-gold-ink); }
+.waiting--good .waiting__cta { color: var(--c-gold-ink); }
+
 /* Focus is drawn on the strip itself because the strip IS the link — a focus
    ring on some inner span would point at the wrong thing for a keyboard. */
 .waiting:focus-visible {

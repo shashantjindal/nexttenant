@@ -77,7 +77,8 @@ public class CurrentUserAdvice {
         }
         return new HeaderCounts(
                 shortlists.countFor(user.id()),
-                requests.pendingCountFor(user.id()));
+                requests.pendingCountFor(user.id()),
+                requests.answeredUnseenCountFor(user.id()));
     }
 
     @ModelAttribute("currentPath")

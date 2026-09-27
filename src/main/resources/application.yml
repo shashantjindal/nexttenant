@@ -113,6 +113,11 @@ househunting:
     #      this file is committed.
     google-api-key: ${GOOGLE_MAPS_API_KEY:}
 
+  site:
+    # Emails need an ABSOLUTE link; a browser knows where a relative path
+    # came from and an inbox does not. Override per environment.
+    base-url: ${HOUSEHUNTING_BASE_URL:http://localhost:8080}
+
   otp:
     # HMAC key for hashing codes. The default below is committed, therefore
     # public, therefore not a secret — OtpSecretCheck refuses to start with it

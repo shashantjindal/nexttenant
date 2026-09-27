@@ -73,8 +73,8 @@
                    say those are the same kind of number. */-->
             <a class="btn btn--ghost site-header__requests" th:if="${currentUser != null}"
                th:href="@{/requests}"
-               th:attr="title=${counts.hasPendingRequests()}
-                        ? ${counts.pendingRequests} + ' waiting for your answer'
+               th:attr="title=${counts.hasRequestsBadge()}
+                        ? ${counts.requestsBadge()} + ' to look at'
                         : 'Requests'">
                 <!--/* An icon so the word can drop away on a phone, exactly
                        as the wishlist heart does. Without one, hiding the
@@ -87,8 +87,8 @@
                 </svg>
                 <span class="site-header__label">Requests</span>
                 <span class="site-header__count site-header__count--waiting"
-                      th:hidden="${counts.pendingRequests} == 0"
-                      th:text="${counts.hasPendingRequests()} ? ${counts.pendingRequests} : ''">2</span>
+                      th:hidden="${counts.requestsBadge()} == 0"
+                      th:text="${counts.hasRequestsBadge()} ? ${counts.requestsBadge()} : ''">2</span>
             </a>
             <a class="btn btn--ghost" th:if="${currentUser == null}"
                th:href="@{/login}" href="/login">Log in</a>

@@ -77,9 +77,17 @@ public class RequestController {
 
     @GetMapping("/requests")
     public String myRequests(@AuthenticationPrincipal AuthenticatedUser user, Model model) {
+        // Read BEFORE marking seen. The other order would clear the badge and
+        // then render a page with no indication of which answers were the new
+        // ones — the notification would vanish in the act of being delivered.
         model.addAttribute("received", views.receivedBy(user.id()));
         model.addAttribute("sent", views.sentBy(user.id()));
         model.addAttribute("me", user);
+
+        // This page IS where answers are shown, so opening it is exactly what
+        // "seen" means. The header badge for the requester clears from here.
+        requests.markAnswersSeen(user.id());
+
         return "request/index";
     }
 

@@ -67,6 +67,18 @@ public class InterestRequest {
     @Column(name = "connected_at")
     private Instant connectedAt;
 
+    /**
+     * When the REQUESTER last saw the answer to this.
+     *
+     * <p>Null means unread news. Only the requester needs such a marker: the
+     * leaver reads "still needs me" straight off {@link #status}, because a
+     * request they have dealt with is no longer PENDING. Nothing moves the
+     * requester's side out of CONNECTED, so without this column their badge
+     * would light up once and stay lit forever.
+     */
+    @Column(name = "requester_seen_at")
+    private Instant requesterSeenAt;
+
     @Column(name = "updated_at", insertable = false, updatable = false)
     @Generated(event = {EventType.INSERT, EventType.UPDATE})
     private Instant updatedAt;
@@ -147,6 +159,35 @@ public class InterestRequest {
         return listingId.equals(id);
     }
 
+    /**
+     * Has the leaver answered this, one way or the other?
+     *
+     * <p>WITHDRAWN is excluded because the requester did that themselves, and
+     * REVOKED because it is not an answer to the original ask. Both would be
+     * news about something the person already knows.
+     */
+    public boolean isAnswered() {
+        return status == RequestStatus.CONNECTED || status == RequestStatus.DECLINED;
+    }
+
+    /** Answered, and the person who asked has not looked yet. */
+    public boolean isUnseenByRequester() {
+        return isAnswered() && requesterSeenAt == null;
+    }
+
+    /**
+     * Marks the answer read.
+     *
+     * <p>Idempotent, and deliberately only moves null to a value: re-stamping
+     * on every page load would make "when did they first see this?" — the one
+     * question the column can answer — unanswerable.
+     */
+    public void markSeenByRequester(Instant now) {
+        if (requesterSeenAt == null) {
+            this.requesterSeenAt = now;
+        }
+    }
+
     // ---- Accessors --------------------------------------------------------
 
     public UUID getId() {
@@ -171,6 +212,10 @@ public class InterestRequest {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getRequesterSeenAt() {
+        return requesterSeenAt;
     }
 
     public Instant getRespondedAt() {

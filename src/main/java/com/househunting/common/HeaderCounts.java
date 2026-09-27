@@ -22,11 +22,41 @@ package com.househunting.common;
  *
  * @param wishlist        rooms the viewer has hearted
  * @param pendingRequests people waiting on the viewer to accept or decline
+ * @param answeredUnseen  answers the viewer has been given and not read
  */
-public record HeaderCounts(long wishlist, long pendingRequests) {
+public record HeaderCounts(long wishlist, long pendingRequests, long answeredUnseen) {
 
     /** For signed-out visitors. Saves every template a null check. */
-    public static final HeaderCounts NONE = new HeaderCounts(0, 0);
+    public static final HeaderCounts NONE = new HeaderCounts(0, 0, 0);
+
+    /**
+     * The number on the Requests badge.
+     *
+     * <p>Both sides of the same page, added together, because the badge means
+     * one thing: "there is something here for you". Splitting it into two
+     * badges would make somebody read two numbers and work out that they both
+     * lead to the same screen.
+     *
+     * <p>They stay separate in this record because the SENTENCES differ —
+     * "2 people want your room" and "your request was accepted" are not the
+     * same news, and the landing page says the right one.
+     */
+    public long requestsBadge() {
+        return pendingRequests + answeredUnseen;
+    }
+
+    public boolean hasRequestsBadge() {
+        return requestsBadge() > 0;
+    }
+
+    public boolean hasAnsweredUnseen() {
+        return answeredUnseen > 0;
+    }
+
+    /** "reply" or "replies" — the noun for the requester's side. */
+    public String answeredNoun() {
+        return answeredUnseen == 1 ? "reply" : "replies";
+    }
 
     /**
      * Named {@code hasX} rather than {@code isX}.

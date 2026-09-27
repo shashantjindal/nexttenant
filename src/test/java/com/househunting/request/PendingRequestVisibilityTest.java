@@ -88,7 +88,7 @@ class PendingRequestVisibilityTest {
         // asserting on its presence would prove nothing. The title attribute
         // is the part that changes, and it is what a person actually sees.
         assertThat(html).contains("title=\"Requests\"");
-        assertThat(html).doesNotContain("waiting for your answer");
+        assertThat(html).doesNotContain("to look at");
     }
 
     @Test
@@ -99,8 +99,8 @@ class PendingRequestVisibilityTest {
         // The landing page and the search page, because the point of putting
         // this in the layout rather than on one controller is that it follows
         // the person around.
-        assertThat(page("/", leaver)).contains("1 waiting for your answer");
-        assertThat(page("/flats", leaver)).contains("1 waiting for your answer");
+        assertThat(page("/", leaver)).contains("1 to look at");
+        assertThat(page("/flats", leaver)).contains("1 to look at");
     }
 
     @Test
@@ -110,13 +110,13 @@ class PendingRequestVisibilityTest {
         User another = users.save(new User("Sneha", Gender.FEMALE, AgeBracket.AGE_23_27));
         requests.send(listing.getId(), another.getId(), null);
 
-        assertThat(page("/", leaver)).contains("2 waiting for your answer");
+        assertThat(page("/", leaver)).contains("2 to look at");
 
         requests.accept(first.getId(), leaver.getId());
 
         // A badge that kept counting answered requests would train people to
         // ignore it, which is worse than not having one.
-        assertThat(page("/", leaver)).contains("1 waiting for your answer");
+        assertThat(page("/", leaver)).contains("1 to look at");
     }
 
     @Test
@@ -124,13 +124,19 @@ class PendingRequestVisibilityTest {
     void theRequesterSeesNoBadge() throws Exception {
         requests.send(listing.getId(), seeker.getId(), null);
 
-        // The seeker SENT the request; there is nothing for them to approve.
-        // Showing them a badge would be both meaningless and a small leak of
-        // somebody else's inbox state.
+        // The seeker SENT the request; there is nothing for them to approve
+        // and nothing has been answered yet. Showing them a badge here would
+        // be both meaningless and a small leak of somebody else's inbox state.
+        //
+        // They DO get one the moment they are answered — see
+        // RequestNotificationTest — which is the distinction this pins: the
+        // badge tracks "something needs you", not "a request exists".
         String html = page("/", seeker);
 
         assertThat(html).contains("title=\"Requests\"");
-        assertThat(html).doesNotContain("waiting for your answer");
+        assertThat(html).doesNotContain("to look at");
+        assertThat(html).doesNotContain("new reply");
+        assertThat(html).doesNotContain("want your room");
     }
 
     @Test
@@ -142,7 +148,7 @@ class PendingRequestVisibilityTest {
                 .andReturn().getResponse().getContentAsString();
 
         // HeaderCounts.NONE, and no query run at all for the anonymous case.
-        assertThat(html).doesNotContain("waiting for your answer");
+        assertThat(html).doesNotContain("to look at");
         assertThat(html).doesNotContain("want your room");
     }
 
