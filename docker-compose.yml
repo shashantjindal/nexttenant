@@ -9,6 +9,17 @@
 # Note there is no `version:` key — it has been obsolete in Compose v2 for years
 # and now only produces a warning.
 
+# The project name, pinned.
+#
+# Compose otherwise derives this from the FOLDER NAME, and the project name is
+# what prefixes every volume — `db-data` is really `<project>_db-data`. So
+# renaming the folder orphans the database: Compose looks for a volume that
+# does not exist, creates an empty one, and every listing appears to have
+# vanished while the old volume sits there untouched.
+#
+# Pinned here so the folder can be called anything.
+name: nexttenant
+
 services:
   db:
     # Pinned deliberately. `latest` would silently bump major versions and cost
