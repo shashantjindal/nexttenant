@@ -94,6 +94,29 @@ househunting:
     storage: ${HOUSEHUNTING_PHOTO_STORAGE:local}
     local-dir: ${HOUSEHUNTING_PHOTO_DIR:./data/photos}
 
+    # Used only when storage=s3. Works with Amazon S3, Cloudflare R2,
+    # DigitalOcean Spaces, Backblaze B2 and MinIO — they all speak this API.
+    s3:
+      bucket: ${HOUSEHUNTING_S3_BUCKET:}
+      # Leave blank for Amazon S3 itself. Set it for everyone else, e.g.
+      #   R2      https://<account>.r2.cloudflarestorage.com
+      #   Spaces  https://blr1.digitaloceanspaces.com
+      endpoint: ${HOUSEHUNTING_S3_ENDPOINT:}
+      # "auto" for providers that have no regions but require the field.
+      region: ${HOUSEHUNTING_S3_REGION:ap-south-1}
+      access-key: ${HOUSEHUNTING_S3_ACCESS_KEY:}
+      secret-key: ${HOUSEHUNTING_S3_SECRET_KEY:}
+
+  mail:
+    # "console" prints to the log; "smtp" actually sends. Every provider worth
+    # using speaks SMTP, so switching is configuration rather than code.
+    provider: ${HOUSEHUNTING_MAIL_PROVIDER:console}
+    # MUST be an address the provider has verified for the sending domain. An
+    # unverified From is rejected by SES and silently spam-foldered by others.
+    from: ${HOUSEHUNTING_MAIL_FROM:HouseHunting <noreply@invalid.invalid>}
+    # People reply to notification emails. Send those somewhere a person reads.
+    reply-to: ${HOUSEHUNTING_MAIL_REPLY_TO:}
+
   maps:
     # Google Maps JavaScript API key. Blank by default, which makes every map
     # fall back to Leaflet with OpenStreetMap tiles — so a fresh clone runs
@@ -159,3 +182,100 @@ logging:
     # hunting N+1 queries; far too noisy to leave on.
     # org.hibernate.SQL: DEBUG
     # org.hibernate.orm.jdbc.bind: TRACE
+
+# ---- Health check ---------------------------------------------------------
+# One endpoint, and only one. The others (env, beans, configprops, heapdump)
+# publish configuration and environment variables, which is how a deployment
+# leaks its own database URL to anyone who guesses a URL.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # "UP" only when the database answers too. A health check that reports a
+      # healthy JVM in front of an unreachable database keeps a broken instance
+      # in the load balancer, which is worse than no health check at all.
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    db:
+      enabled: true
+
+    # OFF, deliberately, and this was found by actually booting with
+    # provider=smtp: spring-boot-starter-mail registers a health indicator that
+    # opens a real SMTP connection on EVERY health poll. Two things wrong with
+    # leaving it on.
+    #
+    # It reports the whole application DOWN when the mail provider is
+    # unreachable — so a load balancer pulls the site out of rotation because
+    # email is having a bad minute, even though browsing, searching and
+    # requesting all work perfectly without it. The health check would cause
+    # the outage it is meant to detect.
+    #
+    # And polling every few seconds means an SMTP connection every few seconds,
+    # which providers rate-limit and some count as usage.
+    mail:
+      enabled: false
+
+
+# ===========================================================================
+# PRODUCTION
+#
+# Active when SPRING_PROFILES_ACTIVE=prod. Everything secret comes from the
+# environment; nothing secret is in this file, which is why this file can be
+# committed.
+#
+# Note what is NOT here: DevDataSeeder. It is @Profile("dev"), so under prod
+# the bean is never created at all, rather than created and disabled by a flag
+# somebody could get wrong.
+# ===========================================================================
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # Production mail. The host/port/credentials belong to Spring Boot's own
+  # binding; only the addresses on the message are ours (househunting.mail.*).
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          # STARTTLS, not plaintext. Without it, credentials and message bodies
+          # cross the network in the clear.
+          starttls:
+            enable: true
+            required: true
+          # Fail rather than hang. A blocked SMTP port is a common first-deploy
+          # symptom, and an infinite wait looks like the whole app has frozen.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+server:
+  error:
+    # OFF. In development these turn a 500 into a readable message; in
+    # production the same message hands a stranger the shape of the stack,
+    # the SQL, and sometimes the values that were being processed.
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+  # Behind a load balancer or reverse proxy, so the app must trust the
+  # X-Forwarded-* headers to know it is really on HTTPS. Without this, every
+  # redirect it issues points at http:// and the browser downgrades.
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    # INFO, not DEBUG. DEBUG here prints the OTP issuing path and a great deal
+    # of Hibernate, into an aggregator readable by more people than an inbox.
+    com.househunting: INFO
+    root: WARN

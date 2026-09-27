@@ -110,6 +110,30 @@ dependencies {
     // error. This module is what registers FlywayAutoConfiguration.
     implementation("org.springframework.boot:spring-boot-flyway")
 
+    // ---- Production adapters ------------------------------------------------
+
+    // SMTP, for the production EmailSender.
+    //
+    // SMTP rather than a provider's REST SDK on purpose: Amazon SES, Resend,
+    // Postmark, Mailgun and Brevo all speak it, so switching provider is four
+    // environment variables rather than a new dependency and a new class. A
+    // vendor SDK would buy webhooks and analytics this product does not use,
+    // in exchange for being locked to one supplier on launch day.
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
+    // The S3 API, for the production PhotoStorage.
+    //
+    // Note this is not only Amazon. Cloudflare R2, DigitalOcean Spaces,
+    // Backblaze B2 and MinIO are all S3-compatible, so one implementation
+    // covers every realistic option — including running MinIO locally if that
+    // is ever wanted. Only the endpoint and the keys change.
+    implementation("software.amazon.awssdk:s3:2.30.11")
+
+    // ---- Observability ------------------------------------------------------
+    // A health endpoint a load balancer can poll, which also checks that the
+    // database is actually reachable rather than only that the JVM is up.
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
     // ---- Testing ------------------------------------------------------------
     // Bundles JUnit 5, AssertJ, Mockito and Spring's test context framework.
     testImplementation("org.springframework.boot:spring-boot-starter-test")

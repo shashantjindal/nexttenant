@@ -26,9 +26,6 @@ public class HomeController {
     /** How many cards the "Just listed" row shows. */
     private static final int RECENT_CARDS = 6;
 
-    /** Placeholder until we have a real figure to compute. */
-    private static final int BROKERAGE_SAVED_INR = 4_800_000;
-
     private final ListingCatalog catalog;
     private final AreaRepository areas;
     private final ShortlistService shortlists;
@@ -55,7 +52,9 @@ public class HomeController {
         // wrong. Counting it costs one trivial query on one page.
         model.addAttribute("areaCount", areas.countActive());
 
-        model.addAttribute("brokerageSaved", Rupees.compact(BROKERAGE_SAVED_INR));
+        // Computed from real connections, not a figure somebody chose. See
+        // ListingCatalog.brokerageSavedInr for what it counts and why.
+        model.addAttribute("brokerageSaved", Rupees.compact(catalog.brokerageSavedInr()));
 
         // Which of these the viewer has already hearted. One query for the row,
         // not one per card.

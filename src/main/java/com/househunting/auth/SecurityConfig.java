@@ -45,6 +45,13 @@ public class SecurityConfig {
                                          "/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/error").permitAll()
 
+                        // The load balancer's health check. Only /health is
+                        // opened — the other actuator endpoints expose
+                        // configuration, environment variables and beans, and
+                        // publishing those is how a deployment leaks its own
+                        // database URL.
+                        .requestMatchers("/actuator/health").permitAll()
+
                         // Moderation. Declared BEFORE anyRequest(), and by
                         // role rather than by a check inside each handler, so
                         // an /admin route added later is protected by default.
@@ -55,6 +62,69 @@ public class SecurityConfig {
                         // route is private by default: forgetting to list it
                         // locks it down rather than exposing it.
                         .anyRequest().authenticated()
+                )
+
+                // ---- Response headers ------------------------------------
+                //
+                // Spring Security sets sensible defaults (nosniff, frame deny,
+                // no-cache on authenticated responses). These are the three it
+                // cannot guess for us.
+                .headers(headers -> headers
+
+                        // HSTS: after the first visit over HTTPS, the browser
+                        // refuses to speak plain HTTP to this host at all —
+                        // which closes the window where a redirect from
+                        // http:// can be intercepted before the redirect
+                        // happens.
+                        //
+                        // Deliberately NOT preload, and not includeSubDomains.
+                        // Preloading is baked into browsers and effectively
+                        // irreversible; committing to it before the domain and
+                        // its subdomains are settled is a decision that cannot
+                        // be taken back in a hurry.
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(false)
+                                .maxAgeInSeconds(31536000))
+
+                        // Referrer: send the full URL within our own site, and
+                        // only the origin to anyone else. Without this, a
+                        // visitor clicking a Google Maps tile would hand
+                        // Google the exact listing URL they were looking at.
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers
+                                        .ReferrerPolicyHeaderWriter.ReferrerPolicy
+                                        .STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+
+                        // CSP: the real defence against an injected script.
+                        // Everything of ours is same-origin; the exceptions are
+                        // listed because they are the only third parties this
+                        // site loads at all.
+                        //
+                        // 'unsafe-inline' is present for styles and NOT for
+                        // scripts. Inline styles are used by the templates;
+                        // inline script is what an injection attack needs, so
+                        // that is the one that must not be allowed.
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(String.join("; ",
+                                "default-src 'self'",
+                                "script-src 'self' https://maps.googleapis.com "
+                                        + "https://unpkg.com",
+                                "style-src 'self' 'unsafe-inline' "
+                                        + "https://fonts.googleapis.com https://unpkg.com",
+                                "font-src 'self' https://fonts.gstatic.com",
+                                // blob: and data: are how the wizard previews a
+                                // photo before it has been uploaded.
+                                "img-src 'self' data: blob: https://*.googleapis.com "
+                                        + "https://*.gstatic.com https://*.tile.openstreetmap.org",
+                                "connect-src 'self' https://maps.googleapis.com "
+                                        + "https://*.tile.openstreetmap.org",
+                                // Nothing on this site should ever be framed,
+                                // and this is the modern form of that rule.
+                                "frame-ancestors 'none'",
+                                "base-uri 'self'",
+                                // Forms may only post back to us — so an
+                                // injected form cannot exfiltrate a CSRF token
+                                // or a typed phone number to another host.
+                                "form-action 'self'")))
                 )
 
                 // No username/password form: there are no passwords. Leaving it

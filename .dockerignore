@@ -1,0 +1,27 @@
+# Everything here is either rebuilt inside the image or must never reach it.
+
+# Build output — stale classes from the host would be copied in and silently
+# shadow the ones the image builds.
+build/
+.gradle/
+
+# Secrets. A .env copied into an image is a secret published to whoever can
+# pull that image.
+.env
+
+# Local data: uploaded photos and the database volume. Large, private, and
+# meaningless inside a container.
+data/
+
+# Version control and editor state.
+.git/
+.gitignore
+.gitattributes
+.idea/
+*.iml
+
+# Documentation. Does not affect the build, and every file included is another
+# layer invalidation when it changes.
+*.md
+docker/
+docker-compose.yml

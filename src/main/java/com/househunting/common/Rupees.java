@@ -81,9 +81,18 @@ public final class Rupees {
      * large figures: {@code ₹48 lakh}, {@code ₹1.2 crore}.
      */
     public static String compact(Integer amount) {
-        if (amount == null) {
-            return "";
-        }
+        return amount == null ? "" : compact(amount.longValue());
+    }
+
+    /**
+     * The same, for figures that are SUMS rather than single prices.
+     *
+     * <p>A rent fits in an int comfortably; a total across every flat on the
+     * site does not necessarily. Overflowing to a negative number on a
+     * headline statistic is the kind of bug that only appears once the site is
+     * doing well, which is the worst time to find it.
+     */
+    public static String compact(long amount) {
         if (amount >= 10_000_000) {
             double crore = amount / 10_000_000.0;
             return "₹" + trimZero(crore) + " crore";
@@ -92,7 +101,8 @@ public final class Rupees {
             double lakh = amount / 100_000.0;
             return "₹" + trimZero(lakh) + " lakh";
         }
-        return format(amount);
+        // Below a lakh it is small enough that an int is certain to hold it.
+        return format((int) amount);
     }
 
     /** 1.0 -> "1", 1.5 -> "1.5". Avoids "₹1.0 lakh". */

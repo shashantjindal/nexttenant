@@ -1,15 +1,23 @@
 package com.househunting.mail;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.javamail.JavaMailSender;
 
 /**
  * Wiring for the mail package.
+ *
+ * <p>Exactly one {@link EmailSender} is registered, chosen by
+ * {@code househunting.mail.provider}. The rest of the application depends on
+ * the interface and never learns which one it got.
  */
 @Configuration
-@org.springframework.boot.context.properties.EnableConfigurationProperties(
-        com.househunting.common.SiteProperties.class)
+@EnableConfigurationProperties({
+        MailProperties.class,
+        com.househunting.common.SiteProperties.class
+})
 public class MailConfig {
 
     /**
@@ -18,16 +26,26 @@ public class MailConfig {
      * <p>{@code @ConditionalOnProperty} with {@code matchIfMissing} rather than
      * {@code @ConditionalOnMissingBean} — see {@code AuthConfig} for why the
      * latter does not work reliably here.
-     *
-     * <p>When a real provider arrives it registers under
-     * {@code househunting.mail.provider=ses} (or whichever) and this one stands
-     * down. The switch is a property, not a code change, so the same jar runs
-     * in both places.
      */
     @Bean
     @ConditionalOnProperty(name = "househunting.mail.provider",
                            havingValue = "console", matchIfMissing = true)
     public EmailSender consoleEmailSender() {
         return new ConsoleEmailSender();
+    }
+
+    /**
+     * The production sender.
+     *
+     * <p>Takes {@link JavaMailSender}, which Spring Boot auto-configures from
+     * {@code spring.mail.*}. Those properties have no defaults worth using, so
+     * a deployment that sets {@code provider=smtp} and forgets the host fails
+     * at the first send rather than at startup — which is why the deployment
+     * checklist ends with sending one real code to a real inbox.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "househunting.mail.provider", havingValue = "smtp")
+    public EmailSender smtpEmailSender(JavaMailSender mailer, MailProperties config) {
+        return new SmtpEmailSender(mailer, config);
     }
 }
