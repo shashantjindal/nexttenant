@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
     # Secrets come from a file that is NOT in this repository.
-    env_file: hh.env
+    env_file: nt.env
 
     # Note the 127.0.0.1 prefix — it is doing the important work here.
     #

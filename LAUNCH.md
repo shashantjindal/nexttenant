@@ -381,7 +381,7 @@ This stores every listing, account and message. Amazon runs and backs it up.
 A **security group** is a firewall: a list of who may connect.
 
 1. Search **VPC** → **Security groups** (left menu) → **Create security group**.
-2. Name: `hh-db`. Description: `Database`.
+2. Name: `nt-db`. Description: `Database`.
 3. VPC: leave the default.
 4. **Leave inbound rules empty for now.** We add one in Part 7, once the server
    exists.
@@ -399,7 +399,7 @@ A **security group** is a firewall: a list of who may connect.
    > you have users.
 
 5. **Settings**
-   - DB instance identifier: `househunting-db`
+   - DB instance identifier: `nexttenant-db`
    - Master username: `postgres`
    - Master password: generate a long one and **save it now** in a password
      manager
@@ -413,9 +413,9 @@ A **security group** is a firewall: a list of who may connect.
 
      > The database must never be reachable from the internet. Your server
      > talks to it over Amazon's private network.
-   - Existing VPC security groups: **remove `default`**, choose **`hh-db`**
+   - Existing VPC security groups: **remove `default`**, choose **`nt-db`**
 9. **Additional configuration**
-   - Initial database name: `househunting`
+   - Initial database name: `nexttenant`
 
      > Easy to miss and worth getting right — it saves creating it by hand
      > later.
@@ -427,11 +427,11 @@ Takes about 10 minutes. Status goes `Creating` → `Available`.
 
 ### 5.3 Write down the address
 
-Click `househunting-db` → **Connectivity & security** → copy the **Endpoint**.
+Click `nexttenant-db` → **Connectivity & security** → copy the **Endpoint**.
 It looks like:
 
 ```
-househunting-db.abc123xyz.ap-south-1.rds.amazonaws.com
+nexttenant-db.abc123xyz.ap-south-1.rds.amazonaws.com
 ```
 
 You need this in Part 8.
@@ -450,7 +450,7 @@ you update the site. They go in **S3**, Amazon's file storage.
 1. Search **S3** → **Create bucket**.
 2. Region: **Mumbai**.
 3. Name: must be globally unique across all of AWS. Use something like
-   `househunting-photos-4821` with random digits.
+   `nexttenant-photos-4821` with random digits.
 4. **Block all public access: leave TICKED.**
 
    > The bucket stays private deliberately. Photos are served *through* the
@@ -469,8 +469,8 @@ automatically and cannot be copied off the machine.
 1. Search **IAM** → **Roles** → **Create role**.
 2. Trusted entity: **AWS service**. Use case: **EC2**. Next.
 3. Skip the permissions list for now. Next.
-4. Name: `hh-app-role`. Create.
-5. Click into `hh-app-role` → **Add permissions** → **Create inline policy**.
+4. Name: `nt-app-role`. Create.
+5. Click into `nt-app-role` → **Add permissions** → **Create inline policy**.
 6. Click the **JSON** tab and replace everything with this, putting **your**
    bucket name in:
 
@@ -480,12 +480,12 @@ automatically and cannot be copied off the machine.
   "Statement": [{
     "Effect": "Allow",
     "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-    "Resource": "arn:aws:s3:::househunting-photos-4821/*"
+    "Resource": "arn:aws:s3:::nexttenant-photos-4821/*"
   }]
 }
 ```
 
-7. Name it `hh-s3-access`. Create.
+7. Name it `nt-s3-access`. Create.
 
 Three actions, one bucket. If the server is ever broken into, that is the
 entire extent of what the attacker gets.
@@ -499,7 +499,7 @@ entire extent of what the attacker gets.
 ### 7.1 Its firewall
 
 1. **VPC → Security groups → Create security group**.
-2. Name: `hh-app`.
+2. Name: `nt-app`.
 3. **Inbound rules** — add three:
 
 | Type | Source | Meaning |
@@ -515,8 +515,8 @@ entire extent of what the attacker gets.
 
 ### 7.2 Let the database accept connections from the server
 
-1. **Security groups** → select **`hh-db`** → **Inbound rules** → **Edit**.
-2. **Add rule**: Type **PostgreSQL**, Source → start typing `hh-app` and pick
+1. **Security groups** → select **`nt-db`** → **Inbound rules** → **Edit**.
+2. **Add rule**: Type **PostgreSQL**, Source → start typing `nt-app` and pick
    that **security group** from the list.
 3. Save.
 
@@ -527,7 +527,7 @@ entire extent of what the attacker gets.
 ### 7.3 Launch it
 
 1. Search **EC2** → **Launch instance**.
-2. Name: `househunting`.
+2. Name: `nexttenant`.
 3. Image: **Amazon Linux 2023**.
 4. Instance type: **t3.small**.
 
@@ -535,13 +535,13 @@ entire extent of what the attacker gets.
    > enough. The app resizes uploaded photos in memory and will be killed by
    > the system on the first real upload.
 
-5. Key pair → **Create new key pair** → name `hh-key`, type **RSA**, format
+5. Key pair → **Create new key pair** → name `nt-key`, type **RSA**, format
    **.pem** → Create. **The file downloads once.** Lose it and you lose access
    to the server.
-6. **Network settings → Edit** → Select existing security group → **`hh-app`**.
+6. **Network settings → Edit** → Select existing security group → **`nt-app`**.
 7. **Configure storage**: 20 GiB gp3.
 8. **Advanced details** → scroll to **IAM instance profile** → choose
-   **`hh-app-role`**.
+   **`nt-app-role`**.
 
    > Easy to miss, and photo uploads fail without it.
 
@@ -555,7 +555,7 @@ your domain.
 1. **EC2 → Elastic IPs** (left menu) → **Allocate Elastic IP address** →
    Allocate.
 2. Select it → **Actions → Associate Elastic IP address** → choose your
-   `househunting` instance → Associate.
+   `nexttenant` instance → Associate.
 
 **Write this IP down.** It is your server's address.
 
@@ -570,7 +570,7 @@ your domain.
 
 ### 8.1 Connect to it
 
-Open **PowerShell** on your PC and go to wherever `hh-key.pem` downloaded:
+Open **PowerShell** on your PC and go to wherever `nt-key.pem` downloaded:
 
 ```powershell
 cd ~\Downloads
@@ -579,13 +579,13 @@ cd ~\Downloads
 Windows will refuse to use the key file until its permissions are locked down:
 
 ```powershell
-icacls hh-key.pem /inheritance:r /grant:r "$env:USERNAME:R"
+icacls nt-key.pem /inheritance:r /grant:r "$env:USERNAME:R"
 ```
 
 Then connect, using your Elastic IP:
 
 ```powershell
-ssh -i hh-key.pem ec2-user@13.234.56.78
+ssh -i nt-key.pem ec2-user@13.234.56.78
 ```
 
 Type `yes` when asked about authenticity.
@@ -617,7 +617,7 @@ Now **log out and back in** so the Docker permission takes effect:
 exit
 ```
 ```powershell
-ssh -i hh-key.pem ec2-user@13.234.56.78
+ssh -i nt-key.pem ec2-user@13.234.56.78
 ```
 
 Check it worked:
@@ -644,10 +644,10 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 Using the endpoint from Part 5.3:
 
 ```bash
-psql -h househunting-db.abc123xyz.ap-south-1.rds.amazonaws.com -U postgres -d househunting
+psql -h nexttenant-db.abc123xyz.ap-south-1.rds.amazonaws.com -U postgres -d nexttenant
 ```
 
-Enter your master password. At the `househunting=>` prompt:
+Enter your master password. At the `nexttenant=>` prompt:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -664,9 +664,17 @@ timeout, the security group rule in Part 7.2 is wrong.
 ### 8.5 Get the code
 
 ```bash
-git clone https://github.com/<you>/househunting.git
-cd househunting
+git clone https://github.com/<you>/nexttenant.git
+cd nexttenant
 ```
+
+> Use whatever your repository is actually called — if it is still named
+> `househunting`, clone that and `cd` into it. The folder name does not matter
+> to anything except the two commands below, **with one exception**: Docker
+> Compose derives its project name from the directory, and the project name is
+> what the certificate volume is attached to. So do not rename the folder after
+> you have deployed, or Caddy loses its certificates and asks Let's Encrypt for
+> new ones.
 
 If the repository is private, GitHub will ask for a username and a **personal
 access token** — your GitHub password will not work. Create one at
@@ -675,7 +683,7 @@ access token** — your GitHub password will not work. Create one at
 ### 8.6 Write the settings file
 
 ```bash
-nano hh.env
+nano nt.env
 ```
 
 Paste this, **replacing every `<...>`**:
@@ -683,7 +691,7 @@ Paste this, **replacing every `<...>`**:
 ```bash
 SPRING_PROFILES_ACTIVE=prod
 
-DB_URL=jdbc:postgresql://<your-rds-endpoint>:5432/househunting?sslmode=require
+DB_URL=jdbc:postgresql://<your-rds-endpoint>:5432/nexttenant?sslmode=require
 DB_USERNAME=postgres
 DB_PASSWORD=<your master password>
 
@@ -729,7 +737,7 @@ anyone who has read the source code.
 Lock the file down:
 
 ```bash
-chmod 600 hh.env
+chmod 600 nt.env
 ```
 
 ### 8.7 Set up the web address config
@@ -880,7 +888,7 @@ There is no button for this, deliberately. Sign in through the real site first,
 then on the server:
 
 ```bash
-psql -h <your-rds-endpoint> -U postgres -d househunting
+psql -h <your-rds-endpoint> -U postgres -d nexttenant
 ```
 ```sql
 UPDATE users SET is_admin = true
@@ -898,7 +906,7 @@ SELECT count(*) FROM users;
 
 Expect only what you created in Part 10. If you see ~315 listings, the app
 started with the wrong profile — check `SPRING_PROFILES_ACTIVE=prod` in
-`hh.env`.
+`nt.env`.
 
 ### 11.3 Legal pages
 
@@ -932,7 +940,7 @@ not advertise the map as precise.
 ### Updating the site
 
 ```bash
-cd ~/househunting
+cd ~/nexttenant
 git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
@@ -980,24 +988,24 @@ The username is `ec2-user`, not `root` or your name. On Windows, run the
 `icacls` command from Part 8.1.
 
 **`psql` just hangs, then times out**
-The `hh-db` security group is missing the rule from Part 7.2, or its source is
-an IP instead of the `hh-app` group.
+The `nt-db` security group is missing the rule from Part 7.2, or its source is
+an IP instead of the `nt-app` group.
 
 **App logs say "Refusing to start: the OTP secret is still the development
 default"**
 Working as intended. Generate a real one with `openssl rand -base64 48` and put
-it in `hh.env` (Part 8.6).
+it in `nt.env` (Part 8.6).
 
 **App logs mention `postgis` or `geography`**
 Part 8.4 was skipped or run against the wrong database.
 
 **Health says `DOWN`**
-Usually the database. Check `DB_URL` in `hh.env` — the endpoint, `:5432`, and
-`/househunting` at the end.
+Usually the database. Check `DB_URL` in `nt.env` — the endpoint, `:5432`, and
+`/nexttenant` at the end.
 
 **Site loads on `http://` but not `https://`**
 Caddy could not get a certificate. Check `nslookup nexttenant.in` returns your
-IP, that ports 80 and 443 are open in `hh-app`, then
+IP, that ports 80 and 443 are open in `nt-app`, then
 `docker compose -f docker-compose.prod.yml restart caddy`.
 
 **Sign-in emails never arrive**
