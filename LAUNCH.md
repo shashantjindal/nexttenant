@@ -1,4 +1,4 @@
-# Putting HouseHunting on the internet
+# Putting NextTenant on the internet
 
 **A complete walkthrough, assuming you have never used AWS.**
 
@@ -51,22 +51,82 @@ Pick something short and typeable over a phone call.
 
 ### 1.2 Buy it
 
-1. Go to **namecheap.com** and create an account.
-2. Search your name, add it to the cart.
-3. At checkout, **turn OFF every extra** — hosting, email, SSL, "premium DNS".
-   You need none of them. **Keep "Domain Privacy"**, which is usually free and
-   hides your home address from public records.
-4. Pay.
+Any registrar works — GoDaddy, Namecheap, Cloudflare. This guide uses
+**GoDaddy**, and notes where another registrar differs.
 
-> **Why not buy the domain from Amazon too?** You can, but Amazon charges
-> $0.50/month extra for DNS where Namecheap includes it. One less thing to
-> configure, and one less thing on the bill.
+1. Search your name and add it to the cart.
+2. At checkout, **turn OFF every extra** — hosting, email, SSL certificates,
+   "premium DNS", SEO tools, "domain protection". You need none of them.
 
-**You should now have:** a domain, visible under *Domain List* in your
-Namecheap account.
+   > The SSL one is worth refusing deliberately: it is usually the most
+   > expensive upsell on the page, and Part 8 gets you a certificate free and
+   > automatically. "Domain protection" is mostly repackaging two-factor
+   > authentication and a transfer lock, both of which are free in your account
+   > settings.
 
-We come back to Namecheap twice: in Part 4 to prove you own the domain, and in
-Part 9 to point it at your server.
+   **Keep "Domain Privacy"** if it is free — it hides your home address and
+   phone number from public WHOIS lookups, which matters when the product puts
+   you in contact with strangers.
+3. Pay.
+4. Turn on **auto-renew**, and **two-factor authentication** on the registrar
+   account.
+
+   > Domains are lost to expiry far more often than to anything dramatic. A
+   > card expires, the reminder goes to spam, and somebody who watches expiry
+   > lists takes the name.
+
+> **Why not buy the domain from Amazon too?** You can, but Route 53 charges
+> $0.50/month for the hosted zone where others include DNS. One less thing to
+> configure and one less line on the bill.
+
+**You should now have:** a domain, visible under *My Products* (GoDaddy) or
+*Domain List* (Namecheap).
+
+---
+
+### 1.3 Move DNS to Cloudflare
+
+*Optional, free, and worth doing — but only if you want an email address at
+your domain. Skip to Part 2 if you do not.*
+
+**DNS** is the phone book turning `nexttenant.in` into a server address. Your
+registrar provides it, but Cloudflare's is free, faster, and — the actual
+reason — includes **free email forwarding**, so `hello@nexttenant.in` lands in
+your normal inbox.
+
+GoDaddy removed free forwarding from most new domains and sells a Microsoft 365
+plan instead. Check **My Products → your domain → Email** first; if forwarding
+is free on your account, take it and skip this section.
+
+**Do this BEFORE Part 4.** You are about to add five DNS records for email. Move
+nameservers first and you add them once. Move afterwards and you add all five
+again.
+
+1. Sign up at **cloudflare.com** (free plan) → **Add a site** → `nexttenant.in`
+   → **Free**.
+2. It scans your existing records, then shows **two nameservers** like
+   `xxx.ns.cloudflare.com`. Copy both.
+3. **GoDaddy → My Products → your domain → Nameservers → Change → "I'll use my
+   own nameservers"** → paste both → Save. GoDaddy will try to talk you out of
+   it; continue.
+4. Wait. Usually 15 minutes, occasionally a few hours. Cloudflare emails you
+   when it takes effect.
+
+**Then set up the mailbox:**
+
+5. Cloudflare → **Email → Email Routing → Get started**.
+6. Add `hello@nexttenant.in`, forwarding to your normal Gmail. Cloudflare adds
+   the MX records itself.
+7. Add `privacy@nexttenant.in` too — Part 11.3 needs a monitored address for
+   the privacy policy, and it is another thirty seconds.
+
+**To reply *as* your domain** rather than from your personal address, after
+Part 4.5: Gmail → **Settings → Accounts → Send mail as** → add
+`hello@nexttenant.in` and point it at the SES SMTP credentials you create
+there. Gmail emails a code to that address, which forwards to you.
+
+**From here on, "your DNS provider" means Cloudflare** if you did this, and
+your registrar if you did not. The records are identical either way.
 
 ---
 
@@ -180,33 +240,54 @@ in at all.
 1. Search **SES** in the top bar. **Check the region says Mumbai.**
 2. **Identities** → **Create identity**.
 3. Choose **Domain**. Type your domain, without `www` and without `https://`.
-4. Leave **Easy DKIM** on, **RSA_2048_BIT**, **Publish DNS records to Route 53**
-   unticked (your DNS is at Namecheap).
+4. Leave **Easy DKIM** on, **RSA_2048_BIT**, and leave **Publish DNS records to
+   Route 53** unticked — your DNS is not at Amazon.
 5. Create.
 
 You now see **three CNAME records**. Keep this page open.
 
-### 4.2 Add those records at Namecheap
+### 4.2 Add those records at your DNS provider
 
-1. Namecheap → **Domain List** → **Manage** next to your domain →
-   **Advanced DNS**.
-2. For each of the three records: **Add New Record** → type **CNAME Record**.
-   - **Host**: the AWS "Name" value **with `.yourdomain.in` removed from the
-     end**. Namecheap adds the domain itself, and leaving it in produces
-     `x.yourdomain.in.yourdomain.in`, which silently never verifies. This trips
-     up nearly everyone.
-   - **Value**: the AWS "Value", exactly.
-   - **TTL**: Automatic.
-3. Save all three.
+Where to find the records screen:
+
+| | |
+|---|---|
+| **Cloudflare** | Your site → **DNS → Records → Add record** |
+| **GoDaddy** | **My Products → your domain → DNS → Add New Record** |
+| **Namecheap** | **Domain List → Manage → Advanced DNS → Add New Record** |
+
+For each of the three: type **CNAME**.
+
+- **Name** (GoDaddy and Namecheap call it *Host*): the AWS "Name" value **with
+  `.nexttenant.in` removed from the end**.
+
+  > **This is the one that catches nearly everyone.** All three providers append
+  > your domain to whatever you type. AWS shows
+  > `abc123._domainkey.nexttenant.in`; you enter **`abc123._domainkey`**. Paste
+  > it whole and you create `abc123._domainkey.nexttenant.in.nexttenant.in`,
+  > which never verifies and never tells you why.
+
+- **Value** (Cloudflare: *Target*): the AWS "Value", exactly.
+- **TTL**: Auto.
+- **Cloudflare only:** set **Proxy status to DNS only** (grey cloud, not
+  orange). Proxying a verification record hides it from Amazon and verification
+  never completes.
+
+Save all three.
 
 ### 4.3 Add two more records so your mail is not treated as spam
 
-Still in Advanced DNS, add:
+Same screen, two **TXT** records:
 
-| Type | Host | Value |
-|---|---|---|
-| TXT Record | `@` | `v=spf1 include:amazonses.com ~all` |
-| TXT Record | `_dmarc` | `v=DMARC1; p=none; rua=mailto:you@yourdomain.in` |
+| Name / Host | Value |
+|---|---|
+| `@` | `v=spf1 include:amazonses.com ~all` |
+| `_dmarc` | `v=DMARC1; p=none; rua=mailto:hello@nexttenant.in` |
+
+> If Cloudflare Email Routing already added an SPF record, **edit** it rather
+> than adding a second — a domain with two SPF records is treated as having
+> none. Merge them into one, e.g.
+> `v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all`.
 
 These three things together — DKIM, SPF and DMARC — prove your emails are
 really from you. **Without them Gmail rejects your sign-in codes outright.**
@@ -219,7 +300,7 @@ personally verified, 200 a day. That is useless for a real site.
 
 1. **SES → Account dashboard** → **Request production access**.
 2. Mail type: **Transactional**.
-3. Website URL: `https://yourdomain.in`.
+3. Website URL: `https://nexttenant.in`.
 4. Use case — describe it honestly, something like:
 
    > A flat-sharing marketplace for Mumbai. We send six-digit sign-in codes and
@@ -564,11 +645,11 @@ DB_PASSWORD=<your master password>
 
 HOUSEHUNTING_OTP_SECRET=<paste the random string from below>
 
-HOUSEHUNTING_BASE_URL=https://yourdomain.in
+HOUSEHUNTING_BASE_URL=https://nexttenant.in
 
 HOUSEHUNTING_MAIL_PROVIDER=smtp
-HOUSEHUNTING_MAIL_FROM=HouseHunting <noreply@yourdomain.in>
-HOUSEHUNTING_MAIL_REPLY_TO=hello@yourdomain.in
+HOUSEHUNTING_MAIL_FROM=NextTenant <noreply@nexttenant.in>
+HOUSEHUNTING_MAIL_REPLY_TO=hello@nexttenant.in
 SMTP_HOST=email-smtp.ap-south-1.amazonaws.com
 SMTP_PORT=587
 SMTP_USERNAME=<SES SMTP username from the CSV>
@@ -614,7 +695,7 @@ cp Caddyfile.example Caddyfile
 nano Caddyfile
 ```
 
-Replace `yourdomain.in` with your real domain. Save and exit.
+Replace the example domain with `nexttenant.in`. Save and exit.
 
 ### 8.8 Start it
 
@@ -630,7 +711,7 @@ Watch it come up:
 docker compose -f docker-compose.prod.yml logs -f app
 ```
 
-**You should see** `Started HouseHuntingApplication`. Press **Ctrl+C** to stop
+**You should see** `Started NextTenantApplication`. Press **Ctrl+C** to stop
 watching (this does not stop the app).
 
 Check it is alive:
@@ -650,23 +731,37 @@ just that the app is running.
 
 *5 minutes of work, then up to a few hours of waiting.*
 
-1. Namecheap → **Domain List → Manage → Advanced DNS**.
-2. Delete any existing records pointing at Namecheap's parking page — usually a
-   `CNAME` on `www` and a `URL Redirect` on `@`. **Leave your SES records
-   alone.**
-3. **Add New Record:**
+Open the same records screen you used in Part 4.2.
 
-| Type | Host | Value | TTL |
+1. **Delete the registrar's parking records first.** A new domain arrives
+   pointing at the registrar's own advert — usually an **A record on `@`** and
+   a **CNAME on `www`**. Adding your records without removing those leaves two
+   answers for one name, and visitors get whichever the internet feels like.
+
+   **Leave your SES and email records alone** — only the `@` and `www` entries
+   go.
+
+2. Add two records:
+
+| Type | Name / Host | Value | TTL |
 |---|---|---|---|
-| A Record | `@` | your Elastic IP | Automatic |
-| A Record | `www` | your Elastic IP | Automatic |
+| A | `@` | your Elastic IP | Auto |
+| A | `www` | your Elastic IP | Auto |
+
+3. **Cloudflare only:** set both to **DNS only** (grey cloud), not Proxied
+   (orange).
+
+   > Proxying routes visitors through Cloudflare, which sounds good and breaks
+   > the next step: Caddy proves it controls the domain by answering a request
+   > on port 80, and behind the proxy that request never reaches your server.
+   > You can turn proxying on later, once the certificate exists.
 
 4. Save.
 
 Check it from PowerShell on your PC:
 
 ```powershell
-nslookup yourdomain.in
+nslookup nexttenant.in
 ```
 
 **You should see** your Elastic IP. If not, wait 15 minutes and try again.
@@ -680,7 +775,7 @@ docker compose -f docker-compose.prod.yml logs caddy
 
 **You should see** a line saying a certificate was obtained.
 
-**Now open `https://yourdomain.in` in your browser.** You should see the site,
+**Now open `https://nexttenant.in` in your browser.** You should see the site,
 with a padlock.
 
 ---
@@ -691,7 +786,7 @@ Do all nine. Each one catches a different failure, and some only show up once.
 
 **1. Health**
 ```powershell
-curl https://yourdomain.in/actuator/health
+curl https://nexttenant.in/actuator/health
 ```
 Expect `{"status":"UP"}`.
 
@@ -726,7 +821,7 @@ Requests button changes.
 
 **9. Confirm your settings are not public:**
 ```powershell
-curl -s -o /dev/null -w "%{http_code}" https://yourdomain.in/actuator/env
+curl -s -o /dev/null -w "%{http_code}" https://nexttenant.in/actuator/env
 ```
 **Expect `302`.** If it says `200`, your database password is readable by
 anyone and you must stop and fix it.
@@ -745,7 +840,7 @@ psql -h <your-rds-endpoint> -U postgres -d househunting
 ```
 ```sql
 UPDATE users SET is_admin = true
- WHERE id = (SELECT user_id FROM user_private WHERE email = 'you@yourdomain.in');
+ WHERE id = (SELECT user_id FROM user_private WHERE email = 'you@nexttenant.in');
 ```
 
 Do it now, not during an incident.
@@ -822,7 +917,7 @@ budget:
 ### Free monitoring worth adding
 
 - **uptimerobot.com** — free, emails you if the site goes down. Point it at
-  `https://yourdomain.in/actuator/health`.
+  `https://nexttenant.in/actuator/health`.
 - **sentry.io** — free tier, tells you when users hit errors. Without it you
   find out when someone complains, which is usually never; they just leave.
 
@@ -851,7 +946,7 @@ Usually the database. Check `DB_URL` in `hh.env` — the endpoint, `:5432`, and
 `/househunting` at the end.
 
 **Site loads on `http://` but not `https://`**
-Caddy could not get a certificate. Check `nslookup yourdomain.in` returns your
+Caddy could not get a certificate. Check `nslookup nexttenant.in` returns your
 IP, that ports 80 and 443 are open in `hh-app`, then
 `docker compose -f docker-compose.prod.yml restart caddy`.
 
