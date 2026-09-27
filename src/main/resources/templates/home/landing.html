@@ -13,6 +13,37 @@
 
 <main id="content">
 
+    <!-- ================= Waiting on you =================
+      Shown only to somebody who has people waiting on an answer.
+
+      ABOVE the hero, not below it. The hero sells the site to a stranger; a
+      person with three unanswered requests is not a stranger and does not need
+      selling. Putting this under the fold would make it the thing they find
+      after they have already decided nothing happened.
+
+      The whole strip is the link rather than a button inside it, so on a phone
+      the tap target is the full width of the screen instead of a few words.
+    -->
+    <section class="page-width" th:if="${counts.hasPendingRequests()}">
+        <a class="waiting" th:href="@{/requests}" href="/requests">
+            <span class="waiting__dot" aria-hidden="true"></span>
+            <span class="waiting__text">
+                <!--/* Literal substitution keeps this one expression, and
+                       keeps the singular honest: "1 person wants your room",
+                       never "1 people want". */-->
+                <strong class="waiting__title"
+                        th:text="|${counts.pendingRequests} ${counts.pendingNoun()} ${counts.pendingVerb()} your room|">
+                    3 people want your room
+                </strong>
+                <span class="waiting__body">
+                    They are waiting for you to accept or decline.
+                    Nothing of yours is shared until you do.
+                </span>
+            </span>
+            <span class="waiting__cta">See requests &rarr;</span>
+        </a>
+    </section>
+
     <!-- ================= Hero ================= -->
     <section class="hero page-width">
         <h1 class="hero__title">

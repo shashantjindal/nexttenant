@@ -55,16 +55,41 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M12 21s-7.5-4.6-9.6-9A5.2 5.2 0 0 1 12 6.6 5.2 5.2 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z"/>
                 </svg>
-                <span>Wishlist</span>
+                <span class="site-header__label">Wishlist</span>
                 <!--/* Updated in place by shortlist.js after a heart is
                        toggled, so the count never disagrees with what the
                        hearts on the page are showing. */-->
                 <span class="site-header__count" data-wishlist-count
-                      th:hidden="${wishlistCount == null or wishlistCount == 0}"
-                      th:text="${wishlistCount != null and wishlistCount > 0} ? ${wishlistCount} : ''">3</span>
+                      th:hidden="${counts.wishlist} == 0"
+                      th:text="${counts.hasWishlist()} ? ${counts.wishlist} : ''">3</span>
             </a>
-            <a class="btn btn--ghost" th:if="${currentUser != null}"
-               th:href="@{/requests}">Requests</a>
+
+            <!--/* The pending badge is styled differently from the wishlist
+                   one, and deliberately. A wishlist count is information:
+                   nothing happens if you ignore it. A pending request is a
+                   person waiting on an answer, and the thing that kills a
+                   marketplace like this is requests sitting unanswered until
+                   both sides give up. Two counts that looked identical would
+                   say those are the same kind of number. */-->
+            <a class="btn btn--ghost site-header__requests" th:if="${currentUser != null}"
+               th:href="@{/requests}"
+               th:attr="title=${counts.hasPendingRequests()}
+                        ? ${counts.pendingRequests} + ' waiting for your answer'
+                        : 'Requests'">
+                <!--/* An icon so the word can drop away on a phone, exactly
+                       as the wishlist heart does. Without one, hiding the
+                       label would leave a bare number meaning nothing — and
+                       keeping the label costs 113px of a 197px row, which is
+                       what squeezed the signed-in name down to an ellipsis. */-->
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M3 13h4l2 3h6l2-3h4"/>
+                    <path d="M4.5 6.5h15l1.5 6.5v4a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17v-4z"/>
+                </svg>
+                <span class="site-header__label">Requests</span>
+                <span class="site-header__count site-header__count--waiting"
+                      th:hidden="${counts.pendingRequests} == 0"
+                      th:text="${counts.hasPendingRequests()} ? ${counts.pendingRequests} : ''">2</span>
+            </a>
             <a class="btn btn--ghost" th:if="${currentUser == null}"
                th:href="@{/login}" href="/login">Log in</a>
             <a class="btn btn--ghost" th:if="${currentUser != null}"

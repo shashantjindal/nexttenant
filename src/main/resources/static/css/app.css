@@ -118,7 +118,56 @@
 .site-nav a { color: var(--c-ink-2); font-size: var(--t-sm); }
 .site-nav a:hover { color: var(--c-brand); text-decoration: none; }
 
-.site-header__actions { margin-left: auto; }
+/*
+ * The right-hand side of the header.
+ *
+ * This was `margin-left: auto` on a plain block, so its children were inline
+ * content that WRAPPED when the row ran out of width. On a phone that meant
+ * three stacked rows — a 146px block inside a 64px header — spilling the
+ * signed-in name out of the header and over whatever was below it. The bug
+ * predates the badges (measured: the block is exactly as tall with them
+ * removed); it was simply less obvious when the thing underneath was hero
+ * whitespace rather than a notice.
+ *
+ * A flex row that refuses to wrap is the fix. What has to give instead is
+ * stated explicitly below, rather than left to whatever happens to overflow.
+ */
+.site-header__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+/* The buttons keep their size; the NAME is the one allowed to shrink, because
+   a truncated name is still recognisable and a truncated badge is a lie. */
+.site-header__actions > .btn { flex: none; }
+
+.site-header__actions > .btn:last-child {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* Tight buttons on a phone, where every pixel of the row is contested. */
+@media (max-width: 767px) {
+    .site-header__actions > .btn { padding-inline: var(--s-3); }
+}
+
+/* The word "Wishlist" hides on phones; the heart and its count carry the
+   meaning on their own. "Requests" keeps its word because it has no icon to
+   fall back on, and a bare number would say nothing. */
+.site-header__label { display: none; }
+
+@media (min-width: 768px) {
+    .site-header__actions { gap: var(--s-2); }
+    .site-header__label { display: inline; }
+}
 
 /* ---- Hero -------------------------------------------------------------- */
 
@@ -707,6 +756,82 @@
 
 .notice__title { font-family: var(--font-display); font-weight: 600; margin: 0 0 var(--s-1); }
 .notice__body { font-size: var(--t-sm); margin: 0 0 var(--s-3); }
+
+/* ---- "People are waiting on you" --------------------------------------- */
+
+/*
+ * The strip above the hero on the landing page.
+ *
+ * Mobile first, as everywhere else here: it stacks by default and becomes a
+ * row at the width where a row fits. The CTA moves to the end of the row on
+ * desktop and sits under the text on a phone, rather than being squeezed
+ * beside it.
+ */
+.waiting {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+
+    margin-top: var(--s-6);
+    padding: var(--s-4) var(--s-5);
+    border-radius: var(--r-lg);
+
+    background: var(--c-brand-tint);
+    border: 1px solid var(--c-brand-tint-hard);
+    color: var(--c-ink);
+    text-decoration: none;
+}
+
+.waiting:hover { border-color: var(--c-brand); }
+
+/* Focus is drawn on the strip itself because the strip IS the link — a focus
+   ring on some inner span would point at the wrong thing for a keyboard. */
+.waiting:focus-visible {
+    outline: 2px solid var(--c-brand);
+    outline-offset: 2px;
+}
+
+/* Deliberately not animated. A pulsing dot in the corner of every visit is
+   pressure, and this is somebody's home, not a growth funnel. */
+.waiting__dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    margin-top: 7px;
+    border-radius: 50%;
+    background: var(--c-brand);
+}
+
+.waiting__text {
+    display: grid;
+    gap: 2px;
+    /* Lets the text shrink so a long line wraps instead of pushing the CTA
+       off the edge — a flex item will not go below its content width without
+       this. */
+    min-width: 0;
+    flex: 1 1 260px;
+}
+
+.waiting__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-base);
+}
+
+.waiting__body {
+    font-size: var(--t-sm);
+    color: var(--c-ink-2);
+}
+
+.waiting__cta {
+    flex: none;
+    align-self: center;
+    font-size: var(--t-sm);
+    font-weight: 600;
+    color: var(--c-brand);
+    white-space: nowrap;
+}
 
 .empty {
     text-align: center;
@@ -1393,6 +1518,57 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     stroke: currentColor;
     stroke-width: 1.8;
     stroke-linejoin: round;
+}
+
+.site-header__requests {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+.site-header__requests svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+/*
+ * The header badges.
+ *
+ * These had no styling at all until now — the wishlist count rendered as a
+ * bare digit sitting next to the word, which reads as a typo rather than a
+ * count. A pill is what makes a number next to a label say "this many".
+ *
+ * min-width plus centred text so "1" and "12" are the same shape and the nav
+ * does not shift as the number crosses ten.
+ */
+.site-header__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--c-surface-2);
+    color: var(--c-ink-2);
+    font-size: var(--t-xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+/*
+ * Pending requests are people waiting on an answer, so this one is filled
+ * rather than quiet. The difference is the point: a wishlist count is
+ * information you may ignore, and an unanswered request is not.
+ */
+.site-header__count--waiting {
+    background: var(--c-brand);
+    color: var(--c-brand-ink);
 }
 
 /* ---- Photo gallery on the listing page --------------------------------- */

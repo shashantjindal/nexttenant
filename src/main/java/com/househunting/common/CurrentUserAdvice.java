@@ -20,9 +20,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 public class CurrentUserAdvice {
 
     private final com.househunting.shortlist.ShortlistService shortlists;
+    private final com.househunting.request.RequestService requests;
 
-    public CurrentUserAdvice(com.househunting.shortlist.ShortlistService shortlists) {
+    public CurrentUserAdvice(com.househunting.shortlist.ShortlistService shortlists,
+                             com.househunting.request.RequestService requests) {
         this.shortlists = shortlists;
+        this.requests = requests;
     }
 
     @ModelAttribute("currentUser")
@@ -49,22 +52,32 @@ public class CurrentUserAdvice {
      * either could be bypassed alone.
      */
     /**
-     * How many rooms are on the signed-in person's wishlist.
+     * The numbers on the header's badges.
      *
-     * <p>A count on the header button, so hearting something on a search page
-     * visibly lands somewhere. Without it the heart fills in and nothing else
-     * changes, which reads as "did that do anything?" — the complaint this is
-     * answering.
+     * <p>The wishlist count came first, so that hearting something on a search
+     * page visibly lands somewhere — without it the heart fills in and nothing
+     * else changes, which reads as "did that do anything?".
      *
-     * <p>It is one indexed COUNT on a two-column join table, and only for
-     * signed-in visitors: anonymous requests, which are most of them, do no
-     * query at all. Worth stating plainly that this is a query per page render
-     * — if the header ever grows a second such badge, they should be fetched
-     * together rather than one advice method each.
+     * <p>The pending-request count is the same argument with more at stake. A
+     * request that nobody notices is the failure mode that kills a marketplace
+     * of this shape: somebody asks, nobody answers, both sides conclude the
+     * site is dead. A number on the header is the cheapest possible way to
+     * make an unanswered request visible on every page rather than only on the
+     * one nobody opens.
+     *
+     * <p>Two indexed counts, and only for signed-in visitors — anonymous
+     * requests, which are most of them, do no query at all. See
+     * {@link HeaderCounts} for why they are bundled rather than merged into a
+     * single statement.
      */
-    @ModelAttribute("wishlistCount")
-    public Long wishlistCount(@AuthenticationPrincipal AuthenticatedUser user) {
-        return user == null ? null : shortlists.countFor(user.id());
+    @ModelAttribute("counts")
+    public HeaderCounts counts(@AuthenticationPrincipal AuthenticatedUser user) {
+        if (user == null) {
+            return HeaderCounts.NONE;
+        }
+        return new HeaderCounts(
+                shortlists.countFor(user.id()),
+                requests.pendingCountFor(user.id()));
     }
 
     @ModelAttribute("currentPath")
