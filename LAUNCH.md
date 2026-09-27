@@ -146,6 +146,18 @@ change your card. You should use it as little as possible.
    `https://123456789012.signin.aws.amazon.com/console`. Save it somewhere.
 6. Sign out. Sign back in with that URL as `admin`.
 
+> **Missed the URL?** It is not lost — it is built from your account number.
+> Go to **IAM → Dashboard** and look at the **AWS Account** box on the right:
+> "Sign-in URL for IAM users in this account", with a copy button.
+>
+> While you are there, click **Account Alias → Create** and set it to
+> `nexttenant`. Your sign-in URL becomes
+> `https://nexttenant.signin.aws.amazon.com/console`, which you can type from
+> memory instead of remembering twelve digits. Both forms keep working.
+>
+> Failing all that: the normal AWS sign-in page has an **IAM user** option
+> where you type the 12-digit account ID by hand. Same result.
+
 Then add MFA (a phone app that generates codes) to **both** accounts:
 **IAM → Users → click the user → Security credentials → Assign MFA device.**
 
