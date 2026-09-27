@@ -33,3 +33,9 @@ desktop.ini
 *.log
 logs/
 data/photos/
+
+# Production config, created on the server from the examples in the repo.
+# hh.env holds database and email credentials; Caddyfile holds your real
+# domain. Neither belongs in version control.
+hh.env
+Caddyfile

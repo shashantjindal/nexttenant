@@ -1,0 +1,76 @@
+# =============================================================================
+# Production stack: the app, and a web server in front of it.
+#
+# Two containers rather than one. Caddy is the only thing exposed to the
+# internet; it obtains and renews the HTTPS certificate by itself and passes
+# requests inward. The app is not published to the host at all — it is reachable
+# only from Caddy over Docker's private network, so there is no way to bypass
+# the certificate by hitting a port directly.
+#
+# Caddy runs as a container rather than an OS package on purpose: the package
+# name and repository differ between Linux distributions, and "install Caddy"
+# is a step that fails differently on every machine. This image is the same
+# everywhere.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+# =============================================================================
+
+services:
+
+  app:
+    build: .
+    restart: unless-stopped
+
+    # Secrets come from a file that is NOT in this repository.
+    env_file: hh.env
+
+    # Note the 127.0.0.1 prefix — it is doing the important work here.
+    #
+    # Plain "8080:8080" would publish the app on every interface, so
+    # http://<server-ip>:8080 would serve the whole site with no certificate,
+    # and anyone could skip HTTPS by using it. Bound to loopback, the port is
+    # reachable only from the server itself, which is what makes
+    # `curl http://localhost:8080/actuator/health` work when you are logged in
+    # and diagnosing something.
+    #
+    # Caddy reaches it as `app:8080` over Docker's private network either way,
+    # which is unaffected by this line.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    logging:
+      driver: json-file
+      options:
+        # Without a cap, Docker's logs grow until they fill the disk and take
+        # the site down. This is a real way small servers die.
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+
+    ports:
+      - "80:80"      # needed for certificate issue and renewal, and to redirect
+      - "443:443"
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+      # Certificates live here. WITHOUT this volume they are lost on every
+      # restart and re-requested from Let's Encrypt, which rate-limits to five
+      # per domain per week — so a few restarts and the site has no HTTPS for
+      # seven days. This one line is the difference.
+      - caddy_data:/data
+      - caddy_config:/config
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

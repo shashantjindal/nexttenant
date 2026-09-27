@@ -1,0 +1,27 @@
+# Copy to `Caddyfile` and replace the domain with yours.
+#
+#   cp Caddyfile.example Caddyfile
+#
+# That is the entire web-server configuration. Caddy obtains a free HTTPS
+# certificate from Let's Encrypt on first start, renews it before it expires,
+# and redirects http:// to https:// — none of which needs to be written here.
+#
+# For this to work, two things must already be true:
+#   1. yourdomain.in resolves to this server's IP address
+#   2. ports 80 and 443 are open to the world in the security group
+#
+# If either is false the certificate request fails, and Caddy will say so in
+# `docker compose logs caddy`.
+
+yourdomain.in {
+    # `app` is the service name in docker-compose.prod.yml. Docker resolves it
+    # on the private network between the containers — it is not a hostname that
+    # exists anywhere else, and that is the point.
+    reverse_proxy app:8080
+}
+
+# Uncomment to serve www as well. Caddy will get a certificate for both.
+#
+# www.yourdomain.in {
+#     redir https://yourdomain.in{uri} permanent
+# }
