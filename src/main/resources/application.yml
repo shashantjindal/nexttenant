@@ -1,6 +1,6 @@
 spring:
   application:
-    name: househunting
+    name: nexttenant
 
   # Defaults to dev locally; production overrides with SPRING_PROFILES_ACTIVE.
   # The dev profile is what activates DevDataSeeder — in production that bean
@@ -14,8 +14,8 @@ spring:
   # runs against the dev container and production with no code change and no
   # secret in the repository.
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/househunting}
-    username: ${DB_USERNAME:househunting}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexttenant}
+    username: ${DB_USERNAME:nexttenant}
     password: ${DB_PASSWORD:localdev}
     hikari:
       # Pool sizing is not "bigger is better". Each connection is a real
@@ -86,36 +86,36 @@ spring:
     check-template-location: true
 
 # ---- Application settings -------------------------------------------------
-househunting:
+nexttenant:
   photos:
     # "local" writes under the directory below. Production will use an
     # S3-compatible bucket behind the same PhotoStorage interface, so nothing
     # above that interface changes.
-    storage: ${HOUSEHUNTING_PHOTO_STORAGE:local}
-    local-dir: ${HOUSEHUNTING_PHOTO_DIR:./data/photos}
+    storage: ${NEXTTENANT_PHOTO_STORAGE:local}
+    local-dir: ${NEXTTENANT_PHOTO_DIR:./data/photos}
 
     # Used only when storage=s3. Works with Amazon S3, Cloudflare R2,
     # DigitalOcean Spaces, Backblaze B2 and MinIO — they all speak this API.
     s3:
-      bucket: ${HOUSEHUNTING_S3_BUCKET:}
+      bucket: ${NEXTTENANT_S3_BUCKET:}
       # Leave blank for Amazon S3 itself. Set it for everyone else, e.g.
       #   R2      https://<account>.r2.cloudflarestorage.com
       #   Spaces  https://blr1.digitaloceanspaces.com
-      endpoint: ${HOUSEHUNTING_S3_ENDPOINT:}
+      endpoint: ${NEXTTENANT_S3_ENDPOINT:}
       # "auto" for providers that have no regions but require the field.
-      region: ${HOUSEHUNTING_S3_REGION:ap-south-1}
-      access-key: ${HOUSEHUNTING_S3_ACCESS_KEY:}
-      secret-key: ${HOUSEHUNTING_S3_SECRET_KEY:}
+      region: ${NEXTTENANT_S3_REGION:ap-south-1}
+      access-key: ${NEXTTENANT_S3_ACCESS_KEY:}
+      secret-key: ${NEXTTENANT_S3_SECRET_KEY:}
 
   mail:
     # "console" prints to the log; "smtp" actually sends. Every provider worth
     # using speaks SMTP, so switching is configuration rather than code.
-    provider: ${HOUSEHUNTING_MAIL_PROVIDER:console}
+    provider: ${NEXTTENANT_MAIL_PROVIDER:console}
     # MUST be an address the provider has verified for the sending domain. An
     # unverified From is rejected by SES and silently spam-foldered by others.
-    from: ${HOUSEHUNTING_MAIL_FROM:NextTenant <noreply@invalid.invalid>}
+    from: ${NEXTTENANT_MAIL_FROM:NextTenant <noreply@invalid.invalid>}
     # People reply to notification emails. Send those somewhere a person reads.
-    reply-to: ${HOUSEHUNTING_MAIL_REPLY_TO:}
+    reply-to: ${NEXTTENANT_MAIL_REPLY_TO:}
 
   maps:
     # Google Maps JavaScript API key. Blank by default, which makes every map
@@ -139,14 +139,14 @@ househunting:
   site:
     # Emails need an ABSOLUTE link; a browser knows where a relative path
     # came from and an inbox does not. Override per environment.
-    base-url: ${HOUSEHUNTING_BASE_URL:http://localhost:8080}
+    base-url: ${NEXTTENANT_BASE_URL:http://localhost:8080}
 
   otp:
     # HMAC key for hashing codes. The default below is committed, therefore
     # public, therefore not a secret — OtpSecretCheck refuses to start with it
     # under any profile but dev. Generate a real one with:
     #     openssl rand -base64 48
-    secret: ${HOUSEHUNTING_OTP_SECRET:dev-only-insecure-otp-secret-change-me}
+    secret: ${NEXTTENANT_OTP_SECRET:dev-only-insecure-otp-secret-change-me}
 
     code-validity: 10m
     resend-cooldown: 30s
@@ -175,7 +175,7 @@ server:
 
 logging:
   level:
-    com.househunting: DEBUG
+    com.nexttenant: DEBUG
     # Flyway announces each migration it applies — worth seeing.
     org.flywaydb: INFO
     # Uncomment to see every SQL statement Hibernate issues. Invaluable when
@@ -239,7 +239,7 @@ spring:
       on-profile: prod
 
   # Production mail. The host/port/credentials belong to Spring Boot's own
-  # binding; only the addresses on the message are ours (househunting.mail.*).
+  # binding; only the addresses on the message are ours (nexttenant.mail.*).
   mail:
     host: ${SMTP_HOST}
     port: ${SMTP_PORT:587}
@@ -277,5 +277,5 @@ logging:
   level:
     # INFO, not DEBUG. DEBUG here prints the OTP issuing path and a great deal
     # of Hibernate, into an aggregator readable by more people than an inbox.
-    com.househunting: INFO
+    com.nexttenant: INFO
     root: WARN

@@ -1,4 +1,4 @@
-# HouseHunting
+# NextTenant
 
 A Mumbai flat-takeover marketplace: people leaving a shared flat list the spot
 they are vacating, and people looking for a room take it over directly. No
@@ -62,7 +62,7 @@ container loses nothing, `down -v` loses everything.
 Connect with psql:
 
 ```
-docker exec -it househunting-db psql -U househunting -d househunting
+docker exec -it nexttenant-db psql -U nexttenant -d nexttenant
 ```
 
 ### Schema migrations
@@ -103,7 +103,7 @@ lines or `;`.
 ### First time
 
 ```
-cd C:\dev\househunting
+cd C:\dev\nexttenant
 docker compose up -d
 .\gradlew bootRun
 ```
@@ -119,7 +119,7 @@ Then open <http://localhost:8080>.
 ### Every time after that
 
 ```
-cd C:\dev\househunting
+cd C:\dev\nexttenant
 docker compose up -d      # skip if Docker Desktop already has it running
 .\gradlew bootRun
 ```
@@ -136,7 +136,7 @@ printed to the terminal running the app:
 ==================== SMS (not actually sent) ====================
   to:   +919820044556
   CODE: 261688
-  text: 261688 is your HouseHunting code. It expires in 10 minutes.
+  text: 261688 is your NextTenant code. It expires in 10 minutes.
 =================================================================
 ```
 
@@ -162,7 +162,7 @@ These are real production limits, not debug settings, so they apply locally too:
 
 If a code stops arriving, it is almost always the 30-second cooldown. Use a
 different number, or wait. They can be loosened for local work in
-`application.yml` under `househunting.otp.*` — leave the production values alone.
+`application.yml` under `nexttenant.otp.*` — leave the production values alone.
 
 ### Becoming a moderator
 
@@ -170,7 +170,7 @@ different number, or wait. They can be loosened for local work in
 access — there is deliberately no UI to promote a user.
 
 ```
-docker exec -it househunting-db psql -U househunting -d househunting
+docker exec -it nexttenant-db psql -U nexttenant -d nexttenant
 ```
 
 ```sql
@@ -247,8 +247,8 @@ The Postgres container holds two:
 
 | | Used by | Reset with |
 |---|---|---|
-| `househunting` | `.\gradlew bootRun` | `docker compose down -v` |
-| `househunting_test` | `.\gradlew test` | drop and recreate it (below) |
+| `nexttenant` | `.\gradlew bootRun` | `docker compose down -v` |
+| `nexttenant_test` | `.\gradlew test` | drop and recreate it (below) |
 
 They used to be one, and the tests wrote into the database you browse.
 `WizardTest` publishes real listings with 60×40 all-black fixture images, so
@@ -256,14 +256,14 @@ those turned up in search on localhost:8080 as live rooms with black
 photographs — which takes a while to recognise as test data rather than a
 broken image pipeline.
 
-`househunting_test` is created by `docker/initdb/01-test-database.sql`, which
+`nexttenant_test` is created by `docker/initdb/01-test-database.sql`, which
 Postgres runs **only when the data volume is first created**. If you already
 had a volume before this existed, `docker compose down -v` once.
 
 To reset just the test database without touching your dev data:
 
 ```bash
-docker compose exec db psql -U househunting -d postgres -c "DROP DATABASE IF EXISTS househunting_test" -c "CREATE DATABASE househunting_test OWNER househunting"
+docker compose exec db psql -U nexttenant -d postgres -c "DROP DATABASE IF EXISTS nexttenant_test" -c "CREATE DATABASE nexttenant_test OWNER nexttenant"
 ```
 
 The next `.\gradlew test` re-migrates and re-seeds it, which takes a couple of
@@ -305,7 +305,7 @@ PowerShell, from the project root.
 Connect to the database directly:
 
 ```
-docker exec -it househunting-db psql -U househunting -d househunting
+docker exec -it nexttenant-db psql -U nexttenant -d nexttenant
 ```
 
 ## Data model and the privacy boundary
@@ -371,8 +371,8 @@ Packages are organised **by feature**, not by layer — everything for one
 capability lives in one folder, so a feature can be read or removed as a unit.
 
 ```
-com.househunting
-├── HouseHuntingApplication.java   scan root — do not move
+com.nexttenant
+├── NextTenantApplication.java   scan root — do not move
 ├── area/          Mumbai localities and sublocalities, and fuzzy autocomplete
 ├── auth/          phone OTP, sessions, security config
 ├── common/        Rupees, Hashing, RelativeTime

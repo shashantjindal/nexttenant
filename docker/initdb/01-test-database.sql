@@ -1,4 +1,4 @@
--- Runs once, when the data volume is first created, as the househunting user.
+-- Runs once, when the data volume is first created, as the nexttenant user.
 --
 -- A SECOND database, for the test suite.
 --
@@ -13,4 +13,4 @@
 -- are installed per database by V1, and sharing them across schemas means
 -- search_path juggling in every connection. Two databases cost one line here
 -- and nothing at all afterwards.
-CREATE DATABASE househunting_test OWNER househunting;
+CREATE DATABASE nexttenant_test OWNER nexttenant;

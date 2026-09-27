@@ -9,7 +9,7 @@ plugins {
     id("org.springframework.boot") version "4.1.1"
 }
 
-group = "com.househunting"
+group = "com.nexttenant"
 version = "0.0.1-SNAPSHOT"
 description = "NextTenant — Mumbai flat-takeover marketplace"
 

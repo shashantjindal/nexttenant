@@ -1,5 +1,5 @@
 # =============================================================================
-# HouseHunting
+# NextTenant
 #
 # Two stages. The first has Gradle, the JDK and the whole source tree; the
 # second has a JRE and one jar. Only the second is shipped, so the image that

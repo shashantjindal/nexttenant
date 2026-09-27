@@ -1,4 +1,4 @@
-# Deploying HouseHunting on AWS
+# Deploying NextTenant on AWS
 
 A standalone runbook. You do not need `DEPLOY.md` — everything is here.
 
@@ -89,7 +89,7 @@ with no marketing mail. Usually approved within 24 hours.
                    ┌─────┴──────────────────────────┐
                    │  EC2 t3.small (public subnet)  │
                    │    Caddy  :443 → :8080         │
-                   │    Docker: househunting        │
+                   │    Docker: nexttenant        │
                    │    IAM role → S3               │
                    └─────┬──────────────────────────┘
                          │ private VPC traffic
@@ -138,7 +138,7 @@ is replaced.
 ### 3.2 S3 bucket and its IAM role
 
 **S3 → Create bucket**, region `ap-south-1`, name something unique like
-`househunting-photos-<random>`. Leave **Block all public access ON.**
+`nexttenant-photos-<random>`. Leave **Block all public access ON.**
 
 The bucket stays private on purpose. Photos are served through the app's
 `/photos/**` endpoint, which is what keeps EXIF stripping, moderation and
@@ -153,7 +153,7 @@ retract.
   "Statement": [{
     "Effect": "Allow",
     "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-    "Resource": "arn:aws:s3:::househunting-photos-<random>/*"
+    "Resource": "arn:aws:s3:::nexttenant-photos-<random>/*"
   }]
 }
 ```
@@ -165,7 +165,7 @@ compromised, that is the whole blast radius.
 long-lived key lives in a file, gets copied into a backup, and is still valid a
 year after whoever made it forgot. A role gives the instance short-lived
 credentials that rotate themselves and cannot leave the box. Leave
-`HOUSEHUNTING_S3_ACCESS_KEY` blank and the app picks the role up automatically.
+`NEXTTENANT_S3_ACCESS_KEY` blank and the app picks the role up automatically.
 
 ### 3.3 The database
 
@@ -269,8 +269,8 @@ without it:
 psql -h <rds-endpoint> -U postgres -d postgres
 ```
 ```sql
-CREATE DATABASE househunting;
-\c househunting
+CREATE DATABASE nexttenant;
+\c nexttenant
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
@@ -280,9 +280,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 Building on the instance is simplest — no registry, no architecture mismatch:
 
 ```bash
-git clone <your repo> househunting
-cd househunting
-docker build -t househunting:latest .
+git clone <your repo> nexttenant
+cd nexttenant
+docker build -t nexttenant:latest .
 ```
 
 2GB plus swap will build it, slowly. If Gradle runs out of memory, build on
@@ -293,12 +293,12 @@ Write `/home/ec2-user/hh.env` — see §4 — then:
 
 ```bash
 chmod 600 hh.env
-docker run -d --name househunting \
+docker run -d --name nexttenant \
   --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
   --env-file /home/ec2-user/hh.env \
   --log-opt max-size=10m --log-opt max-file=3 \
-  househunting:latest
+  nexttenant:latest
 ```
 
 `127.0.0.1` so the app is unreachable except through Caddy. The log options
@@ -344,44 +344,44 @@ for `www` if you want it.
 SPRING_PROFILES_ACTIVE=prod
 
 # Database (Option A: RDS)
-DB_URL=jdbc:postgresql://<rds-endpoint>:5432/househunting?sslmode=require
+DB_URL=jdbc:postgresql://<rds-endpoint>:5432/nexttenant?sslmode=require
 DB_USERNAME=postgres
 DB_PASSWORD=<master password>
 
 # Secret. Generate with: openssl rand -base64 48
-HOUSEHUNTING_OTP_SECRET=<48 random bytes>
+NEXTTENANT_OTP_SECRET=<48 random bytes>
 
 # Absolute links in emails. An inbox has no base URL.
-HOUSEHUNTING_BASE_URL=https://yourdomain.in
+NEXTTENANT_BASE_URL=https://yourdomain.in
 
 # Email, via SES over SMTP
-HOUSEHUNTING_MAIL_PROVIDER=smtp
-HOUSEHUNTING_MAIL_FROM=HouseHunting <noreply@yourdomain.in>
-HOUSEHUNTING_MAIL_REPLY_TO=hello@yourdomain.in
+NEXTTENANT_MAIL_PROVIDER=smtp
+NEXTTENANT_MAIL_FROM=NextTenant <noreply@yourdomain.in>
+NEXTTENANT_MAIL_REPLY_TO=hello@yourdomain.in
 SMTP_HOST=email-smtp.ap-south-1.amazonaws.com
 SMTP_PORT=587
 SMTP_USERNAME=<SES SMTP username>
 SMTP_PASSWORD=<SES SMTP password>
 
 # Photos, via S3. No keys: the instance role supplies them.
-HOUSEHUNTING_PHOTO_STORAGE=s3
-HOUSEHUNTING_S3_BUCKET=househunting-photos-<random>
-HOUSEHUNTING_S3_REGION=ap-south-1
-HOUSEHUNTING_S3_ENDPOINT=
-HOUSEHUNTING_S3_ACCESS_KEY=
-HOUSEHUNTING_S3_SECRET_KEY=
+NEXTTENANT_PHOTO_STORAGE=s3
+NEXTTENANT_S3_BUCKET=nexttenant-photos-<random>
+NEXTTENANT_S3_REGION=ap-south-1
+NEXTTENANT_S3_ENDPOINT=
+NEXTTENANT_S3_ACCESS_KEY=
+NEXTTENANT_S3_SECRET_KEY=
 ```
 
-`HOUSEHUNTING_S3_ENDPOINT` stays **blank** for real Amazon S3 — it is only set
+`NEXTTENANT_S3_ENDPOINT` stays **blank** for real Amazon S3 — it is only set
 for R2, Spaces or B2.
 
-`HOUSEHUNTING_MAIL_FROM` must be on the domain you verified in SES. An
+`NEXTTENANT_MAIL_FROM` must be on the domain you verified in SES. An
 unverified sender is rejected outright.
 
 `sslmode=require` on the database because the connection crosses a network you
 do not control, even inside a VPC.
 
-Two things are deliberately absent. **`HOUSEHUNTING_MAPS_KEY`** — maps fall
+Two things are deliberately absent. **`NEXTTENANT_MAPS_KEY`** — maps fall
 back to Leaflet with OpenStreetMap, which is free and works; add Google later
 if you want it, and restrict the key to your domain when you do. And the S3
 keys, because the instance role supplies them.

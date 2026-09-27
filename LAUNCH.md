@@ -669,7 +669,7 @@ cd nexttenant
 ```
 
 > Use whatever your repository is actually called — if it is still named
-> `househunting`, clone that and `cd` into it. The folder name does not matter
+> `nexttenant`, clone that and `cd` into it. The folder name does not matter
 > to anything except the two commands below, **with one exception**: Docker
 > Compose derives its project name from the directory, and the project name is
 > what the certificate volume is attached to. So do not rename the folder after
@@ -695,31 +695,31 @@ DB_URL=jdbc:postgresql://<your-rds-endpoint>:5432/nexttenant?sslmode=require
 DB_USERNAME=postgres
 DB_PASSWORD=<your master password>
 
-HOUSEHUNTING_OTP_SECRET=<paste the random string from below>
+NEXTTENANT_OTP_SECRET=<paste the random string from below>
 
-HOUSEHUNTING_BASE_URL=https://nexttenant.in
+NEXTTENANT_BASE_URL=https://nexttenant.in
 
-HOUSEHUNTING_MAIL_PROVIDER=smtp
-HOUSEHUNTING_MAIL_FROM=NextTenant <noreply@nexttenant.in>
-HOUSEHUNTING_MAIL_REPLY_TO=hello@nexttenant.in
+NEXTTENANT_MAIL_PROVIDER=smtp
+NEXTTENANT_MAIL_FROM=NextTenant <noreply@nexttenant.in>
+NEXTTENANT_MAIL_REPLY_TO=hello@nexttenant.in
 SMTP_HOST=email-smtp.ap-south-1.amazonaws.com
 SMTP_PORT=587
 SMTP_USERNAME=<SES SMTP username from the CSV>
 SMTP_PASSWORD=<SES SMTP password from the CSV>
 
-HOUSEHUNTING_PHOTO_STORAGE=s3
-HOUSEHUNTING_S3_BUCKET=<your bucket name>
-HOUSEHUNTING_S3_REGION=ap-south-1
-HOUSEHUNTING_S3_ENDPOINT=
-HOUSEHUNTING_S3_ACCESS_KEY=
-HOUSEHUNTING_S3_SECRET_KEY=
+NEXTTENANT_PHOTO_STORAGE=s3
+NEXTTENANT_S3_BUCKET=<your bucket name>
+NEXTTENANT_S3_REGION=ap-south-1
+NEXTTENANT_S3_ENDPOINT=
+NEXTTENANT_S3_ACCESS_KEY=
+NEXTTENANT_S3_SECRET_KEY=
 ```
 
 Save with **Ctrl+O, Enter, Ctrl+X**.
 
 Three things that are deliberately as they look:
 
-- **`HOUSEHUNTING_S3_ENDPOINT` is blank.** That means "real Amazon S3".
+- **`NEXTTENANT_S3_ENDPOINT` is blank.** That means "real Amazon S3".
 - **The S3 key and secret are blank.** The role from Part 6.2 supplies them.
   This is the secure way round.
 - **`sslmode=require`** encrypts the database connection.
@@ -730,7 +730,7 @@ Generate the secret:
 openssl rand -base64 48
 ```
 
-Copy the output into `HOUSEHUNTING_OTP_SECRET`. **The app refuses to start if
+Copy the output into `NEXTTENANT_OTP_SECRET`. **The app refuses to start if
 you leave the example value in** — every sign-in code would be forgeable by
 anyone who has read the source code.
 
@@ -1010,7 +1010,7 @@ IP, that ports 80 and 443 are open in `nt-app`, then
 
 **Sign-in emails never arrive**
 Check spam first. Then: is SES still in sandbox (Part 4.4)? Does the Identities
-page say **Verified**? Does `HOUSEHUNTING_MAIL_FROM` use the domain you
+page say **Verified**? Does `NEXTTENANT_MAIL_FROM` use the domain you
 verified? Then `docker compose -f docker-compose.prod.yml logs app | grep -i mail`.
 
 **Photos upload but do not appear**

@@ -1,4 +1,4 @@
-# Deploying HouseHunting
+# Deploying NextTenant
 
 A runbook, in the order you should actually do it. Work top to bottom; each
 part assumes the ones above it are done.
@@ -94,16 +94,16 @@ Skip these and your sign-in codes land in spam. Not "might" — Gmail rejects
 unauthenticated bulk mail outright.
 
 ```bash
-HOUSEHUNTING_MAIL_PROVIDER=smtp
-HOUSEHUNTING_MAIL_FROM="HouseHunting <noreply@yourdomain.in>"
-HOUSEHUNTING_MAIL_REPLY_TO=hello@yourdomain.in
+NEXTTENANT_MAIL_PROVIDER=smtp
+NEXTTENANT_MAIL_FROM="NextTenant <noreply@yourdomain.in>"
+NEXTTENANT_MAIL_REPLY_TO=hello@yourdomain.in
 SMTP_HOST=smtp.resend.com
 SMTP_PORT=587
 SMTP_USERNAME=resend
 SMTP_PASSWORD=<api key>
 ```
 
-`HOUSEHUNTING_MAIL_FROM` must be an address on the domain you verified. An
+`NEXTTENANT_MAIL_FROM` must be an address on the domain you verified. An
 unverified sender is rejected by SES and quietly spam-foldered by everyone
 else — the second being much worse, because nothing looks wrong.
 
@@ -122,12 +122,12 @@ Create a bucket. Keep it **private** — the app serves photos through
 A public bucket URL is a permanent link nobody can retract.
 
 ```bash
-HOUSEHUNTING_PHOTO_STORAGE=s3
-HOUSEHUNTING_S3_BUCKET=househunting-photos
-HOUSEHUNTING_S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
-HOUSEHUNTING_S3_REGION=auto
-HOUSEHUNTING_S3_ACCESS_KEY=...
-HOUSEHUNTING_S3_SECRET_KEY=...
+NEXTTENANT_PHOTO_STORAGE=s3
+NEXTTENANT_S3_BUCKET=nexttenant-photos
+NEXTTENANT_S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+NEXTTENANT_S3_REGION=auto
+NEXTTENANT_S3_ACCESS_KEY=...
+NEXTTENANT_S3_SECRET_KEY=...
 ```
 
 For Amazon S3 itself, leave `ENDPOINT` blank and set `REGION=ap-south-1`.
@@ -139,7 +139,7 @@ the committed default. That is deliberate: a secret in version control is not a
 secret, and every login code would be forgeable by anyone who read the repo.
 
 ```bash
-HOUSEHUNTING_OTP_SECRET=$(openssl rand -base64 48)
+NEXTTENANT_OTP_SECRET=$(openssl rand -base64 48)
 ```
 
 Store it wherever your host keeps secrets. If you lose it, every in-flight
@@ -151,7 +151,7 @@ Emails contain absolute links. A browser knows where a relative path came from;
 an inbox does not, so `/requests` in an email is a dead link.
 
 ```bash
-HOUSEHUNTING_BASE_URL=https://yourdomain.in
+NEXTTENANT_BASE_URL=https://yourdomain.in
 ```
 
 Get this wrong and every notification links to `localhost`.
@@ -159,7 +159,7 @@ Get this wrong and every notification links to `localhost`.
 ### 2.5 The database
 
 ```bash
-DB_URL=jdbc:postgresql://<host>:<port>/househunting?sslmode=require
+DB_URL=jdbc:postgresql://<host>:<port>/nexttenant?sslmode=require
 DB_USERNAME=...
 DB_PASSWORD=...
 ```
@@ -192,7 +192,7 @@ HTTPS behind your proxy.
 ### 3.1 Build
 
 ```bash
-docker build -t househunting:latest .
+docker build -t nexttenant:latest .
 ```
 
 The `Dockerfile` is two-stage — the shipped image has a JRE and one jar, not a
@@ -201,11 +201,11 @@ compiler and your source code.
 ### 3.2 Run
 
 ```bash
-docker run -d --name househunting \
+docker run -d --name nexttenant \
   --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
-  --env-file /etc/househunting.env \
-  househunting:latest
+  --env-file /etc/nexttenant.env \
+  nexttenant:latest
 ```
 
 Bound to `127.0.0.1`, not `0.0.0.0` — the app should be reachable only through
@@ -252,7 +252,7 @@ create a key → **restrict it to your domain** (an unrestricted key on a public
 page is somebody else's free quota, billed to you).
 
 ```bash
-HOUSEHUNTING_MAPS_KEY=...
+NEXTTENANT_MAPS_KEY=...
 ```
 
 Leave it blank and everything still works. This is the one item on the list
@@ -291,7 +291,7 @@ fake listings land in it. Check before launch:
 ```sql
 SELECT count(*) FROM listings;             -- expect 0
 SELECT count(*) FROM users;                -- expect 0
-SELECT email FROM user_private LIMIT 5;    -- expect nothing @househunting.invalid
+SELECT email FROM user_private LIMIT 5;    -- expect nothing @nexttenant.invalid
 ```
 
 ### 5.3 Make yourself an admin
@@ -374,35 +374,35 @@ In order. Each one catches a different class of mistake:
 SPRING_PROFILES_ACTIVE=prod
 
 # Database
-DB_URL=jdbc:postgresql://host:25060/househunting?sslmode=require
-DB_USERNAME=househunting
+DB_URL=jdbc:postgresql://host:25060/nexttenant?sslmode=require
+DB_USERNAME=nexttenant
 DB_PASSWORD=...
 
 # Secrets
-HOUSEHUNTING_OTP_SECRET=...          # openssl rand -base64 48
+NEXTTENANT_OTP_SECRET=...          # openssl rand -base64 48
 
 # Site
-HOUSEHUNTING_BASE_URL=https://yourdomain.in
+NEXTTENANT_BASE_URL=https://yourdomain.in
 
 # Email
-HOUSEHUNTING_MAIL_PROVIDER=smtp
-HOUSEHUNTING_MAIL_FROM="HouseHunting <noreply@yourdomain.in>"
-HOUSEHUNTING_MAIL_REPLY_TO=hello@yourdomain.in
+NEXTTENANT_MAIL_PROVIDER=smtp
+NEXTTENANT_MAIL_FROM="NextTenant <noreply@yourdomain.in>"
+NEXTTENANT_MAIL_REPLY_TO=hello@yourdomain.in
 SMTP_HOST=...
 SMTP_PORT=587
 SMTP_USERNAME=...
 SMTP_PASSWORD=...
 
 # Photos
-HOUSEHUNTING_PHOTO_STORAGE=s3
-HOUSEHUNTING_S3_BUCKET=...
-HOUSEHUNTING_S3_ENDPOINT=...         # blank for Amazon S3
-HOUSEHUNTING_S3_REGION=auto
-HOUSEHUNTING_S3_ACCESS_KEY=...
-HOUSEHUNTING_S3_SECRET_KEY=...
+NEXTTENANT_PHOTO_STORAGE=s3
+NEXTTENANT_S3_BUCKET=...
+NEXTTENANT_S3_ENDPOINT=...         # blank for Amazon S3
+NEXTTENANT_S3_REGION=auto
+NEXTTENANT_S3_ACCESS_KEY=...
+NEXTTENANT_S3_SECRET_KEY=...
 
 # Optional
-HOUSEHUNTING_MAPS_KEY=...
+NEXTTENANT_MAPS_KEY=...
 ```
 
 ---

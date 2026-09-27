@@ -14,15 +14,15 @@ services:
     # Pinned deliberately. `latest` would silently bump major versions and cost
     # you a day of debugging. PostGIS 3.4 on PostgreSQL 16.
     image: postgis/postgis:16-3.4
-    container_name: househunting-db
+    container_name: nexttenant-db
 
     environment:
       # These three variable names are a convention of the postgres image's
       # entrypoint script; on first start it creates this user and database.
       # They are read ONLY when the volume is empty — changing them later has
       # no effect until the volume is destroyed.
-      POSTGRES_DB: househunting
-      POSTGRES_USER: househunting
+      POSTGRES_DB: nexttenant
+      POSTGRES_USER: nexttenant
       # Local-only credential. Production secrets never live in this file;
       # they arrive as environment variables from the host. See .env.example.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdev}
@@ -47,7 +47,7 @@ services:
       # A postgres container reports "running" several seconds before it accepts
       # connections. Without this, the app races the database on startup and
       # dies with "connection refused". pg_isready makes "up" mean "usable".
-      test: ["CMD-SHELL", "pg_isready -U househunting -d househunting"]
+      test: ["CMD-SHELL", "pg_isready -U nexttenant -d nexttenant"]
       interval: 5s
       timeout: 5s
       retries: 10
