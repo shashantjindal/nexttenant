@@ -95,7 +95,7 @@ public class RequestNotifier {
                 Read it and reply here:
                 %s
 
-                -- HouseHunting
+                -- NextTenant
                 """.formatted(
                         nameOf(recipient),
                         nameOf(other),
@@ -124,10 +124,10 @@ public class RequestNotifier {
                 %s
 
                 Before you pay anything: visit in person first. Nobody on
-                HouseHunting should ask you for a deposit before you have seen
+                NextTenant should ask you for a deposit before you have seen
                 the flat.
 
-                -- HouseHunting
+                -- NextTenant
                 """.formatted(
                         nameOf(recipient),
                         nameOf(other),

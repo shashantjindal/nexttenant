@@ -9,7 +9,7 @@ package com.househunting.user;
  *
  * <p>Its message deliberately does not say whose account holds the number —
  * that would make the profile form into a way of asking "is this person on
- * HouseHunting?".
+ * NextTenant?".
  */
 public class PhoneAlreadyInUseException extends RuntimeException {
     public PhoneAlreadyInUseException(String message) {

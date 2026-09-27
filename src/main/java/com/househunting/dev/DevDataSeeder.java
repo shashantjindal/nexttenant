@@ -332,7 +332,7 @@ public class DevDataSeeder implements CommandLineRunner {
         // numbers are outside the ranges carriers assign, for the same reason.
         userPrivates.save(new UserPrivate(
                 leaver.getId(),
-                "seed-%05d@househunting.invalid".formatted(phoneCounter),
+                "seed-%05d@nexttenant.invalid".formatted(phoneCounter),
                 "+9190000%05d".formatted(phoneCounter)));
 
         Configuration configuration = randomOf(random, Configuration.values());

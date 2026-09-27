@@ -11,7 +11,7 @@ plugins {
 
 group = "com.househunting"
 version = "0.0.1-SNAPSHOT"
-description = "HouseHunting — Mumbai flat-takeover marketplace"
+description = "NextTenant — Mumbai flat-takeover marketplace"
 
 java {
     toolchain {

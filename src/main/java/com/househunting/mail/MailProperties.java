@@ -24,6 +24,6 @@ public record MailProperties(String provider, String from, String replyTo) {
         // .invalid can never resolve (RFC 2606), so a deployment that forgot
         // to set this fails visibly at the provider instead of sending mail
         // that quietly lands nowhere.
-        from = from == null || from.isBlank() ? "HouseHunting <noreply@invalid.invalid>" : from;
+        from = from == null || from.isBlank() ? "NextTenant <noreply@invalid.invalid>" : from;
     }
 }

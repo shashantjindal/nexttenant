@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * <p>Deliberately not libphonenumber: that library is excellent and large, and
  * we serve exactly one country with a strictly defined mobile format. Adding a
  * dependency to solve a problem a regex solves correctly is a cost without a
- * return. If HouseHunting ever crosses a border, that decision flips.
+ * return. If NextTenant ever crosses a border, that decision flips.
  */
 public final class PhoneNumbers {
 

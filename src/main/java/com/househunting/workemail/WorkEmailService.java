@@ -42,7 +42,7 @@ public class WorkEmailService {
     public static final int MAX_ATTEMPTS = 5;
     public static final int MAX_SENDS = 4;
 
-    private static final String SUBJECT = "Your HouseHunting verification code";
+    private static final String SUBJECT = "Your NextTenant verification code";
 
     private final WorkEmailChallengeRepository challenges;
     private final UserRepository users;
@@ -123,7 +123,7 @@ public class WorkEmailService {
 
     private static String body(String code) {
         return """
-                %s is your HouseHunting verification code.
+                %s is your NextTenant verification code.
 
                 It confirms you can receive mail at this address, which puts a
                 "Work email verified" badge on your listings. It expires in %d

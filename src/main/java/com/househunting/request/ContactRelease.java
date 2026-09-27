@@ -178,9 +178,9 @@ public class ContactRelease {
         String digits = phoneE164.replaceAll("[^0-9]", "");
 
         String message = viewerIsRequester
-                ? "Hi! I saw your %s in %s on HouseHunting and you accepted my request."
+                ? "Hi! I saw your %s in %s on NextTenant and you accepted my request."
                         .formatted(safe(listing.getRoomType()), safe(listing.getAreaName()))
-                : "Hi! You asked about my %s in %s on HouseHunting."
+                : "Hi! You asked about my %s in %s on NextTenant."
                         .formatted(safe(listing.getRoomType()), safe(listing.getAreaName()));
 
         return "https://wa.me/%s?text=%s".formatted(

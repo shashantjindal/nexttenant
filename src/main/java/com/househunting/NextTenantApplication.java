@@ -19,9 +19,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @org.springframework.scheduling.annotation.EnableScheduling
-public class HouseHuntingApplication {
+public class NextTenantApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(HouseHuntingApplication.class, args);
+        SpringApplication.run(NextTenantApplication.class, args);
     }
 }

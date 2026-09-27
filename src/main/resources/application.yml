@@ -113,7 +113,7 @@ househunting:
     provider: ${HOUSEHUNTING_MAIL_PROVIDER:console}
     # MUST be an address the provider has verified for the sending domain. An
     # unverified From is rejected by SES and silently spam-foldered by others.
-    from: ${HOUSEHUNTING_MAIL_FROM:HouseHunting <noreply@invalid.invalid>}
+    from: ${HOUSEHUNTING_MAIL_FROM:NextTenant <noreply@invalid.invalid>}
     # People reply to notification emails. Send those somewhere a person reads.
     reply-to: ${HOUSEHUNTING_MAIL_REPLY_TO:}
 

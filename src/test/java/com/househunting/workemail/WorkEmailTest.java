@@ -316,7 +316,7 @@ class WorkEmailTest {
         workEmail.requestCode(other.getId(), address);
 
         // Refused at the final step, not the first. Refusing when the address
-        // is TYPED would answer "is this colleague on HouseHunting?" for
+        // is TYPED would answer "is this colleague on NextTenant?" for
         // anybody who cared to ask.
         assertThat(workEmail.verify(other.getId(), address, sender.lastCode()))
                 .isInstanceOf(WorkEmailResult.AlreadyUsed.class);

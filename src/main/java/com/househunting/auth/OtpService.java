@@ -204,7 +204,7 @@ public class OtpService {
 
         switch (channel) {
             case SMS -> sms.send(subject,
-                    "%s is your HouseHunting code. It expires in %d minutes."
+                    "%s is your NextTenant code. It expires in %d minutes."
                             .formatted(code, minutes));
 
             // The code goes in the SUBJECT LINE as well as the body. Most
@@ -213,13 +213,13 @@ public class OtpService {
             // text message — and immediacy is the whole reason SMS was
             // preferred in the first place.
             case EMAIL -> email.send(subject,
-                    "%s is your HouseHunting sign-in code".formatted(code),
+                    "%s is your NextTenant sign-in code".formatted(code),
                     emailBody(code, minutes));
         }
     }
 
     private static String emailBody(String code, long minutes) {
-        return ("%s is your sign-in code for HouseHunting.\n"
+        return ("%s is your sign-in code for NextTenant.\n"
                 + "\n"
                 + "It expires in %d minutes and can be used once.\n"
                 + "\n"
