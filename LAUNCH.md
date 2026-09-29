@@ -568,7 +568,23 @@ A **security group** is a firewall: a list of who may connect.
 
 1. Search **RDS** → **Create database**.
 2. **Standard create**.
-3. Engine: **PostgreSQL**, version **16.x**.
+3. Engine: **PostgreSQL**. Then open **Engine version** and **choose a 16.x
+   release explicitly**.
+
+   > **Do not accept the default.** AWS moves it forward as new majors ship, so
+   > it will offer 17, 18 or later. This application is built and tested
+   > against 16 — `docker-compose.yml` pins `postgis/postgis:16-3.4`, and every
+   > test runs on that.
+   >
+   > The failure is not subtle but it is late: Flyway only runs against major
+   > versions it explicitly supports, and refuses with
+   > `Unsupported Database: PostgreSQL 18.x` at startup, before a single
+   > migration executes. You would find out in Part 8, after everything else
+   > was done.
+   >
+   > **RDS cannot downgrade a major version**, so getting this wrong means
+   > deleting the instance and creating it again. Thirty seconds here; twenty
+   > minutes later.
 4. Templates: **Dev/Test**.
 
    > Not "Production". That template turns on Multi-AZ, which runs a second
@@ -942,6 +958,14 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 **You should see** `CREATE EXTENSION` twice. If instead you see a connection
 timeout, the security group rule in Part 7.2 is wrong.
 
+> **Read the banner `psql` prints when it connects.** A line like
+> *"psql major version 15, server major version 18"* means the database is not
+> on 16, and the app will refuse to start later with
+> `Unsupported Database: PostgreSQL 18.x`. Stop here and fix it — §5.2 — rather
+> than finding out after the rest of Part 8 is done. A one-version gap between
+> psql and the server (15 vs 16) is normal and harmless; it is the *server*
+> number that has to be 16.
+
 ### 8.5 Get the code
 
 ```bash
@@ -1304,6 +1328,12 @@ it in `nt.env` (Part 8.6).
 
 **App logs mention `postgis` or `geography`**
 Part 8.4 was skipped or run against the wrong database.
+
+**App logs say `Unsupported Database: PostgreSQL 17.x` (or 18, or later)**
+The RDS instance was created on a newer major version than this application is
+built for. Flyway refuses before running any migration. There is no downgrade —
+delete the instance and create it again on **16.x** (§5.2). `psql` warns about
+this the moment you connect: *"psql major version 15, server major version 18"*.
 
 **Health says `DOWN`**
 Usually the database. Check `DB_URL` in `nt.env` — the endpoint, `:5432`, and
