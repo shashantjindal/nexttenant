@@ -159,10 +159,41 @@ again.
 **Then set up the mailbox:**
 
 5. Cloudflare → **Email → Email Routing → Get started**.
-6. Add `hello@nexttenant.in`, forwarding to your normal Gmail. Cloudflare adds
-   the MX records itself.
-7. Add `privacy@nexttenant.in` too — Part 11.3 needs a monitored address for
-   the privacy policy, and it is another thirty seconds.
+6. **Add a destination address** first — your normal Gmail — and **click the
+   verification link Cloudflare emails to it**.
+
+   > Do this before creating any rule. An unverified destination can still be
+   > picked when you write a rule, and mail to it simply never arrives.
+
+7. **Routing rules → Create** two custom addresses, both forwarding to that
+   destination:
+   - `hello@nexttenant.in` — where replies to your notification emails land,
+     and what `NEXTTENANT_MAIL_REPLY_TO` points at
+   - `privacy@nexttenant.in` — Part 11.3 needs a monitored address for the
+     privacy policy, and it is another thirty seconds now
+
+8. **Set the catch-all rule to Drop.**
+
+   > Forwarding everything means every address anybody invents at your domain
+   > reaches your inbox — and once the domain is public, spam finds it and
+   > there is nothing to unsubscribe from. Drop, and add real addresses as you
+   > need them.
+
+`noreply@` needs no rule and no inbox: SES only ever sends from it, and replies
+go to `hello@` because the app sets a reply-to.
+
+**Routing status "Syncing"** is Cloudflare adding the MX records; it clears by
+itself. **DNS records "Locked"** is normal — it means Cloudflare owns those MX
+entries so they cannot be broken by accident.
+
+> **Remember this for §4.3.** Email Routing has just added its own SPF record.
+> Do not add a second one for Amazon — a domain with two SPF records is treated
+> as having **none**, and your sign-in codes go to spam. Merge them into a
+> single TXT record on `@`:
+>
+> ```
+> v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all
+> ```
 
 **To reply *as* your domain** rather than from your personal address, after
 Part 4.5: Gmail → **Settings → Accounts → Send mail as** → add
