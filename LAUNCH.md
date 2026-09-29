@@ -329,7 +329,25 @@ personal Gmail**. Amazon sends it a link; click it.
 2. Choose **Domain**. Type your domain, without `www` and without `https://`.
 3. Leave **Easy DKIM** on, **RSA_2048_BIT**, and leave **Publish DNS records to
    Route 53** unticked — your DNS is not at Amazon.
-4. Create.
+4. **Leave "MAIL FROM domain" blank.**
+
+   > MAIL FROM is the envelope sender, separate from the `From:` your users
+   > see; by default SES uses a subdomain of `amazonses.com` for it. People set
+   > a custom one for DMARC alignment — which you do not need, because **DMARC
+   > passes if EITHER SPF or DKIM aligns**, and Easy DKIM signs as your domain
+   > and therefore aligns already. A custom MAIL FROM only adds a second way to
+   > pass the same check, in exchange for two more DNS records. Add it later if
+   > you ever want it; nothing breaks by leaving it off.
+
+5. If it offers **"Behavior on MX failure"**, leave it on **Use default MAIL
+   FROM domain**.
+
+   > This is the fail-open choice: if that DNS ever goes missing, SES falls
+   > back to `amazonses.com` and mail still sends. The other option, **Reject
+   > message, stops mail entirely** — so one DNS slip would silently kill every
+   > sign-in code on the site.
+
+6. Create.
 
 You now see **three CNAME records**. Keep this page open.
 
