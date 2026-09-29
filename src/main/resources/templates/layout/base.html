@@ -90,6 +90,15 @@
                       th:hidden="${counts.requestsBadge()} == 0"
                       th:text="${counts.hasRequestsBadge()} ? ${counts.requestsBadge()} : ''">2</span>
             </a>
+            <!--/* Admins only. Without it /admin is reachable only by
+                   somebody who remembers the URL, which is a poor way to find
+                   the moderation queue during the one incident it exists for.
+                   The label is short because it sits in a row that already
+                   runs out of width on a phone. */-->
+            <a class="btn btn--ghost site-header__label"
+               th:if="${currentUser != null and currentUser.admin()}"
+               th:href="@{/admin}" title="Admin">Admin</a>
+
             <a class="btn btn--ghost" th:if="${currentUser == null}"
                th:href="@{/login}" href="/login">Log in</a>
             <a class="btn btn--ghost" th:if="${currentUser != null}"

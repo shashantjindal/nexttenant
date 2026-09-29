@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Admin — NextTenant</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Admin</h1>
+    </div>
+
+    <!--/*
+      Anything needing a person comes first and looks different from the
+      numbers. A page where every figure carries equal weight is one somebody
+      skims once and then stops opening.
+    */-->
+    <section class="page-width" th:if="${overview.needsAttention()}" style="padding-inline: 0">
+        <a class="waiting" th:href="@{/admin/reports}">
+            <span class="waiting__dot" aria-hidden="true"></span>
+            <span class="waiting__text">
+                <strong class="waiting__title"
+                        th:text="|${overview.openReports} report${overview.openReports == 1 ? '' : 's'} waiting|">
+                    2 reports waiting
+                </strong>
+                <span class="waiting__body">
+                    Somebody flagged a listing. Two confirmed reports remove an
+                    account, so these are worth reading rather than clearing.
+                </span>
+            </span>
+            <span class="waiting__cta">Open the queue &rarr;</span>
+        </a>
+    </section>
+
+    <!-- ================= The marketplace ================= -->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
+        Is it turning over?
+    </h2>
+
+    <div class="dash-tiles">
+        <a class="dash-tile" th:href="@{/flats}">
+            <span class="dash-tile__value" th:text="${overview.liveListings}">0</span>
+            <span class="dash-tile__label">rooms live</span>
+        </a>
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.pendingRequests}">0</span>
+            <span class="dash-tile__label">requests unanswered</span>
+        </div>
+        <div class="dash-tile">
+            <!--/* The number that means the product worked: two people who
+                   now have each other's number and no broker between them. */-->
+            <span class="dash-tile__value" th:text="${overview.connections}">0</span>
+            <span class="dash-tile__label">connections made</span>
+        </div>
+    </div>
+
+    <!-- ================= People ================= -->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
+        People
+    </h2>
+
+    <div class="dash-tiles">
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.users}">0</span>
+            <span class="dash-tile__label">accounts</span>
+        </div>
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.usersThisWeek}">0</span>
+            <span class="dash-tile__label">joined this week</span>
+        </div>
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.rentedListings}">0</span>
+            <span class="dash-tile__label">rooms marked taken</span>
+        </div>
+    </div>
+
+    <!-- ================= Where people give up ================= -->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
+        Unfinished
+    </h2>
+
+    <div class="dash-tiles">
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.draftListings}">0</span>
+            <span class="dash-tile__label">drafts abandoned</span>
+        </div>
+        <div class="dash-tile">
+            <span class="dash-tile__value" th:text="${overview.draftPercentage()} + '%'">0%</span>
+            <span class="dash-tile__label">of listings never finished</span>
+        </div>
+        <a class="dash-tile" th:href="@{/admin/reports}">
+            <span class="dash-tile__value" th:text="${overview.openReports}">0</span>
+            <span class="dash-tile__label">open reports</span>
+        </a>
+    </div>
+
+    <p class="auth__fine" style="margin-top: var(--s-6)">
+        <!--/*
+          Said plainly because a dashboard invites the assumption that it shows
+          everything. Drafts are a rate to watch rather than a thing to act on:
+          a rising share means people are opening the wizard and abandoning it,
+          and the step they leave at is what to fix.
+        */-->
+        Counted live from the database, every time this page loads. There is no
+        page-view tracking, and none of these numbers is stored or historic.
+    </p>
+
+</main>
+</body>
+</html>
