@@ -777,11 +777,29 @@ icacls nt-key.pem
 than one entry means `/inheritance:r` did not apply, and SSH will still refuse
 the key.
 
-Then connect, using your Elastic IP:
+Then connect. **Replace `YOUR-ELASTIC-IP` with the address from §7.4** — find it
+again under **EC2 → Instances → your instance → Public IPv4 address**:
 
 ```powershell
-ssh -i nt-key.pem ec2-user@13.234.56.78
+ssh -i nt-key.pem ec2-user@YOUR-ELASTIC-IP
 ```
+
+> **`Connection timed out` means nothing answered**, which is one of three
+> things, in order of likelihood:
+>
+> 1. **The wrong address.** Check it against the console rather than anything
+>    you typed earlier.
+> 2. **Your home IP has changed.** The SSH rule in §7.1 was set to *My IP*, and
+>    Indian broadband reassigns addresses regularly — often daily. **EC2 →
+>    Security Groups → `nt-app` → Inbound rules → Edit**, and re-select **My
+>    IP** on the SSH rule.
+> 3. **The instance is not running**, or the Elastic IP came unattached — in
+>    which case the instance has a different address, and you are being billed
+>    for an idle one.
+>
+> *Timed out* and *Connection refused* mean different things: refused would
+> mean the machine answered and nothing was listening, which points at the
+> server rather than the network.
 
 Type `yes` when asked about authenticity.
 
@@ -812,7 +830,7 @@ Now **log out and back in** so the Docker permission takes effect:
 exit
 ```
 ```powershell
-ssh -i nt-key.pem ec2-user@13.234.56.78
+ssh -i nt-key.pem ec2-user@YOUR-ELASTIC-IP
 ```
 
 Check it worked:
@@ -1191,10 +1209,15 @@ Your registrant email is unverified, so the registrar has suspended the domain.
 Click the link in the verification email they sent — see §1.2b. Nothing needs
 uploading; it is an email confirmation, not an identity check.
 
+**`ssh` says "Connection timed out"**
+Nothing answered. Wrong IP (check EC2 → Instances, do not reuse one from
+earlier), or your home address changed and the `nt-app` SSH rule still names
+the old one — re-select **My IP** on it. See the note in Part 8.1.
+
 **`ssh` says "Permission denied (publickey)"**
-The username is `ec2-user`, not `root` or your name. On Windows, run the
-`icacls` command from Part 8.1, then `icacls nt-key.pem` to confirm you are the
-only account listed.
+Something answered, so the network is fine. The username is `ec2-user`, not
+`root` or your name. On Windows, run the `icacls` command from Part 8.1, then
+`icacls nt-key.pem` to confirm you are the only account listed.
 
 **`icacls` says `Invalid parameter "/grant:r"`**
 Use `"${env:USERNAME}:R"` with braces. Without them PowerShell reads
@@ -1244,7 +1267,7 @@ Swap was not set up — Part 8.3.
 | **DNS** | The phone book turning your domain into a server address. |
 | **A record** | A DNS entry pointing a domain at an IP address. |
 | **CNAME** | A DNS entry pointing one name at another. Used to prove you own a domain. |
-| **IP address** | A server's numeric address, like `13.234.56.78`. |
+| **IP address** | A server's numeric address, like `13.234.56.78`. Yours is in EC2 → Instances. |
 | **Elastic IP** | An AWS address that does not change when the server restarts. |
 | **EC2** | A rented computer in Amazon's data centre. |
 | **Instance** | One of those computers. |
