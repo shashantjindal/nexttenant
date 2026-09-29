@@ -534,13 +534,34 @@ When the site is up:
 
 ### 4.6 Create the email username and password
 
-**SES → SMTP settings → Create SMTP credentials** → accept the defaults →
-Create.
+**SES → SMTP settings.** The page offers two credential methods, and **the one
+marked "Recommended" is the wrong one here.**
 
-**Download the CSV.** The password is shown once and never again.
+Choose **IAM SMTP credentials** — the right-hand card, *"Manual credential
+management. No traffic policies or rule sets."* Then **Create SMTP
+credentials** → it creates an IAM user → **Download the CSV**. The password is
+shown once and never again.
 
-These are **not** your AWS password and not the IAM keys — SES issues a
-separate pair used only for sending mail.
+> **Not "Mail Manager SMTP"**, despite the badge. That is a separate product:
+> it creates an *ingress endpoint* with its own credentials, whose username
+> looks like `inp-l6qxksq6ymmuapwf3b4h6iri` rather than an `AKIA…` access key.
+> Those authenticate against the ingress endpoint, **not** against
+> `email-smtp.ap-south-1.amazonaws.com` — so the app fails with
+> `535 Authentication Credentials Invalid`, which reads like a typo and is
+> actually the right credentials for the wrong door.
+>
+> It also says "Mail Manager processing charges apply". It buys traffic
+> policies and rule-based routing, none of which this application uses.
+>
+> If you took that path already: **SES → Mail Manager → Ingress endpoints** and
+> delete the one it created, so it cannot bill you.
+
+**What correct credentials look like:** username **20 characters starting
+`AKIA`**, password around **44 characters**. Check before you paste — it is
+thirty seconds against an hour of `535`.
+
+These are **not** your AWS password and not the IAM keys from §6.2 — SES issues
+a separate pair used only for sending mail.
 
 **Check back in a few hours:** the Identities page should say **Verified**, and
 the Account dashboard should no longer say "sandbox".
@@ -1357,9 +1378,29 @@ IP, that ports 80 and 443 are open in `nt-app`, then
 `docker compose -f docker-compose.prod.yml restart caddy`.
 
 **Sign-in emails never arrive**
-Check spam first. Then: is SES still in sandbox (Part 4.5)? Does the Identities
+Check spam first. Then: is SES still in sandbox (§4.5)? Does the Identities
 page say **Verified**? Does `NEXTTENANT_MAIL_FROM` use the domain you
 verified? Then `docker compose -f docker-compose.prod.yml logs app | grep -i mail`.
+
+**App logs say `535 Authentication Credentials Invalid`**
+The SMTP username and password are rejected. In order of likelihood:
+
+1. **They are Mail Manager credentials, not IAM ones** — username starts
+   `inp-` rather than `AKIA`. Wrong door; see §4.6.
+2. **The container still holds the old values.** Environment variables are
+   fixed when a container is created, so editing `nt.env` and running `up -d`
+   may change nothing. Check with
+   `docker compose -f docker-compose.prod.yml exec app printenv | grep SMTP_USERNAME`,
+   and apply with `up -d --force-recreate app`.
+3. **Credentials from another region.** They are region-specific and will not
+   work against `email-smtp.ap-south-1.amazonaws.com`.
+4. **Stray characters** — a trailing space or a Windows line ending becomes
+   part of the password. `grep -E "^SMTP_" nt.env | cat -A`; every line must
+   end `$`, and `^M$` means run `sed -i 's/\r$//' nt.env`.
+
+None of this blocks you. Set `NEXTTENANT_MAIL_PROVIDER=console`, read codes
+from the log, and finish the deployment — SMTP has to be revisited when
+production access is granted anyway.
 
 **Photos upload but do not appear**
 The IAM instance profile from Part 7.3 step 8 was not attached, or the bucket
