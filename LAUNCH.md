@@ -351,6 +351,14 @@ personal Gmail**. Amazon sends it a link; click it.
 
 You now see **three CNAME records**. Keep this page open.
 
+> **Lost them?** The wizard does not leave you on that screen. Get back to them
+> from the SES dashboard: the **Verify sending domain** card has a **Get DNS
+> Records** button. Or **Identities → nexttenant.in → Authentication**.
+>
+> While you are there: **Request production access** (§4.5) stays greyed out
+> until the domain shows Verified, so the order is forced — add the records
+> first, and the button unlocks by itself.
+
 > **If SES showed you a "Get set up" wizard instead**, that is the same thing
 > with extras. Step 1 is the address above, step 2 is this domain, and the
 > pricing step wants the standard pay-as-you-go option.
