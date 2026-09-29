@@ -715,7 +715,15 @@ entire extent of what the attacker gets.
 5. Key pair → **Create new key pair** → name `nt-key`, type **RSA**, format
    **.pem** → Create. **The file downloads once.** Lose it and you lose access
    to the server.
-6. **Network settings → Edit** → Select existing security group → **`nt-app`**.
+6. **Network settings → Edit** → **Select existing security group** →
+   **`nt-app`**.
+
+   > Easy to skip, and it fails late. Left alone, the wizard creates its own
+   > `launch-wizard-N` group or uses `default`, which allows nothing inbound —
+   > so the instance launches happily and then refuses every connection in
+   > Part 8. Confirm afterwards under the instance's **Security** tab; it is
+   > changeable at any time with **Actions → Security → Change security
+   > groups**.
 7. **Configure storage**: 20 GiB gp3.
 8. **Advanced details** → scroll to **IAM instance profile** → choose
    **`nt-app-role`**.
@@ -784,22 +792,39 @@ again under **EC2 → Instances → your instance → Public IPv4 address**:
 ssh -i nt-key.pem ec2-user@YOUR-ELASTIC-IP
 ```
 
-> **`Connection timed out` means nothing answered**, which is one of three
-> things, in order of likelihood:
+> **`Connection timed out` means nothing answered.** Rather than guessing which
+> of several causes it is, test a second port — this splits the problem in one
+> step:
 >
-> 1. **The wrong address.** Check it against the console rather than anything
->    you typed earlier.
-> 2. **Your home IP has changed.** The SSH rule in §7.1 was set to *My IP*, and
->    Indian broadband reassigns addresses regularly — often daily. **EC2 →
->    Security Groups → `nt-app` → Inbound rules → Edit**, and re-select **My
->    IP** on the SSH rule.
-> 3. **The instance is not running**, or the Elastic IP came unattached — in
->    which case the instance has a different address, and you are being billed
->    for an idle one.
+> ```powershell
+> Test-NetConnection -ComputerName YOUR-ELASTIC-IP -Port 80
+> ```
 >
-> *Timed out* and *Connection refused* mean different things: refused would
-> mean the machine answered and nothing was listening, which points at the
-> server rather than the network.
+> | Result | What it means |
+> |---|---|
+> | 80 **open**, 22 blocked | The SSH rule is wrong — almost always a stale *My IP* |
+> | 80 **also blocked** | The wrong security group is attached, or there is no route out |
+> | Either port **refused** rather than timing out | The machine answered and nothing was listening — a server problem, not a network one |
+>
+> Port 80 is the useful probe because `nt-app` opens it to the whole internet,
+> so it does not depend on your address at all. If 80 is shut, the group is not
+> doing its job — or is not attached.
+>
+> **If both are blocked**, check **Instances → your instance → Security** tab.
+> The launch wizard quietly defaults to a new `launch-wizard-N` group, or to
+> `default` which allows nothing inbound, so §7.3 step 6 is easy to miss. Fix
+> it with **Actions → Security → Change security groups** — add `nt-app`,
+> remove the other. It applies immediately; no restart.
+>
+> **If only 22 is blocked**, your address changed. Find the current one at
+> <https://checkip.amazonaws.com>, then **EC2 → Security Groups → `nt-app` →
+> Inbound rules → Edit** and re-select **My IP**. Indian broadband reassigns
+> addresses regularly, so expect to do this again — when SSH stops working for
+> no apparent reason, look here first.
+>
+> Also worth a glance: is the instance **Running**, and is the Elastic IP still
+> associated? An unattached one means a different address and a bill for the
+> idle address.
 
 Type `yes` when asked about authenticity.
 
@@ -1210,9 +1235,9 @@ Click the link in the verification email they sent — see §1.2b. Nothing needs
 uploading; it is an email confirmation, not an identity check.
 
 **`ssh` says "Connection timed out"**
-Nothing answered. Wrong IP (check EC2 → Instances, do not reuse one from
-earlier), or your home address changed and the `nt-app` SSH rule still names
-the old one — re-select **My IP** on it. See the note in Part 8.1.
+Nothing answered. Test port 80 as well — if that is blocked too, the wrong
+security group is attached to the instance; if only 22 is blocked, your address
+changed. Part 8.1 has the full split.
 
 **`ssh` says "Permission denied (publickey)"**
 Something answered, so the network is fine. The username is `ec2-user`, not
