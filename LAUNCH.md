@@ -25,7 +25,7 @@ there.
 | Wait | How long |
 |---|---|
 | Verifying your domain email (§1.2b) | minutes to a couple of hours |
-| Amazon approving your email sending (§4.4) | a few hours to a day |
+| Amazon approving your email sending (§4.5) | a few hours to a day |
 | Nameservers and DNS spreading across the internet | 15 minutes to a few hours |
 
 The first one blocks the other two, so start it the moment you have bought the
@@ -186,7 +186,7 @@ go to `hello@` because the app sets a reply-to.
 itself. **DNS records "Locked"** is normal — it means Cloudflare owns those MX
 entries so they cannot be broken by accident.
 
-> **Remember this for §4.3.** Email Routing has just added its own SPF record.
+> **Remember this for §4.4.** Email Routing has just added its own SPF record.
 > Do not add a second one for Amazon — a domain with two SPF records is treated
 > as having **none**, and your sign-in codes go to spam. Merge them into a
 > single TXT record on `@`:
@@ -196,7 +196,7 @@ entries so they cannot be broken by accident.
 > ```
 
 **To reply *as* your domain** rather than from your personal address, after
-Part 4.5: Gmail → **Settings → Accounts → Send mail as** → add
+Part 4.6: Gmail → **Settings → Accounts → Send mail as** → add
 `hello@nexttenant.in` and point it at the SES SMTP credentials you create
 there. Gmail emails a code to that address, which forwards to you.
 
@@ -310,18 +310,40 @@ step with the longest wait.
 Your site emails people six-digit sign-in codes. Without this, nobody can log
 in at all.
 
-### 4.1 Tell Amazon you own the domain
+### 4.1 Verify your own email address first
 
-1. Search **SES** in the top bar. **Check the region says Mumbai.**
-2. **Identities** → **Create identity**.
-3. Choose **Domain**. Type your domain, without `www` and without `https://`.
-4. Leave **Easy DKIM** on, **RSA_2048_BIT**, and leave **Publish DNS records to
+Search **SES** in the top bar. **Check the region says Mumbai.**
+
+Then **Identities → Create identity → Email address**, and enter **your own
+personal Gmail**. Amazon sends it a link; click it.
+
+> **Why this comes first.** SES starts in a sandbox where you may only send
+> **to** addresses you have verified. Until §4.5 is approved — which takes up
+> to a day — your own address is the only one the site can email, so without
+> this you cannot test your own login flow at all. Two minutes now, and Part 10
+> works today rather than tomorrow.
+
+### 4.2 Tell Amazon you own the domain
+
+1. **Identities** → **Create identity**.
+2. Choose **Domain**. Type your domain, without `www` and without `https://`.
+3. Leave **Easy DKIM** on, **RSA_2048_BIT**, and leave **Publish DNS records to
    Route 53** unticked — your DNS is not at Amazon.
-5. Create.
+4. Create.
 
 You now see **three CNAME records**. Keep this page open.
 
-### 4.2 Add those records at your DNS provider
+> **If SES showed you a "Get set up" wizard instead**, that is the same thing
+> with extras. Step 1 is the address above, step 2 is this domain, and the
+> pricing step wants the standard pay-as-you-go option.
+>
+> **Skip every step marked optional.** Deliverability enhancements and tenant
+> management are paid add-ons, and a **Dedicated IP pool costs around
+> $25/month** — and would make deliverability *worse* at your volume, because
+> a fresh dedicated IP has no sending reputation, where Amazon's shared pool
+> already has one.
+
+### 4.3 Add those records at your DNS provider
 
 Where to find the records screen:
 
@@ -350,7 +372,7 @@ For each of the three: type **CNAME**.
 
 Save all three.
 
-### 4.3 Add two more records so your mail is not treated as spam
+### 4.4 Add two more records so your mail is not treated as spam
 
 Two records: one you **edit**, one you **add**. Getting that the wrong way
 round is the single most common way sign-in codes end up in spam.
@@ -407,7 +429,7 @@ as you. DMARC tells receivers what to do when either fails.
 spam" — modern inboxes refuse unauthenticated bulk mail, and a login code that
 never arrives is a user who cannot get in at all.
 
-### 4.4 Ask Amazon to let you email real people
+### 4.5 Ask Amazon to let you email real people
 
 New SES accounts are in a **sandbox**: you can only email addresses you have
 personally verified, 200 a day. That is useless for a real site.
@@ -425,7 +447,7 @@ personally verified, 200 a day. That is useless for a real site.
 
 Usually approved within a day. **Continue with the rest while you wait.**
 
-### 4.5 Create the email username and password
+### 4.6 Create the email username and password
 
 **SES → SMTP settings → Create SMTP credentials** → accept the defaults →
 Create.
@@ -853,7 +875,7 @@ just that the app is running.
 
 *5 minutes of work, then up to a few hours of waiting.*
 
-Open the same records screen you used in Part 4.2.
+Open the same records screen you used in Part 4.3.
 
 1. **Delete the registrar's parking records first.** A new domain arrives
    pointing at the registrar's own advert — usually an **A record on `@`** and
@@ -920,7 +942,12 @@ be valid and issued to your domain.
 This is the most valuable single check on the list: it proves email, DNS
 records, the secret and the database all at once.
 
-**Check your spam folder.** If the code landed there, something in Part 4.3 is
+> Use the address you verified in §4.1. If production access (§4.5) has not
+> come through yet, SES is still in its sandbox and **that is the only address
+> it will send to** — any other one fails, and the failure looks exactly like a
+> broken app.
+
+**Check your spam folder.** If the code landed there, something in Part 4.4 is
 wrong.
 
 **4. Publish a listing with photos.** Go through the whole wizard.
@@ -1079,7 +1106,7 @@ IP, that ports 80 and 443 are open in `nt-app`, then
 `docker compose -f docker-compose.prod.yml restart caddy`.
 
 **Sign-in emails never arrive**
-Check spam first. Then: is SES still in sandbox (Part 4.4)? Does the Identities
+Check spam first. Then: is SES still in sandbox (Part 4.5)? Does the Identities
 page say **Verified**? Does `NEXTTENANT_MAIL_FROM` use the domain you
 verified? Then `docker compose -f docker-compose.prod.yml logs app | grep -i mail`.
 
