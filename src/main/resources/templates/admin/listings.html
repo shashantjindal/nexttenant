@@ -40,7 +40,7 @@
                 <td th:text="${row.rent != null} ? '₹' + ${row.rent} : '—'">₹32000</td>
                 <td>
                     <span th:text="${row.ownerName} ?: '—'">Priya</span>
-                    <span class="admin-dim" th:text="' · ' + ${row.ownerEmail}"> · x@y.com</span>
+                    <span class="admin-dim" th:if="${row.ownerEmail}" th:text="' · ' + ${row.ownerEmail}"> · x@y.com</span>
                 </td>
                 <td th:text="${row.requests}">0</td>
                 <td class="admin-dim" th:text="${row.createdOn()}">1 Oct 2026</td>
@@ -49,6 +49,17 @@
                            draft would 404 and look like a fault. */-->
                     <a th:if="${row.status == 'LIVE'}"
                        th:href="@{/flats/{id}(id=${row.id})}" target="_blank">View</a>
+
+                    <!--/*
+                      A link to a confirmation page, not a button that acts.
+                      Taking a listing down cannot be undone, and a form in a
+                      row of fifty is one stray click away from an irreversible
+                      mistake. Hidden once it is down, because there is nothing
+                      left to do to it.
+                    */-->
+                    <a th:unless="${row.status == 'TAKEN_DOWN'}"
+                       th:href="@{/admin/listings/{id}/take-down(id=${row.id},
+                                  status=${status}, page=${page})}">Take down</a>
                 </td>
             </tr>
             </tbody>

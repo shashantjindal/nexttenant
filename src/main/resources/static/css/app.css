@@ -577,6 +577,7 @@
 .field input[type="text"],
 .field input[type="tel"],
 .field input[type="email"],
+.field textarea,
 .field select {
     width: 100%;
     padding: var(--s-3) var(--s-4);
@@ -588,7 +589,12 @@
     font-size: 16px;
 }
 
-.field input:focus, .field select:focus { border-color: var(--c-brand); }
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--c-brand); }
+
+/* Inherit, because a textarea does not: left alone it renders in the
+   browser's monospace default beside fields using the body face. Vertical
+   resize only — horizontal dragging breaks the column it sits in. */
+.field textarea { font-family: inherit; resize: vertical; }
 
 .field__phone {
     display: flex;
@@ -753,6 +759,21 @@
 }
 .notice--widened { background: var(--c-gold); color: var(--c-gold-ink); }
 .notice--relaxed { background: var(--c-brand-tint); color: var(--c-brand); }
+
+/*
+ * "You are about to do something you cannot undo."
+ *
+ * The bare .notice has no background of its own — the two modifiers above
+ * carry it — so a warning written without one renders as plain text and reads
+ * as a caption rather than a caution. Gold is this palette's warning tone; the
+ * bar gives it an edge to catch, since colour alone is not something every
+ * reader distinguishes.
+ */
+.notice--warning {
+    background: var(--c-gold);
+    color: var(--c-gold-ink);
+    border-left: 4px solid var(--c-gold-strong);
+}
 
 .notice__title { font-family: var(--font-display); font-weight: 600; margin: 0 0 var(--s-1); }
 .notice__body { font-size: var(--t-sm); margin: 0 0 var(--s-3); }
@@ -1883,3 +1904,7 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     justify-content: space-between;
     margin-top: var(--s-5);
 }
+
+/* Row actions sit side by side. Without this "View" and "Take down" render
+   as one run-on word, and the destructive one is the easier to hit. */
+.admin-table td a + a { margin-left: var(--s-4); }

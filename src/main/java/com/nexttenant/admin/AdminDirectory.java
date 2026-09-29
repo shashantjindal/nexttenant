@@ -32,6 +32,14 @@ import java.util.UUID;
  * <p>If this account is ever compromised, that distinction is the difference
  * between leaking who has an account and leaking every phone number on the
  * site.
+ *
+ * <p>Both queries LEFT JOIN {@code user_private}, and that word is load
+ * bearing. An inner join drops every account that has no private row — and
+ * those are precisely the odd ones an operator opens this page to find. A list
+ * that quietly omits rows is worse than no list: it answers "is this account
+ * here?" with a confident no. Written as an inner join, this page showed 50
+ * listings and hid the ones created moments earlier, which is how the defect
+ * was found.
  */
 @Service
 public class AdminDirectory {
@@ -117,7 +125,7 @@ public class AdminDirectory {
                                (SELECT count(*) FROM listings l
                                  WHERE l.leaver_user_id = u.id) AS listing_count
                           FROM users u
-                          JOIN user_private up ON up.user_id = u.id
+                          LEFT JOIN user_private up ON up.user_id = u.id
                          WHERE (CAST(:term AS text) IS NULL
                                 OR lower(up.email) LIKE :term
                                 OR lower(coalesce(u.first_name, '')) LIKE :term)
@@ -172,7 +180,7 @@ public class AdminDirectory {
                                  WHERE r.listing_id = l.id) AS request_count
                           FROM listings l
                           JOIN users u ON u.id = l.leaver_user_id
-                          JOIN user_private up ON up.user_id = u.id
+                          LEFT JOIN user_private up ON up.user_id = u.id
                          WHERE (CAST(:wanted AS text) IS NULL OR l.status = :wanted)
                          ORDER BY l.created_at DESC
                          LIMIT :limit OFFSET :offset

@@ -148,6 +148,54 @@ public class ModerationService {
         audit(moderatorId, "REPORT_DISMISSED", "REPORT", reportId, note);
     }
 
+    /**
+     * Takes a listing down without a report behind it.
+     *
+     * <p>The gap this fills: until now a moderator could only act on a listing
+     * somebody had reported. For one obviously-broker listing from an
+     * otherwise fine account, that meant either removing the whole account or
+     * editing the database by hand — and a hand-edited row is a decision with
+     * nobody's name on it.
+     *
+     * <p><b>This deliberately does not count as a strike.</b> Strikes come
+     * only from confirmed reports, and {@code reports_uq} guarantees two
+     * reports are two different people. A unilateral action that counted would
+     * let one moderator remove an account in two clicks, which is precisely
+     * the safeguard the two-strike rule exists to provide. That follows
+     * automatically from not writing a {@code reports} row here, and this note
+     * exists so nobody later "fixes" it by writing one.
+     *
+     * <p>A reason is required rather than optional, and that is the difference
+     * between this and {@link #confirm}. There, the report is the reason — it
+     * says who complained and why. Here there is no report, so an empty note
+     * leaves an audit row recording that somebody did something.
+     *
+     * @return false if it was already down, so the caller can say so rather
+     *         than claiming to have done something
+     * @throws IllegalArgumentException if no reason is given
+     */
+    @Transactional
+    public boolean takeDownListing(UUID listingId, UUID moderatorId, String reason) {
+        String why = trim(reason);
+        if (why == null) {
+            throw new IllegalArgumentException("Say why. It goes in the record.");
+        }
+
+        Listing listing = listings.findById(listingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (listing.getStatus() == ListingStatus.TAKEN_DOWN) {
+            return false;
+        }
+
+        listing.takeDown(clock.instant());
+        listings.saveAndFlush(listing);
+        audit(moderatorId, "LISTING_TAKEN_DOWN", "LISTING", listingId, why);
+
+        log.warn("Listing {} taken down by moderator {}: {}", listingId, moderatorId, why);
+        return true;
+    }
+
     // ---- Account actions --------------------------------------------------
 
     /**

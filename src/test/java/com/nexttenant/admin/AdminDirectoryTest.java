@@ -1,6 +1,8 @@
 package com.nexttenant.admin;
 
 import com.nexttenant.auth.AuthenticatedUser;
+import com.nexttenant.listing.Listing;
+import com.nexttenant.listing.ListingRepository;
 import com.nexttenant.user.AgeBracket;
 import com.nexttenant.user.Gender;
 import com.nexttenant.user.User;
@@ -46,6 +48,7 @@ class AdminDirectoryTest {
     @Autowired private AdminDirectory directory;
     @Autowired private UserRepository users;
     @Autowired private UserPrivateRepository userPrivates;
+    @Autowired private ListingRepository listings;
 
     /** A real Indian mobile, so PhoneNumbers accepts it and mask() can act. */
     private static final String PHONE = "+919876543210";
@@ -192,6 +195,36 @@ class AdminDirectoryTest {
         // type one that does not exist. Falling back to "no filter" would
         // quietly show the whole table and look like the filter had worked.
         assertThat(directory.listings("NONSENSE", 0)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("an account with no private row is still listed")
+    void accountsWithoutAPrivateRowAreNotHidden() {
+        // Written as an inner join this page silently dropped them, which is
+        // the worst failure an operator screen can have: it answers "is this
+        // account here?" with a confident no. And the accounts with something
+        // odd about their data are exactly the ones somebody opens this page
+        // to look for.
+        User orphan = users.saveAndFlush(
+                new User("Ottoline", Gender.FEMALE, AgeBracket.AGE_33_40));
+
+        assertThat(directory.accounts("ottoline", 0))
+                .extracting(AdminDirectory.AccountRow::id)
+                .containsExactly(orphan.getId());
+    }
+
+    @Test
+    @DisplayName("a listing whose owner has no private row is still listed")
+    void listingsWithoutAPrivateRowAreNotHidden() {
+        User orphan = users.saveAndFlush(
+                new User("Ottoline", Gender.FEMALE, AgeBracket.AGE_33_40));
+        Listing draft = new Listing(orphan.getId());
+        draft.advanceWizardTo(3);
+        listings.saveAndFlush(draft);
+
+        assertThat(directory.listings("DRAFT", 0))
+                .extracting(AdminDirectory.ListingRow::id)
+                .contains(draft.getId());
     }
 
     @Test

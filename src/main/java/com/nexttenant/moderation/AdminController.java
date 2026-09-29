@@ -3,7 +3,9 @@ package com.nexttenant.moderation;
 import com.nexttenant.auth.AuthenticatedUser;
 import com.nexttenant.listing.Listing;
 import com.nexttenant.listing.ListingRepository;
+import com.nexttenant.listing.ListingStatus;
 import com.nexttenant.user.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
@@ -102,6 +105,67 @@ public class AdminController {
             redirect.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/reports";
+    }
+
+    // ---- Taking a listing down without a report ---------------------------
+
+    /**
+     * The confirmation page.
+     *
+     * <p>An interstitial rather than a button in the table, for two reasons.
+     * Taking a listing down cannot be undone — {@code isResumable()} covers
+     * PAUSED and EXPIRED and not TAKEN_DOWN — so a stray click in a row of
+     * fifty is a mistake with no route back. And the reason field needs room
+     * to be answered properly rather than a cramped box in a scrolling table.
+     */
+    @GetMapping("/admin/listings/{id}/take-down")
+    public String confirmTakeDown(@PathVariable UUID id,
+                                  @RequestParam(required = false) String status,
+                                  @RequestParam(defaultValue = "0") int page,
+                                  Model model) {
+        Listing listing = listings.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        model.addAttribute("listing", listing);
+        model.addAttribute("ownerName", users.findById(listing.getLeaverUserId())
+                .map(u -> u.getFirstName()).orElse(null));
+        model.addAttribute("alreadyDown",
+                listing.getStatus() == ListingStatus.TAKEN_DOWN);
+        // Carried through so confirming returns to the filtered page the
+        // moderator was reading, not to the top of an unfiltered list.
+        model.addAttribute("status", status);
+        model.addAttribute("page", page);
+        return "admin/take-down";
+    }
+
+    @PostMapping("/admin/listings/{id}/take-down")
+    public String takeDown(@PathVariable UUID id,
+                           @AuthenticationPrincipal AuthenticatedUser admin,
+                           @RequestParam(required = false) String reason,
+                           @RequestParam(required = false) String status,
+                           @RequestParam(defaultValue = "0") int page,
+                           RedirectAttributes redirect) {
+        try {
+            boolean done = moderation.takeDownListing(id, admin.id(), reason);
+            redirect.addFlashAttribute("notice", done
+                    ? "Taken down. Recorded against you in the moderation log."
+                    : "That listing was already down. Nothing changed.");
+        } catch (IllegalArgumentException e) {
+            // Back to the form rather than on to the list: the moderator still
+            // means to do this and has only to say why.
+            redirect.addFlashAttribute("error", e.getMessage());
+            redirect.addAttribute("status", status);
+            redirect.addAttribute("page", page);
+            return "redirect:/admin/listings/{id}/take-down";
+        }
+
+        if (status != null && !status.isBlank()) {
+            redirect.addAttribute("status", status);
+        }
+        if (page > 0) {
+            redirect.addAttribute("page", page);
+        }
+        return "redirect:/admin/listings";
     }
 
     @PostMapping("/admin/reports/{id}/dismiss")

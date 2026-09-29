@@ -39,7 +39,7 @@
                     <span th:text="${row.firstName} ?: '—'">Priya</span>
                     <span class="admin-tag" th:if="${row.admin}">admin</span>
                 </td>
-                <td th:text="${row.email}">someone@example.com</td>
+                <td th:text="${row.email} ?: '—'">someone@example.com</td>
                 <!--/* Masked in the service, not here — there is no path by
                        which the full number reaches this page. */-->
                 <td class="admin-dim" th:text="${row.maskedPhone} ?: '—'">+91 ***** 43210</td>

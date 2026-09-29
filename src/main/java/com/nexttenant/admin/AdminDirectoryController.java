@@ -14,6 +14,12 @@ import org.springframework.web.bind.annotation.RequestParam;
  * the same effects, without that record, would make the audit trail a
  * best-effort thing rather than a fact.
  *
+ * <p>The listings page does carry a "Take down" link, and it points at
+ * {@code AdminController} in the moderation package rather than at anything
+ * here. That is the same rule holding rather than an exception to it: the
+ * browsing lives with browsing, the decision lives with the audit log that
+ * records it.
+ *
  * <p>Protected by {@code SecurityConfig}'s {@code /admin/**} rule, like every
  * other route under this prefix.
  */

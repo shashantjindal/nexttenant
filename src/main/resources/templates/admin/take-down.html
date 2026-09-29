@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Take this down? — NextTenant admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Take this down?</h1>
+        <a class="btn btn--ghost"
+           th:href="@{/admin/listings(status=${status}, page=${page})}">&larr; Back</a>
+    </div>
+
+    <!--/*
+      The already-down case gets its own screen rather than a disabled button.
+      A moderator arriving here from a stale tab should be told what happened,
+      not left looking at a form that would silently do nothing.
+    */-->
+    <div class="empty" th:if="${alreadyDown}">
+        <p class="empty__title">Already down</p>
+        <p class="empty__body">
+            This listing is not visible to anyone. Nothing left to do.
+        </p>
+        <a class="btn btn--secondary"
+           th:href="@{/admin/listings(status=${status}, page=${page})}">Back to listings</a>
+    </div>
+
+    <div th:unless="${alreadyDown}">
+
+        <div class="admin-table-wrap" style="margin-bottom: var(--s-5)">
+            <table class="admin-table">
+                <tbody>
+                <tr>
+                    <th>Area</th>
+                    <td th:text="${listing.areaName} ?: '—'">Bandra West</td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td th:text="${listing.status.label}">Live</td>
+                </tr>
+                <tr>
+                    <th>Rent</th>
+                    <td th:text="${listing.monthlyRentInr != null}
+                                 ? '₹' + ${listing.monthlyRentInr} : '—'">₹32000</td>
+                </tr>
+                <tr>
+                    <th>Owner</th>
+                    <td th:text="${ownerName} ?: '—'">Priya</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!--/*
+          Said plainly, because it is the part that cannot be walked back.
+          ListingStatus.isResumable() covers PAUSED and EXPIRED and not
+          TAKEN_DOWN, so there is no button anywhere — not the owner's, not
+          yours — that brings this listing back.
+        */-->
+        <div class="notice notice--warning" style="margin-bottom: var(--s-5)">
+            <p class="notice__title">This cannot be undone</p>
+            <p class="notice__body" style="margin: 0">
+                The listing leaves search immediately and there is no way back
+                for you or the owner. If they should be able to relist, ask
+                them to pause it instead.
+            </p>
+        </div>
+
+        <form method="post"
+              th:action="@{/admin/listings/{id}/take-down(id=${listing.id})}">
+            <input type="hidden" name="status" th:value="${status}">
+            <input type="hidden" name="page" th:value="${page}">
+
+            <label class="field">
+                <span class="field__label">Why</span>
+                <!--/*
+                  Required in the service, not only here. A `required`
+                  attribute is a convenience for the person typing; it is not
+                  a rule, because anything can post this form. The rule lives
+                  in ModerationService.takeDownListing.
+                */-->
+                <textarea name="reason" rows="3" required
+                          placeholder="Broker posting as a flatmate. Same photos as three other listings."></textarea>
+            </label>
+
+            <p class="auth__fine" style="margin-top: var(--s-3)">
+                Goes into the moderation log against your name, permanently.
+                This is not a strike: an account is only removed by two
+                confirmed reports from two different people, and taking a
+                listing down on your own is neither.
+            </p>
+
+            <div class="admin-pager" style="justify-content: flex-start">
+                <button type="submit" class="btn btn--primary">Take it down</button>
+                <a class="btn btn--ghost"
+                   th:href="@{/admin/listings(status=${status}, page=${page})}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+</main>
+</body>
+</html>
