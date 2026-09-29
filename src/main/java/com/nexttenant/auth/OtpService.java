@@ -202,19 +202,41 @@ public class OtpService {
     private void deliver(OtpChannel channel, String subject, String code) {
         long minutes = config.codeValidity().toMinutes();
 
-        switch (channel) {
-            case SMS -> sms.send(subject,
-                    "%s is your NextTenant code. It expires in %d minutes."
-                            .formatted(code, minutes));
+        try {
+            switch (channel) {
+                case SMS -> sms.send(subject,
+                        "%s is your NextTenant code. It expires in %d minutes."
+                                .formatted(code, minutes));
 
-            // The code goes in the SUBJECT LINE as well as the body. Most
-            // people read it straight from the notification without opening
-            // anything, which is the closest email gets to the immediacy of a
-            // text message — and immediacy is the whole reason SMS was
-            // preferred in the first place.
-            case EMAIL -> email.send(subject,
-                    "%s is your NextTenant sign-in code".formatted(code),
-                    emailBody(code, minutes));
+                // The code goes in the SUBJECT LINE as well as the body. Most
+                // people read it straight from the notification without opening
+                // anything, which is the closest email gets to the immediacy of
+                // a text message — and immediacy is the whole reason SMS was
+                // preferred in the first place.
+                case EMAIL -> email.send(subject,
+                        "%s is your NextTenant sign-in code".formatted(code),
+                        emailBody(code, minutes));
+            }
+        } catch (RuntimeException e) {
+            // A provider that refuses the message is an ordinary operational
+            // failure — wrong credentials, an unverified sender, a recipient
+            // outside SES's sandbox, a mail host that is down. Left to
+            // propagate, it reaches the browser as a Whitelabel 500, which
+            // tells the visitor nothing and looks like the site is broken.
+            //
+            // The full cause goes to the log, where the operator can read it;
+            // the visitor gets a sentence they can act on. NOT the subject —
+            // an address in a log aggregator is the leak the public/private
+            // split exists to prevent.
+            log.error("Could not deliver an OTP over {}", channel, e);
+
+            // Thrown rather than swallowed, and that matters: this method runs
+            // inside the @Transactional requestCode, so throwing rolls the
+            // challenge back. Swallowing would leave a challenge nobody can
+            // answer, and burn one of the caller's resend attempts on a code
+            // that was never sent.
+            throw new OtpDeliveryException(
+                    "We could not send your code just now. Please try again in a moment.", e);
         }
     }
 

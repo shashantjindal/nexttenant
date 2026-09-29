@@ -8,6 +8,8 @@ import com.nexttenant.user.User;
 import com.nexttenant.user.UserPrivate;
 import com.nexttenant.user.UserPrivateRepository;
 import com.nexttenant.user.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,8 @@ import java.util.UUID;
  */
 @Service
 public class WorkEmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(WorkEmailService.class);
 
     /** Longer than the SMS window. Corporate mail is not instant mail. */
     public static final Duration CODE_VALIDITY = Duration.ofMinutes(30);
@@ -117,7 +121,23 @@ public class WorkEmailService {
                     userId, emailHash, codeHmac, now, CODE_VALIDITY, MAX_ATTEMPTS));
         }
 
-        email.send(address, SUBJECT, body(code));
+        try {
+            email.send(address, SUBJECT, body(code));
+        } catch (RuntimeException e) {
+            // The same hole the login flow had: a provider that refuses the
+            // message — bad credentials, an unverified sender, a recipient
+            // outside SES's sandbox — reached the browser as a Whitelabel 500.
+            //
+            // Thrown rather than swallowed so the surrounding transaction rolls
+            // the challenge back; a challenge nobody can answer is worse than
+            // none, because it also consumes a resend attempt.
+            //
+            // The address is not logged. It is exactly the data this feature
+            // exists to keep private.
+            log.error("Could not deliver a work-email verification code", e);
+            throw new InvalidWorkEmailException(
+                    "We could not send your code just now. Please try again in a moment.");
+        }
         return WorkEmailAddresses.mask(address);
     }
 

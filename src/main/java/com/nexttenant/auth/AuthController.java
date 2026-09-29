@@ -74,7 +74,9 @@ public class AuthController {
                     email, clientIp(request), OtpPurpose.EMAIL_LOGIN);
             // The plaintext address goes into the SESSION, never the database.
             LoginFlow.startFor(session, email, dispatch);
-        } catch (OtpRateLimitedException e) {
+        } catch (OtpRateLimitedException | OtpDeliveryException e) {
+            // Both are shown the same way: the message on each is written to
+            // be read by the person who typed the address.
             model.addAttribute("error", e.getMessage());
             model.addAttribute("email", rawEmail);
             return "auth/email";
@@ -184,7 +186,7 @@ public class AuthController {
                     email, clientIp(request), OtpPurpose.EMAIL_LOGIN);
             LoginFlow.startFor(session, email, dispatch);
             model.addAttribute("notice", "A new code is on its way.");
-        } catch (OtpRateLimitedException e) {
+        } catch (OtpRateLimitedException | OtpDeliveryException e) {
             model.addAttribute("error", e.getMessage());
         }
         addCodeScreen(model, session);
