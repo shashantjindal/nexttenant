@@ -352,21 +352,60 @@ Save all three.
 
 ### 4.3 Add two more records so your mail is not treated as spam
 
-Same screen, two **TXT** records:
+Two records: one you **edit**, one you **add**. Getting that the wrong way
+round is the single most common way sign-in codes end up in spam.
 
-| Name / Host | Value |
-|---|---|
-| `@` | `v=spf1 include:amazonses.com ~all` |
-| `_dmarc` | `v=DMARC1; p=none; rua=mailto:hello@nexttenant.in` |
+#### SPF — edit the record that is already there
 
-> If Cloudflare Email Routing already added an SPF record, **edit** it rather
-> than adding a second — a domain with two SPF records is treated as having
-> none. Merge them into one, e.g.
-> `v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all`.
+**Do not add a new SPF record.** Setting up Email Routing in §1.3 created one
+already, and **a domain with two SPF records counts as having none** — every
+sender becomes unauthenticated, including Amazon. The RFC says a second record
+is a permanent error, and receivers act on that.
 
-These three things together — DKIM, SPF and DMARC — prove your emails are
-really from you. **Without them Gmail rejects your sign-in codes outright.**
-Not "might send to spam" — refuses.
+1. **DNS → Records**, find the existing **TXT** record on **`@`** whose value
+   starts with `v=spf1`. It will read something like
+   `v=spf1 include:_spf.mx.cloudflare.net ~all`.
+2. **Edit** it and replace the value with both senders in one record:
+
+```
+v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all
+```
+
+3. Save.
+
+That single line now says two things: Cloudflare may handle mail for this
+domain, and Amazon may send as it. Order does not matter; the `~all` stays at
+the end, exactly once.
+
+> **If there is no `v=spf1` record at all** — you skipped §1.3 and are using
+> your registrar's DNS — then add one instead, with just Amazon in it:
+> `v=spf1 include:amazonses.com ~all`
+>
+> **If Cloudflare will not let you edit it**, check
+> **Email → Email Routing → Settings**; Email Routing manages some of its own
+> records and may need the change made from there.
+
+#### DMARC — add this one
+
+A genuinely new **TXT** record:
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:hello@nexttenant.in` |
+
+`p=none` means "watch, do not reject". That is the right setting to start with:
+a stricter policy on day one would bounce your own mail if anything is
+misconfigured, and you would find out from users who never received a code.
+Reports arrive at `hello@`, which you routed in §1.3.
+
+#### Why all three matter
+
+DKIM signs each message so it cannot be forged. SPF says which servers may send
+as you. DMARC tells receivers what to do when either fails.
+
+**Without them Gmail rejects your sign-in codes outright.** Not "might land in
+spam" — modern inboxes refuse unauthenticated bulk mail, and a login code that
+never arrives is a user who cannot get in at all.
 
 ### 4.4 Ask Amazon to let you email real people
 
