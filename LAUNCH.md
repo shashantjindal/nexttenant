@@ -747,6 +747,43 @@ your domain.
 > An Elastic IP is free while attached to a running server and charged when it
 > is not. If you ever delete the server, release the IP too.
 
+### 7.5 Check the subnet can actually reach the internet
+
+Thirty seconds, and it saves an hour. A public IP address is not the same as a
+route to the internet, and when the route is missing **nothing says so** — the
+instance launches, passes all its checks, shows a public address, and silently
+drops every packet sent to it.
+
+1. **EC2 → Instances → your instance → Networking** tab → click the
+   **Subnet ID**.
+2. On the subnet, open the **Route table** tab.
+
+You need **two** rows:
+
+| Destination | Target |
+|---|---|
+| `172.31.0.0/16` | `local` |
+| **`0.0.0.0/0`** | **`igw-…`** |
+
+The `local` row is always there. **The `igw-` row is the one to check**, and it
+is the one that goes missing.
+
+**If it is absent:**
+
+1. **VPC → Internet gateways** — you need one whose state is **Attached** to
+   your VPC. If it is detached, **Actions → Attach to VPC**. If there is none,
+   **Create internet gateway**, name it `nt-igw`, then attach it.
+2. **VPC → Route tables** → the one your subnet uses → **Routes → Edit routes
+   → Add route** → Destination `0.0.0.0/0`, Target **Internet Gateway** → your
+   `igw-…` → Save.
+
+> **How this looks when it is wrong:** every port times out — 22, 80, 443 alike
+> — no matter what the security group says, because the packets never arrive.
+> Once it is fixed, ports 80 and 443 start answering **"Connection refused"**
+> instead. That is correct and means it worked: the packets now reach the
+> machine and nothing is listening yet, because you have not deployed. Timeout
+> means "never arrived"; refused means "arrived, nobody home".
+
 ---
 
 # Part 8 — Put the app on the server
@@ -810,11 +847,17 @@ ssh -i nt-key.pem ec2-user@YOUR-ELASTIC-IP
 > so it does not depend on your address at all. If 80 is shut, the group is not
 > doing its job — or is not attached.
 >
-> **If both are blocked**, check **Instances → your instance → Security** tab.
-> The launch wizard quietly defaults to a new `launch-wizard-N` group, or to
-> `default` which allows nothing inbound, so §7.3 step 6 is easy to miss. Fix
-> it with **Actions → Security → Change security groups** — add `nt-app`,
-> remove the other. It applies immediately; no restart.
+> **If both are blocked**, two candidates, in this order:
+>
+> - **The subnet has no route to the internet** — §7.5. A public IP is not a
+>   route, and a missing `0.0.0.0/0 → igw-…` row drops everything silently
+>   while the instance looks perfectly healthy. Check this first; it is the one
+>   that gives no clue at all.
+> - **The wrong security group is attached.** **Instances → your instance →
+>   Security** tab: the launch wizard quietly defaults to a new
+>   `launch-wizard-N` group, or to `default` which allows nothing inbound, so
+>   §7.3 step 6 is easy to miss. Fix with **Actions → Security → Change
+>   security groups**. Applies immediately; no restart.
 >
 > **If only 22 is blocked**, your address changed. Find the current one at
 > <https://checkip.amazonaws.com>, then **EC2 → Security Groups → `nt-app` →
@@ -1235,9 +1278,10 @@ Click the link in the verification email they sent — see §1.2b. Nothing needs
 uploading; it is an email confirmation, not an identity check.
 
 **`ssh` says "Connection timed out"**
-Nothing answered. Test port 80 as well — if that is blocked too, the wrong
-security group is attached to the instance; if only 22 is blocked, your address
-changed. Part 8.1 has the full split.
+Nothing answered. Test port 80 as well. If that is blocked too, check the subnet
+route table for a `0.0.0.0/0 -> igw-` row (§7.5) before anything else, then
+whether `nt-app` is the group actually attached. If only 22 is blocked, your
+address changed. Part 8.1 has the full split.
 
 **`ssh` says "Permission denied (publickey)"**
 Something answered, so the network is fine. The username is `ec2-user`, not
