@@ -17,12 +17,20 @@ cd ~/nexttenant
 Do this once and every command below loses eleven words:
 
 ```bash
-echo "alias dc='docker compose -f ~/nexttenant/docker-compose.prod.yml'" >> ~/.bashrc
+echo "alias ntc='docker compose -f ~/nexttenant/docker-compose.prod.yml'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Then `dc ps`, `dc logs -f app`, and so on, from any directory. Both forms are
-given below.
+Then `ntc ps`, `ntc logs -f app`, and so on, from any directory.
+
+> **`source` is not optional** — without it the alias exists only in shells
+> started afterwards, so it appears not to have worked.
+>
+> Check with `type ntc`; it should print the alias rather than "not found".
+>
+> And do not call it `dc`: that is already the GNU desk calculator, so the
+> mistake surfaces as `dc: invalid option -- 'd'`, which looks like Docker
+> complaining and is not.
 
 ---
 
@@ -42,7 +50,7 @@ Environment variables are fixed when a container is created. So editing
 values are still inside the running container. Check what it actually has:
 
 ```bash
-dc exec app printenv | grep NEXTTENANT
+ntc exec app printenv | grep NEXTTENANT
 ```
 
 ---
@@ -54,7 +62,7 @@ dc exec app printenv | grep NEXTTENANT
 ```bash
 cd ~/nexttenant
 git pull
-dc up -d --build
+ntc up -d --build
 ```
 
 3–8 minutes. Database migrations run automatically on startup.
@@ -63,7 +71,7 @@ dc up -d --build
 
 ```bash
 nano nt.env
-dc up -d --force-recreate app
+ntc up -d --force-recreate app
 ```
 
 No rebuild — only the environment changed.
@@ -72,7 +80,7 @@ No rebuild — only the environment changed.
 
 ```bash
 nano Caddyfile
-dc restart caddy
+ntc restart caddy
 ```
 
 Caddy requests any new certificates by itself.
@@ -80,7 +88,7 @@ Caddy requests any new certificates by itself.
 ### Nothing — you just want a clean restart
 
 ```bash
-dc restart app
+ntc restart app
 ```
 
 About 20 seconds of downtime. Visitors get a 502 while it boots; that is
@@ -91,10 +99,10 @@ Caddy having nothing to proxy to yet, not a fault.
 ## Looking at things
 
 ```bash
-dc ps                      # what is running, and is it healthy
-dc logs -f app             # follow live  (Ctrl+C stops watching, not the app)
-dc logs app --tail 60      # last 60 lines
-dc logs caddy --tail 30    # certificates, TLS, proxy errors
+ntc ps                      # what is running, and is it healthy
+ntc logs -f app             # follow live  (Ctrl+C stops watching, not the app)
+ntc logs app --tail 60      # last 60 lines
+ntc logs caddy --tail 30    # certificates, TLS, proxy errors
 ```
 
 **Is it actually up?**
@@ -110,7 +118,7 @@ PostGIS and every migration.
 **Find an error:**
 
 ```bash
-dc logs app --tail 300 | grep -A3 "Caused by" | head -30
+ntc logs app --tail 300 | grep -A3 "Caused by" | head -30
 ```
 
 `Caused by` walks to the root of the stack trace. Grepping for `error` alone
@@ -121,7 +129,7 @@ usually returns the least useful line.
 ## Sign-in codes while mail is on `console`
 
 ```bash
-dc logs app | grep -A8 "EMAIL" | tail -15
+ntc logs app | grep -A8 "EMAIL" | tail -15
 ```
 
 The six-digit code is in the subject line and the body.
@@ -158,11 +166,11 @@ UPDATE users SET is_admin = true
 **502 in the browser** — the app is not answering.
 
 ```bash
-dc ps
+ntc ps
 ```
 
 `Restarting` on a loop means it is crashing, nearly always a bad value in
-`nt.env`. The reason is in `dc logs app --tail 50`.
+`nt.env`. The reason is in `ntc logs app --tail 50`.
 
 **Out of disk:**
 
@@ -183,8 +191,8 @@ reboot dropped it.
 **Start over cleanly:**
 
 ```bash
-dc down
-dc up -d --build
+ntc down
+ntc up -d --build
 ```
 
 `down` stops and removes the containers. It does **not** touch the database
