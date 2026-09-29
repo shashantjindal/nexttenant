@@ -908,6 +908,18 @@ sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 ```
 
+**And buildx**, which Compose uses to build images. Amazon Linux's docker
+package does not include it, and without it `--build` fails with
+`compose build requires buildx 0.17.0 or later` — after pulling the other
+images, so it looks like it nearly worked:
+
+```bash
+BUILDX=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep browser_download_url | grep 'linux-amd64"' | cut -d'"' -f4)
+sudo curl -SL "$BUILDX" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+```
+
 Now **log out and back in** so the Docker permission takes effect:
 
 ```bash
@@ -920,7 +932,7 @@ ssh -i nt-key.pem ec2-user@YOUR-ELASTIC-IP
 Check it worked:
 
 ```bash
-docker --version && docker compose version
+docker --version && docker compose version && docker buildx version
 ```
 
 ### 8.3 Add swap memory
