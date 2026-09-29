@@ -52,6 +52,19 @@ public class SecurityConfig {
                         // database URL.
                         .requestMatchers("/actuator/health").permitAll()
 
+                        // Everything else under /actuator is ADMIN, and this
+                        // line has to exist. Without it those endpoints fall
+                        // through to anyRequest().authenticated() — so any
+                        // signed-in user could read the metrics and change log
+                        // levels. Harmless while only `health` was exposed,
+                        // and a hole the moment anything else was.
+                        //
+                        // What is exposed is decided in application.yml, and
+                        // `env` and `configprops` are deliberately not: they
+                        // print resolved configuration, which includes the
+                        // database password.
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+
                         // Moderation. Declared BEFORE anyRequest(), and by
                         // role rather than by a check inside each handler, so
                         // an /admin route added later is protected by default.

@@ -184,14 +184,28 @@ logging:
     # org.hibernate.orm.jdbc.bind: TRACE
 
 # ---- Health check ---------------------------------------------------------
-# One endpoint, and only one. The others (env, beans, configprops, heapdump)
-# publish configuration and environment variables, which is how a deployment
-# leaks its own database URL to anyone who guesses a URL.
+# Health is public; everything else here is behind ROLE_ADMIN, enforced in
+# SecurityConfig rather than by obscurity.
+#
+# What is NOT exposed matters more than what is. `env` and `configprops` print
+# resolved configuration - including the database password and the OTP secret -
+# and `heapdump` hands over a file containing whatever was in memory. Being
+# behind an admin login is not sufficient reason to publish a credential over
+# HTTP, so those three stay off whatever the login says.
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        # health       liveness, and whether the database answers
+        # info         build version and time, for "what is actually deployed"
+        # metrics      memory, CPU, HTTP timings, connection pool
+        # loggers      READ and CHANGE log levels at runtime - the one that
+        #              saves a redeploy when production misbehaves quietly
+        # threaddump   what every thread is doing, for when it hangs
+        include: health,info,metrics,loggers,threaddump
+  info:
+    env:
+      enabled: true
   endpoint:
     health:
       # "UP" only when the database answers too. A health check that reports a

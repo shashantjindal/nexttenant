@@ -38,7 +38,12 @@
     </h2>
 
     <div class="dash-tiles">
-        <a class="dash-tile" th:href="@{/flats}">
+        <!--/*
+          Points at the admin list, not /flats. The public page hides drafts,
+          paused and taken-down rooms, so an operator who clicks a number and
+          lands there is looking at a different set than the one they clicked.
+        */-->
+        <a class="dash-tile" th:href="@{/admin/listings(status='LIVE')}">
             <span class="dash-tile__value" th:text="${overview.liveListings}">0</span>
             <span class="dash-tile__label">rooms live</span>
         </a>
@@ -60,10 +65,10 @@
     </h2>
 
     <div class="dash-tiles">
-        <div class="dash-tile">
+        <a class="dash-tile" th:href="@{/admin/users}">
             <span class="dash-tile__value" th:text="${overview.users}">0</span>
             <span class="dash-tile__label">accounts</span>
-        </div>
+        </a>
         <div class="dash-tile">
             <span class="dash-tile__value" th:text="${overview.usersThisWeek}">0</span>
             <span class="dash-tile__label">joined this week</span>
@@ -80,10 +85,10 @@
     </h2>
 
     <div class="dash-tiles">
-        <div class="dash-tile">
+        <a class="dash-tile" th:href="@{/admin/listings(status='DRAFT')}">
             <span class="dash-tile__value" th:text="${overview.draftListings}">0</span>
             <span class="dash-tile__label">drafts abandoned</span>
-        </div>
+        </a>
         <div class="dash-tile">
             <span class="dash-tile__value" th:text="${overview.draftPercentage()} + '%'">0%</span>
             <span class="dash-tile__label">of listings never finished</span>
@@ -92,6 +97,22 @@
             <span class="dash-tile__value" th:text="${overview.openReports}">0</span>
             <span class="dash-tile__label">open reports</span>
         </a>
+    </div>
+
+    <!-- ================= Browse ================= -->
+    <!--/*
+      Spelled out as links rather than left to the clickable numbers above. A
+      figure that happens to be a link is not discoverable: without this row,
+      nothing on the page says these two lists exist at all.
+    */-->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
+        Look something up
+    </h2>
+
+    <div class="admin-search">
+        <a class="btn btn--secondary" th:href="@{/admin/users}">Accounts</a>
+        <a class="btn btn--secondary" th:href="@{/admin/listings}">Listings</a>
+        <a class="btn btn--secondary" th:href="@{/admin/reports}">Reports</a>
     </div>
 
     <p class="auth__fine" style="margin-top: var(--s-6)">

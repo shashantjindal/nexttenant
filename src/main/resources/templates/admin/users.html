@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Accounts — NextTenant admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Accounts</h1>
+        <a class="btn btn--ghost" th:href="@{/admin}">&larr; Admin</a>
+    </div>
+
+    <!--/* GET, so a search is a URL somebody can share or bookmark. */-->
+    <form method="get" th:action="@{/admin/users}" class="admin-search">
+        <input type="search" name="q" th:value="${search}"
+               placeholder="Search email or first name" autocomplete="off">
+        <button type="submit" class="btn btn--secondary">Search</button>
+    </form>
+
+    <div class="empty" th:if="${rows.isEmpty()}">
+        <p class="empty__title">Nothing here</p>
+        <p class="empty__body" th:text="${search != null} ? 'No account matches that.' : 'No accounts yet.'">
+            No accounts yet.
+        </p>
+    </div>
+
+    <div class="admin-table-wrap" th:unless="${rows.isEmpty()}">
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th>Name</th><th>Email</th><th>Phone</th>
+                <th>Status</th><th>Verified</th><th>Listings</th><th>Joined</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${rows}">
+                <td>
+                    <span th:text="${row.firstName} ?: '—'">Priya</span>
+                    <span class="admin-tag" th:if="${row.admin}">admin</span>
+                </td>
+                <td th:text="${row.email}">someone@example.com</td>
+                <!--/* Masked in the service, not here — there is no path by
+                       which the full number reaches this page. */-->
+                <td class="admin-dim" th:text="${row.maskedPhone} ?: '—'">+91 ***** 43210</td>
+                <td>
+                    <span th:text="${row.status}">ACTIVE</span>
+                </td>
+                <td class="admin-dim">
+                    <span th:if="${row.phoneVerified}" title="Phone verified">phone</span>
+                    <span th:if="${row.workEmailVerified}" title="Work email verified">work</span>
+                    <span th:unless="${row.phoneVerified or row.workEmailVerified}">—</span>
+                </td>
+                <td th:text="${row.listings}">0</td>
+                <td class="admin-dim" th:text="${row.joinedOn()}">1 Oct 2026</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-pager">
+        <a class="btn btn--ghost" th:if="${page > 0}"
+           th:href="@{/admin/users(q=${search}, page=${page - 1})}">&larr; Previous</a>
+        <a class="btn btn--ghost" th:if="${hasMore}"
+           th:href="@{/admin/users(q=${search}, page=${page + 1})}">Next &rarr;</a>
+    </div>
+
+    <p class="auth__fine">
+        Phone numbers are shown masked. The full value is in the database for
+        the rare case that needs it — deliberately not one click away, so a
+        compromise of this account leaks who has an account rather than every
+        number on the site.
+    </p>
+
+</main>
+</body>
+</html>

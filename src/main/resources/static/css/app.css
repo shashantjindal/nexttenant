@@ -1805,3 +1805,81 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 /* A sublocality reads as belonging to the row above it rather than as a peer
    of the localities around it. */
 .check[data-sub="true"] span { padding-left: var(--s-2); }
+
+/* ---- Admin tables ------------------------------------------------------ */
+
+/*
+ * Operator screens, not product surface. Dense on purpose: the job here is
+ * scanning many rows, which the card layouts used elsewhere are bad at.
+ */
+
+.admin-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    margin-bottom: var(--s-5);
+}
+.admin-search input[type="search"] {
+    flex: 1 1 260px;
+    min-width: 0;
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    font: inherit;
+}
+
+/*
+ * The wrapper scrolls, not the page. A seven-column table does not fit a
+ * phone, and without this the whole layout grows a horizontal scrollbar and
+ * the header drifts off the side.
+ */
+.admin-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    background: var(--c-surface);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--t-sm);
+    white-space: nowrap;
+}
+.admin-table th,
+.admin-table td {
+    padding: var(--s-3) var(--s-4);
+    text-align: left;
+    border-bottom: 1px solid var(--c-line);
+}
+.admin-table th {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover { background: var(--c-surface-2); }
+
+/* Secondary detail — dates, masked numbers, owner addresses. */
+.admin-dim { color: var(--c-ink-3); }
+
+.admin-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: var(--r-sm);
+    background: var(--c-brand-tint);
+    color: var(--c-brand);
+    font-size: var(--t-xs);
+    font-weight: 600;
+}
+
+.admin-pager {
+    display: flex;
+    gap: var(--s-3);
+    justify-content: space-between;
+    margin-top: var(--s-5);
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Listings — NextTenant admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Listings</h1>
+        <a class="btn btn--ghost" th:href="@{/admin}">&larr; Admin</a>
+    </div>
+
+    <div class="admin-search">
+        <a class="btn btn--ghost" th:href="@{/admin/listings}"
+           th:classappend="${status == null} ? 'btn--secondary'">All</a>
+        <a class="btn btn--ghost" th:each="s : ${ {'LIVE','DRAFT','PAUSED','RENTED','EXPIRED','TAKEN_DOWN'} }"
+           th:href="@{/admin/listings(status=${s})}"
+           th:classappend="${status == s} ? 'btn--secondary'"
+           th:text="${s}">LIVE</a>
+    </div>
+
+    <div class="empty" th:if="${rows.isEmpty()}">
+        <p class="empty__title">Nothing here</p>
+        <p class="empty__body">No listings with that status.</p>
+    </div>
+
+    <div class="admin-table-wrap" th:unless="${rows.isEmpty()}">
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th>Area</th><th>Status</th><th>Rent</th>
+                <th>Owner</th><th>Requests</th><th>Created</th><th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${rows}">
+                <td th:text="${row.area} ?: '—'">Bandra West</td>
+                <td th:text="${row.status}">LIVE</td>
+                <td th:text="${row.rent != null} ? '₹' + ${row.rent} : '—'">₹32000</td>
+                <td>
+                    <span th:text="${row.ownerName} ?: '—'">Priya</span>
+                    <span class="admin-dim" th:text="' · ' + ${row.ownerEmail}"> · x@y.com</span>
+                </td>
+                <td th:text="${row.requests}">0</td>
+                <td class="admin-dim" th:text="${row.createdOn()}">1 Oct 2026</td>
+                <td>
+                    <!--/* Only LIVE listings have a public page; linking to a
+                           draft would 404 and look like a fault. */-->
+                    <a th:if="${row.status == 'LIVE'}"
+                       th:href="@{/flats/{id}(id=${row.id})}" target="_blank">View</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-pager">
+        <a class="btn btn--ghost" th:if="${page > 0}"
+           th:href="@{/admin/listings(status=${status}, page=${page - 1})}">&larr; Previous</a>
+        <a class="btn btn--ghost" th:if="${hasMore}"
+           th:href="@{/admin/listings(status=${status}, page=${page + 1})}">Next &rarr;</a>
+    </div>
+
+</main>
+</body>
+</html>
