@@ -20,18 +20,21 @@ there.
 - About **3 hours of work**, spread over **2 days** — some steps involve
   waiting for other people
 
-**Three waits you cannot rush**, which is why they come first:
+**Three waits you cannot rush:**
 
-| Wait | How long |
-|---|---|
-| Verifying your domain email (§1.2b) | minutes to a couple of hours |
-| Amazon approving your email sending (§4.5) | a few hours to a day |
-| Nameservers and DNS spreading across the internet | 15 minutes to a few hours |
+| Wait | How long | When to start it |
+|---|---|---|
+| Verifying your domain email (§1.2b) | minutes to hours | the moment you buy the domain |
+| Nameservers and DNS spreading (§1.3) | 15 minutes to hours | straight after that |
+| Amazon approving your email sending (§4.5) | hours to a day | **at the end of Part 9** |
 
-The first one blocks the other two, so start it the moment you have bought the
-domain — before you so much as open AWS.
+The first blocks the second, and the second blocks almost everything — so start
+them before you so much as open AWS, and build the rest while they settle.
 
-Start both early and do everything else while they happen.
+The third is deliberately **last**, and it is the one people get wrong. Amazon's
+form asks for your website URL and a reviewer may open it, so asking before the
+site is up risks a rejection you then have to argue out of. It costs nothing to
+wait, because every check in Part 10 works without it.
 
 **Budget:** roughly **$31/month**, which your $200 of AWS credits covers for
 about six months. If you signed up from India you will be billed in rupees by
@@ -195,10 +198,20 @@ entries so they cannot be broken by accident.
 > v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all
 > ```
 
-**To reply *as* your domain** rather than from your personal address, after
-Part 4.6: Gmail → **Settings → Accounts → Send mail as** → add
-`hello@nexttenant.in` and point it at the SES SMTP credentials you create
-there. Gmail emails a code to that address, which forwards to you.
+**Receiving now works.** Anything sent to `hello@nexttenant.in` lands in your
+Gmail, which is all the site needs — it is where replies to notification emails
+go.
+
+> **Optional, and best left until last:** to *reply* as `hello@nexttenant.in`
+> rather than from your personal address, Gmail → **Settings → Accounts → Send
+> mail as** → add it, pointing at the SES SMTP credentials from §4.6.
+>
+> Do this **after production access (§4.5) is granted**, not before. Gmail's
+> own confirmation code would reach you either way, but while SES is sandboxed
+> it refuses to send to anyone unverified — so the address would appear to work
+> and then silently fail the first time you actually replied to a user.
+>
+> Skipping it entirely is fine. You would simply reply from your normal Gmail.
 
 **From here on, every DNS record goes at Cloudflare.** GoDaddy stopped
 answering for this domain the moment the nameservers changed, so records added
@@ -304,13 +317,15 @@ Then add MFA (a phone app that generates codes) to **both** accounts:
 
 # Part 4 — Email
 
-*About 20 minutes of work, then a wait of up to a day.*
-
-**Do this now**, even though you will not use it until Part 10 — this is the
-step with the longest wait.
+*About 20 minutes now, plus one step you come back to after Part 9.*
 
 Your site emails people six-digit sign-in codes. Without this, nobody can log
 in at all.
+
+Do §4.1 to §4.4 and §4.6 now — the DNS records in particular, since they take
+time to verify. **§4.5, the production-access request, waits until the site is
+actually live**; it asks for a URL a reviewer may open, and it blocks nothing
+before then.
 
 ### 4.1 Verify your own email address first
 
@@ -474,23 +489,48 @@ as you. DMARC tells receivers what to do when either fails.
 spam" — modern inboxes refuse unauthenticated bulk mail, and a login code that
 never arrives is a user who cannot get in at all.
 
-### 4.5 Ask Amazon to let you email real people
+### 4.5 Ask Amazon to let you email real people — but not yet
 
 New SES accounts are in a **sandbox**: you can only email addresses you have
-personally verified, 200 a day. That is useless for a real site.
+personally verified, 200 a day. That is useless for a real site, so this has to
+happen before launch.
+
+> **Do it at the end of Part 9, not now.** The form asks for your website URL,
+> and a reviewer may well open it — at this point it would load nothing, and a
+> rejected request is worse than a later one, because re-requesting invites
+> more scrutiny than asking once with a working link.
+>
+> Waiting costs nothing, because **production access is not on the path to a
+> working deployment**. Part 10's checks all run in the sandbox: you verified
+> your own address in §4.1, and that is exactly who SES will still send to.
+> Production access only matters once real users arrive, which is after launch.
+>
+> So: finish Parts 5 to 9, watch `https://nexttenant.in` load, then come back
+> here. It is usually approved within a day, which you can spend on §11's legal
+> pages.
+
+When the site is up:
 
 1. **SES → Account dashboard** → **Request production access**.
 2. Mail type: **Transactional**.
 3. Website URL: `https://nexttenant.in`.
-4. Use case — describe it honestly, something like:
+4. Use case — be specific. A vague answer gets questions back; a concrete one
+   is approved:
 
-   > A flat-sharing marketplace for Mumbai. We send six-digit sign-in codes and
-   > notifications when a user receives or accepts a request. Recipients are
-   > registered users who entered their own address. No marketing email is sent.
+   > NextTenant is a flat-sharing marketplace for Mumbai. We send two kinds of
+   > transactional email: six-digit sign-in codes, and notifications when a
+   > user receives or accepts a request for a room.
+   >
+   > Recipients are registered users who entered their own address and verified
+   > it by receiving a code, so addresses are self-validating and bounce rates
+   > stay low. We send no marketing email and maintain no mailing list. Users
+   > stop receiving notifications by deleting their account.
 
 5. Submit.
 
-Usually approved within a day. **Continue with the rest while you wait.**
+> That second paragraph is the one that matters. Amazon's real question is
+> whether you will generate bounces and complaints, so saying **how** your
+> addresses stay clean answers it directly.
 
 ### 4.6 Create the email username and password
 
@@ -969,6 +1009,11 @@ docker compose -f docker-compose.prod.yml logs caddy
 
 **Now open `https://nexttenant.in` in your browser.** You should see the site,
 with a padlock.
+
+### 9.1 Now go back and request production access
+
+The URL works, so **§4.5** can be submitted — a reviewer opening it will find a
+real site. It takes up to a day, and Part 10 does not wait on it.
 
 ---
 
