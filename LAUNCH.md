@@ -753,11 +753,29 @@ Open **PowerShell** on your PC and go to wherever `nt-key.pem` downloaded:
 cd ~\Downloads
 ```
 
-Windows will refuse to use the key file until its permissions are locked down:
+SSH refuses to use a key file that other accounts on the machine can read, and
+a freshly downloaded file inherits permissions from the Downloads folder. Strip
+those and grant read to yourself only:
 
 ```powershell
-icacls nt-key.pem /inheritance:r /grant:r "$env:USERNAME:R"
+icacls nt-key.pem /inheritance:r /grant:r "${env:USERNAME}:R"
 ```
+
+> **The braces are load-bearing.** Written `"$env:USERNAME:R"`, PowerShell reads
+> `env:USERNAME:R` as one variable name, finds nothing, and expands it to an
+> empty string — so `icacls` receives `/grant:r` with no value and answers
+> `Invalid parameter "/grant:r"`. `${env:USERNAME}` ends the name before the
+> colon.
+
+Check it took:
+
+```powershell
+icacls nt-key.pem
+```
+
+**You should see** one line ending `\<your-username>:(R)` and nothing else. More
+than one entry means `/inheritance:r` did not apply, and SSH will still refuse
+the key.
 
 Then connect, using your Elastic IP:
 
@@ -1175,7 +1193,13 @@ uploading; it is an email confirmation, not an identity check.
 
 **`ssh` says "Permission denied (publickey)"**
 The username is `ec2-user`, not `root` or your name. On Windows, run the
-`icacls` command from Part 8.1.
+`icacls` command from Part 8.1, then `icacls nt-key.pem` to confirm you are the
+only account listed.
+
+**`icacls` says `Invalid parameter "/grant:r"`**
+Use `"${env:USERNAME}:R"` with braces. Without them PowerShell reads
+`env:USERNAME:R` as a single variable name, finds nothing, and passes `icacls`
+an empty value.
 
 **`psql` just hangs, then times out**
 The `nt-db` security group is missing the rule from Part 7.2, or its source is
