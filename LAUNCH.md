@@ -55,8 +55,9 @@ Pick something short and typeable over a phone call.
 
 ### 1.2 Buy it
 
-Any registrar works — GoDaddy, Namecheap, Cloudflare. This guide uses
-**GoDaddy**, and notes where another registrar differs.
+This guide uses **GoDaddy** for the domain and **Cloudflare** for DNS, which
+is the setup it assumes from here on. Another registrar works the same way;
+only the menu names differ.
 
 1. Search your name and add it to the cart.
 2. At checkout, **turn OFF every extra** — hosting, email, SSL certificates,
@@ -83,8 +84,7 @@ Any registrar works — GoDaddy, Namecheap, Cloudflare. This guide uses
 > $0.50/month for the hosted zone where others include DNS. One less thing to
 > configure and one less line on the bill.
 
-**You should now have:** a domain, visible under *My Products* (GoDaddy) or
-*Domain List* (Namecheap).
+**You should now have:** a domain, visible under **My Products** in GoDaddy.
 
 ---
 
@@ -200,8 +200,10 @@ Part 4.6: Gmail → **Settings → Accounts → Send mail as** → add
 `hello@nexttenant.in` and point it at the SES SMTP credentials you create
 there. Gmail emails a code to that address, which forwards to you.
 
-**From here on, "your DNS provider" means Cloudflare** if you did this, and
-your registrar if you did not. The records are identical either way.
+**From here on, every DNS record goes at Cloudflare.** GoDaddy stopped
+answering for this domain the moment the nameservers changed, so records added
+there now do nothing at all — silently. GoDaddy is only opened again to renew
+the domain.
 
 ---
 
@@ -386,30 +388,30 @@ You now see **three CNAME records**. Keep this page open.
 > reputation, where Amazon's shared pool already has one. **Tenant management**
 > is for sending on behalf of many separate customers.
 
-### 4.3 Add those records at your DNS provider
+### 4.3 Add those records at Cloudflare
 
 Where to find the records screen:
 
-| | |
-|---|---|
-| **Cloudflare** | Your site → **DNS → Records → Add record** |
-| **GoDaddy** | **My Products → your domain → DNS → Add New Record** |
-| **Namecheap** | **Domain List → Manage → Advanced DNS → Add New Record** |
+**Cloudflare → your site → DNS → Records → Add record.**
+
+> **Every DNS record from here on goes at Cloudflare, not GoDaddy.** Once the
+> nameservers were changed in §1.3, GoDaddy stopped answering for this domain —
+> records added there now do nothing at all, silently. GoDaddy is only touched
+> again to renew the domain.
 
 For each of the three: type **CNAME**.
 
-- **Name** (GoDaddy and Namecheap call it *Host*): the AWS "Name" value **with
-  `.nexttenant.in` removed from the end**.
+- **Name**: the AWS "Name" value **with `.nexttenant.in` removed from the end**.
 
-  > **This is the one that catches nearly everyone.** All three providers append
-  > your domain to whatever you type. AWS shows
+  > **This is the one that catches nearly everyone.** Cloudflare appends your
+  > domain to whatever you type. AWS shows
   > `abc123._domainkey.nexttenant.in`; you enter **`abc123._domainkey`**. Paste
   > it whole and you create `abc123._domainkey.nexttenant.in.nexttenant.in`,
   > which never verifies and never tells you why.
 
-- **Value** (Cloudflare: *Target*): the AWS "Value", exactly.
+- **Target**: the AWS "Value", exactly.
 - **TTL**: Auto.
-- **Cloudflare only:** set **Proxy status to DNS only** (grey cloud, not
+- Set **Proxy status to DNS only** (grey cloud, not
   orange). Proxying a verification record hides it from Amazon and verification
   never completes.
 
@@ -920,22 +922,25 @@ just that the app is running.
 
 Open the same records screen you used in Part 4.3.
 
-1. **Delete the registrar's parking records first.** A new domain arrives
-   pointing at the registrar's own advert — usually an **A record on `@`** and
-   a **CNAME on `www`**. Adding your records without removing those leaves two
+1. **Delete any parking records first.** If Cloudflare imported them when you
+   added the site, there may be an **A record on `@`** and a **CNAME on `www`**
+   pointing at GoDaddy's advert. Adding yours without removing those leaves two
    answers for one name, and visitors get whichever the internet feels like.
 
-   **Leave your SES and email records alone** — only the `@` and `www` entries
-   go.
+   (If Cloudflare found nothing to import — the records list was empty in
+   §1.3 — there is nothing to delete here. Go straight to step 2.)
+
+   **Leave your SES, MX and SPF/DMARC records alone** — only the `@` and `www`
+   address entries go.
 
 2. Add two records:
 
-| Type | Name / Host | Value | TTL |
+| Type | Name | Value | TTL |
 |---|---|---|---|
 | A | `@` | your Elastic IP | Auto |
 | A | `www` | your Elastic IP | Auto |
 
-3. **Cloudflare only:** set both to **DNS only** (grey cloud), not Proxied
+3. Set both to **DNS only** (grey cloud), not Proxied
    (orange).
 
    > Proxying routes visitors through Cloudflare, which sounds good and breaks
