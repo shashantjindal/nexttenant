@@ -240,11 +240,27 @@ spring:
 
   # Production mail. The host/port/credentials belong to Spring Boot's own
   # binding; only the addresses on the message are ours (nexttenant.mail.*).
+  #
+  # Every one of these has an EMPTY default, which looks careless and is not.
+  # Written as ${SMTP_HOST} with no default, an unset variable is an unresolved
+  # placeholder, and Spring refuses to start — even when
+  # nexttenant.mail.provider is "console" and nothing will ever read it.
+  #
+  # That turns a legitimate state into a dead end: deploying before the mail
+  # provider is ready, with codes printed to the log, is exactly what you want
+  # on the first deployment of a site whose email verification is still being
+  # approved. Blocking startup for want of a host nothing uses is the
+  # configuration refusing a valid deployment.
+  #
+  # With provider=smtp and a blank host, sending fails at the first send, in
+  # the logs, naming the problem — which is where that failure belongs. The
+  # deployment checklist catches it: it has you send a real code to a real
+  # inbox before telling anybody the site exists.
   mail:
-    host: ${SMTP_HOST}
+    host: ${SMTP_HOST:}
     port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
