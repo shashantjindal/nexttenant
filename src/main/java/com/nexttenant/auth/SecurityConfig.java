@@ -113,9 +113,29 @@ public class SecurityConfig {
                                 "font-src 'self' https://fonts.gstatic.com",
                                 // blob: and data: are how the wizard previews a
                                 // photo before it has been uploaded.
-                                "img-src 'self' data: blob: https://*.googleapis.com "
-                                        + "https://*.gstatic.com https://*.tile.openstreetmap.org",
+                                //
+                                // BOTH forms of the tile host are listed, and
+                                // that is not belt-and-braces. A CSP wildcard
+                                // requires at least one label in front of it,
+                                // so `*.tile.openstreetmap.org` matches
+                                // `a.tile.openstreetmap.org` and does NOT match
+                                // `tile.openstreetmap.org` — which is exactly
+                                // the URL our Leaflet layers request. With only
+                                // the wildcard, every tile was blocked and the
+                                // map rendered as a grey rectangle.
+                                //
+                                // unpkg.com is here because Leaflet's own
+                                // marker images are served from beside its CSS.
+                                // Allowing the stylesheet and not the images it
+                                // references gives a working map with a broken
+                                // pin — which looks like a bug in our code.
+                                "img-src 'self' data: blob: "
+                                        + "https://tile.openstreetmap.org "
+                                        + "https://*.tile.openstreetmap.org "
+                                        + "https://unpkg.com "
+                                        + "https://*.googleapis.com https://*.gstatic.com",
                                 "connect-src 'self' https://maps.googleapis.com "
+                                        + "https://tile.openstreetmap.org "
                                         + "https://*.tile.openstreetmap.org",
                                 // Nothing on this site should ever be framed,
                                 // and this is the modern form of that rule.
