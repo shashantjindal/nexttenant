@@ -355,11 +355,28 @@ You now see **three CNAME records**. Keep this page open.
 > with extras. Step 1 is the address above, step 2 is this domain, and the
 > pricing step wants the standard pay-as-you-go option.
 >
-> **Skip every step marked optional.** Deliverability enhancements and tenant
-> management are paid add-ons, and a **Dedicated IP pool costs around
-> $25/month** — and would make deliverability *worse* at your volume, because
-> a fresh dedicated IP has no sending reputation, where Amazon's shared pool
-> already has one.
+> **Skip every step marked optional**, and note that the "Deliverability
+> enhancements" step arrives with everything already switched ON. Turn all of
+> it off:
+>
+> - **Auto Validation** — the one that matters. It *suppresses sending* to
+>   addresses it judges unlikely to be valid, so one false positive means a
+>   real person never receives their sign-in code, sees "we sent you a code",
+>   and can never get in. It exists to protect marketing senders from bounce
+>   damage; you do not need it, because OTP login **is** a deliverability test
+>   — an address that does not work never becomes a user, so your bounce rate
+>   stays low on its own.
+> - **Virtual Deliverability Manager** and **Optimized shared delivery** — a
+>   paid add-on for analysing campaign performance. You send login codes.
+> - **Engagement tracking** — rewrites every link and embeds a tracking pixel.
+>   Link rewriting trips spam filters, it is one more thing to disclose in the
+>   privacy policy from §11.3, and knowing whether somebody *opened* their
+>   login code is worth nothing.
+>
+> A **Dedicated IP pool** costs around **$25/month** and would make
+> deliverability *worse* at your volume: a fresh dedicated IP has no sending
+> reputation, where Amazon's shared pool already has one. **Tenant management**
+> is for sending on behalf of many separate customers.
 
 ### 4.3 Add those records at your DNS provider
 
