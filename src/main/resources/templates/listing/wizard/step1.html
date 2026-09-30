@@ -53,9 +53,17 @@
                         </optgroup>
                     </th:block>
                 </select>
+                <!--/*
+                  This used to end "the pin below is what actually places the
+                  flat", which stopped being true the moment the pin became
+                  optional. Now the area is what places it unless a pin says
+                  otherwise, which makes choosing the closest one matter more
+                  than it did, not less.
+                */-->
                 <p class="wizard__hint">
-                    Cannot find yours? Pick the closest locality — the pin below is
-                    what actually places the flat.
+                    Cannot find yours? Pick the closest locality. Without a pin
+                    this is what places your flat, so pick the nearest one you
+                    can &mdash; you can drop a pin below to be exact.
                 </p>
             </label>
 
@@ -75,12 +83,29 @@
         </fieldset>
 
         <fieldset class="wizard__group">
-            <legend>Drag the pin to your building</legend>
+            <legend>Drag the pin to your building &mdash; optional</legend>
+
+            <!--/*
+              Said first, and said plainly. This was where listings went to
+              die: every other question here is answerable from memory in a
+              second, and this one asks somebody to find their own building on
+              a map and drag a marker onto it, usually on a phone. Without the
+              word "optional" the screen reads as a wall.
+            */-->
             <p class="wizard__hint">
-                This is the only place the exact location is ever recorded. It is
-                stored separately from the listing and released only when you accept
-                someone's request — publicly we show a 500&nbsp;m circle placed a few
-                hundred metres away.
+                Skip it if you like. We will place your listing at the centre of
+                the area you picked, which is enough to publish and to be found
+                in a search.
+            </p>
+
+            <p class="wizard__hint">
+                A pin makes you easier to find &mdash; it puts you in the results
+                of people searching near your actual building rather than near
+                the middle of the neighbourhood. It is also the only place the
+                exact location is ever recorded: stored separately from the
+                listing and released only when you accept someone's request.
+                Publicly we show a 500&nbsp;m circle placed a few hundred metres
+                away.
             </p>
 
             <!--/*

@@ -21,7 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -48,14 +50,31 @@ public class WizardController {
     private final AreaRepository areas;
     private final PhotoService photos;
 
+    /* Injected rather than calling LocalDate.now(), so a test can say what
+       "today" is when checking that a past move-in date is refused. */
+    private final Clock clock;
+
+    /**
+     * "Today" means today in Mumbai.
+     *
+     * <p>The Clock bean is {@code systemUTC}, which is right for timestamps and
+     * wrong for a calendar date: between midnight and half past five in the
+     * morning IST it is still yesterday in UTC, so the date picker would offer
+     * a day that has already gone for the person reading it. Everyone using
+     * this wizard is in one city; this is that city.
+     */
+    private static final java.time.ZoneId IST = java.time.ZoneId.of("Asia/Kolkata");
+
     public WizardController(ListingDraftService drafts,
                             ListingDetailService details,
                             AreaRepository areas,
-                            PhotoService photos) {
+                            PhotoService photos,
+                            Clock clock) {
         this.drafts = drafts;
         this.details = details;
         this.areas = areas;
         this.photos = photos;
+        this.clock = clock;
     }
 
     /** "List your flat" — resume where they left off, or start. */
@@ -197,11 +216,23 @@ public class WizardController {
                             @RequestParam(required = false) String maintenance,
                             @RequestParam(defaultValue = "false") boolean maintenanceIncluded,
                             @RequestParam(required = false) String brokerage,
-                            @RequestParam(required = false) String buyout) {
-        drafts.saveMoney(id, user.id(),
-                rupees(monthlyRent), rupees(deposit), rupees(maintenance),
-                maintenanceIncluded,
-                orZero(rupees(brokerage)), orZero(rupees(buyout)));
+                            @RequestParam(required = false) String buyout,
+                            RedirectAttributes redirect) {
+        try {
+            drafts.saveMoney(id, user.id(),
+                    rupees("Monthly rent", monthlyRent),
+                    rupees("Security deposit", deposit),
+                    rupees("Society maintenance", maintenance),
+                    maintenanceIncluded,
+                    orZero(rupees("Brokerage", brokerage)),
+                    orZero(rupees("Buy-out", buyout)));
+        } catch (InvalidAmountException e) {
+            // Back to the same step, not onward. Nothing was saved, and
+            // carrying on to step 4 would leave a wrong or empty amount behind
+            // with the person believing they had answered.
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/list/%s/3".formatted(id);
+        }
         return next(id, 4);
     }
 
@@ -234,10 +265,18 @@ public class WizardController {
                             @RequestParam(required = false) Boolean smokingAllowed,
                             @RequestParam(required = false) Boolean guestsAllowed,
                             @RequestParam(required = false) String houseRulesNote,
-                            @RequestParam(required = false) String availableFrom) {
-        drafts.saveRules(id, user.id(), flatmateGender,
-                flatmateProfessions, nonVegAllowed, petsAllowed, smokingAllowed,
-                guestsAllowed, houseRulesNote, parseDate(availableFrom));
+                            @RequestParam(required = false) String availableFrom,
+                            RedirectAttributes redirect) {
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
+        try {
+            drafts.saveRules(id, user.id(), flatmateGender,
+                    flatmateProfessions, nonVegAllowed, petsAllowed, smokingAllowed,
+                    guestsAllowed, houseRulesNote,
+                    parseDate(availableFrom, draft.getAvailableFrom(), LocalDate.now(clock.withZone(IST))));
+        } catch (InvalidDateException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/list/%s/5".formatted(id);
+        }
         return next(id, 6);
     }
 
@@ -249,7 +288,7 @@ public class WizardController {
                           Model model) {
         Listing draft = drafts.requireOwnedDraft(id, user.id());
 
-        List<String> missing = missingFor(draft);
+        List<ListingDraftService.Missing> missing = missingFor(draft);
         if (!missing.isEmpty()) {
             addCommon(model, draft, TOTAL_STEPS);
             model.addAttribute("preview", details.preview(draft));
@@ -272,13 +311,16 @@ public class WizardController {
      * minimum, because a listing with no photos is technically complete and
      * practically useless — and the design states the minimum plainly.
      */
-    private List<String> missingFor(Listing draft) {
-        List<String> missing = new java.util.ArrayList<>(drafts.missingForPublication(draft));
+    private List<ListingDraftService.Missing> missingFor(Listing draft) {
+        List<ListingDraftService.Missing> missing =
+                new java.util.ArrayList<>(drafts.missingForPublication(draft));
 
         long count = photos.countFor(draft.getId());
         if (count < PhotoService.MIN_PHOTOS_TO_PUBLISH) {
-            missing.add("at least %d photos (you have %d)"
-                    .formatted(PhotoService.MIN_PHOTOS_TO_PUBLISH, count));
+            missing.add(new ListingDraftService.Missing(
+                    "at least %d photos (you have %d)"
+                            .formatted(PhotoService.MIN_PHOTOS_TO_PUBLISH, count),
+                    TOTAL_STEPS));
         }
 
         return missing;
@@ -297,6 +339,16 @@ public class WizardController {
         // and actively misleading for the second, where nothing is pending and
         // every change has already been saved.
         model.addAttribute("editing", drafts.isPublished(draft));
+
+        // The earliest move-in date the date picker will offer. Today, unless
+        // this listing already holds an earlier one — an August date on a
+        // listing published in August still means "available now", and its
+        // owner should not be stopped from saving an edit to something else
+        // because of it.
+        LocalDate today = LocalDate.now(clock.withZone(IST));
+        LocalDate existing = draft.getAvailableFrom();
+        model.addAttribute("earliestMoveIn",
+                existing != null && existing.isBefore(today) ? existing : today);
     }
 
     /**
@@ -325,7 +377,9 @@ public class WizardController {
                                    org.springframework.web.servlet.mvc.support.RedirectAttributes redirect) {
         redirect.addFlashAttribute("error",
                 "A published listing cannot be left without "
-                        + String.join(", ", e.getMissing())
+                        + e.getMissing().stream()
+                                .map(ListingDraftService.Missing::label)
+                                .collect(java.util.stream.Collectors.joining(", "))
                         + ". That change was not saved.");
         return "redirect:" + request.getRequestURI();
     }
@@ -342,18 +396,48 @@ public class WizardController {
      * first two would be technically defensible and would irritate everybody,
      * because the rest of the site renders rents with those very separators.
      */
-    private static Integer rupees(String input) {
+    /**
+     * What counts as somebody typing a number: digits, and the separators the
+     * site itself prints. A rupee sign because it is beside the field, commas
+     * and spaces because "32,000" and "32 000" are how the amount is written
+     * everywhere else on the page.
+     */
+    private static final java.util.regex.Pattern MONEY =
+            java.util.regex.Pattern.compile("[\\u20B9\\s,0-9]+");
+
+    private static Integer rupees(String field, String input) {
         if (input == null || input.isBlank()) {
             return null;
         }
-        String digits = input.replaceAll("[^0-9]", "");
+
+        String cleaned = input.trim();
+
+        // Anything else is refused rather than filtered out, and that is the
+        // whole change here. Stripping non-digits turned "0234ax" into "0234"
+        // and saved ₹234 — a number the person never typed, on the field that
+        // decides what they are asking for, with nothing on screen to say it
+        // had happened. A typo is worth an error message; it is not worth
+        // guessing at.
+        if (!MONEY.matcher(cleaned).matches()) {
+            throw new InvalidAmountException(field);
+        }
+
+        String digits = cleaned.replaceAll("[^0-9]", "");
         if (digits.isEmpty()) {
             return null;
         }
         try {
             return Integer.valueOf(digits);
         } catch (NumberFormatException e) {
-            return null;
+            // Longer than an int: eleven digits of rent is a typo too.
+            throw new InvalidAmountException(field);
+        }
+    }
+
+    /** A money field that was not a number. Carries the label to point at. */
+    static class InvalidAmountException extends RuntimeException {
+        InvalidAmountException(String field) {
+            super("%s needs to be a number — digits only.".formatted(field));
         }
     }
 
@@ -361,14 +445,43 @@ public class WizardController {
         return value == null ? 0 : value;
     }
 
-    private static LocalDate parseDate(String value) {
+    /**
+     * The move-in date, refused if it is in the past.
+     *
+     * <p>"Available from 3 August" on a listing read in October is not a date,
+     * it is a sign nobody has looked at the listing in months — and it is the
+     * one field a searcher filters on, so a stale value quietly removes the
+     * room from the results it should be in.
+     *
+     * <p>The exception is a date already stored. A listing published in August
+     * for an August move-in is still perfectly valid in October; it simply
+     * means "available now". Refusing to let its owner save an unrelated edit
+     * to house rules, because a field they did not touch is now in the past,
+     * would be the validation making the listing worse.
+     */
+    private static LocalDate parseDate(String value, LocalDate current, LocalDate today) {
         if (value == null || value.isBlank()) {
             return null;
         }
+
+        LocalDate parsed;
         try {
-            return LocalDate.parse(value.trim());
+            parsed = LocalDate.parse(value.trim());
         } catch (java.time.format.DateTimeParseException e) {
-            return null;
+            throw new InvalidDateException("That move-in date could not be read.");
+        }
+
+        if (parsed.isBefore(today) && !parsed.equals(current)) {
+            throw new InvalidDateException(
+                    "The move-in date cannot be in the past.");
+        }
+        return parsed;
+    }
+
+    /** A move-in date that was unreadable or already gone. */
+    static class InvalidDateException extends RuntimeException {
+        InvalidDateException(String message) {
+            super(message);
         }
     }
 

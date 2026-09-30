@@ -13,8 +13,19 @@
     <p class="auth__notice" th:if="${photoNotice}" th:text="${photoNotice}">added</p>
 
     <div class="wizard__group">
+        <!--/*
+          Choosing files IS the upload. data-autosubmit makes the form send
+          itself the moment the picker closes.
+
+          The old flow had a separate Upload button, and nothing on screen
+          said it had to be pressed: people picked three photos, saw "3 files"
+          beside the picker, and read that as done. The next screen then told
+          them to add three more — the one thing they thought they had just
+          finished. A step that every single person must take, and that
+          nobody is told about, is not a step; it is a trap.
+        */-->
         <form method="post" th:action="@{/list/{id}/photos(id=${draft.id})}"
-              enctype="multipart/form-data" class="photo-upload">
+              enctype="multipart/form-data" class="photo-upload" data-autosubmit>
             <label class="field">
                 <span class="field__label">Add photos</span>
                 <!--/* accept= filters the picker for convenience only. The
@@ -23,7 +34,20 @@
                        neither is evidence of anything. */-->
                 <input type="file" name="file" accept="image/*" multiple required>
             </label>
-            <button type="submit" class="btn btn--secondary">Upload</button>
+
+            <!--/*
+              Still here, and that is deliberate. Without JavaScript this is
+              the only way to upload anything, so hiding it in the markup
+              would make the page depend on a script to work at all. The
+              script hides it on the way past, having taken over its job.
+            */-->
+            <button type="submit" class="btn btn--secondary" data-autosubmit-fallback>
+                Upload
+            </button>
+
+            <!--/* Shown by the script while the files are on their way, so
+                   the wait is not a page that appears to have done nothing. */-->
+            <p class="photo-upload__busy" hidden>Uploading&hellip;</p>
         </form>
 
         <p class="wizard__hint">

@@ -165,6 +165,12 @@
 <script th:src="@{/js/toasts.js}" src="/js/toasts.js" defer></script>
 <script th:src="@{/js/shortlist.js}" src="/js/shortlist.js" defer></script>
 <script th:src="@{/js/forms.js}" src="/js/forms.js" defer></script>
+<!--/* Does nothing on a page without the photo form, which is every page but
+       one. Loaded here rather than per-template because the layout takes only
+       a title and a main, so a template has nowhere to add a script of its
+       own. Small enough that a second request for the one screen that needs
+       it would cost more than carrying it. */-->
+<script th:src="@{/js/photo-upload.js}" src="/js/photo-upload.js" defer></script>
 
 </body>
 </html>

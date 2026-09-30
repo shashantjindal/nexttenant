@@ -12,8 +12,20 @@
 
     <div class="notice notice--relaxed" th:if="${!missing.isEmpty()}">
         <p class="notice__title">Still needed before this can go live</p>
+        <!--/*
+          Every line is a link to the screen that fixes it.
+
+          As plain text this list named the problem and left the person to
+          work out which of six steps held it — on the one page whose entire
+          job is getting them over the line. The step travels with each item
+          from ListingDraftService.Missing, so the label and its destination
+          cannot drift apart the way they would if the template guessed.
+        */-->
         <ul class="wizard__missing">
-            <li th:each="item : ${missing}" th:text="${item}">the monthly rent</li>
+            <li th:each="item : ${missing}">
+                <a th:href="@{/list/{id}/{step}(id=${draft.id}, step=${item.step})}"
+                   th:text="${item.label}">the monthly rent</a>
+            </li>
         </ul>
     </div>
 

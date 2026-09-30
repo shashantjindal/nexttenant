@@ -19,6 +19,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="monthlyRent" inputmode="numeric"
+                           data-digits pattern="[0-9,]*"
                            th:value="${draft.monthlyRentInr}" placeholder="32000" required>
                 </div>
             </label>
@@ -28,6 +29,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="deposit" inputmode="numeric"
+                           data-digits pattern="[0-9,]*"
                            th:value="${draft.depositInr}" placeholder="64000" required>
                 </div>
             </label>
@@ -41,6 +43,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="maintenance" inputmode="numeric"
+                           data-digits pattern="[0-9,]*"
                            th:value="${draft.maintenanceInr}" placeholder="2500">
                 </div>
             </label>
@@ -56,6 +59,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="brokerage" inputmode="numeric"
+                           data-digits pattern="[0-9,]*"
                            th:value="${draft.brokerageInr}" placeholder="0">
                 </div>
                 <!--/* Not a rule, a nudge. The product's claim is that these
@@ -72,6 +76,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="buyout" inputmode="numeric"
+                           data-digits pattern="[0-9,]*"
                            th:value="${draft.buyoutInr}" placeholder="0">
                 </div>
                 <small class="wizard__hint">

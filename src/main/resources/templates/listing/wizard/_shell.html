@@ -42,8 +42,30 @@
             Editing a published listing &middot; changes save as you go
         </span>
 
-        <a class="wizard__exit" th:href="@{/dashboard}"
-           th:text="${editing} ? 'Done' : 'Save and exit'">Save and exit</a>
+        <!--/*
+          "Publish listing", not "Save and exit".
+
+          Save-and-exit named the wrong thing twice over. There is nothing to
+          save — each step wrote itself the moment it was submitted, which is
+          the entire reason for saving per step — so the word promised an
+          action that does not exist. And "exit" is the one thing nobody comes
+          to this screen to do, sitting where the page's most prominent action
+          belongs.
+
+          It goes to the preview rather than publishing outright, and that is
+          not a dodge. From step 2 a listing cannot go live yet; a button that
+          publishes would have to be dead most of the time, and a dead button
+          explains nothing. The preview is where the Publish button lives and
+          where the still-missing items are listed, each linking to the step
+          that fixes it — so pressing this always moves somebody forward,
+          whether that is publishing or finding out what is left.
+        */-->
+        <a class="wizard__exit" th:unless="${editing}"
+           th:href="@{/list/{id}/preview(id=${draft.id})}">Publish listing</a>
+
+        <!--/* Editing something already out there: it IS published, so the
+               word would be a lie. Nothing is pending; this is the way out. */-->
+        <a class="wizard__exit" th:if="${editing}" th:href="@{/dashboard}">Done</a>
     </div>
 
     <h1 class="wizard__title" th:text="${title}">Where is the flat?</h1>

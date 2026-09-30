@@ -69,6 +69,23 @@
                 <!-- A draft resumes where it stopped -->
                 <div th:if="${l.isDraft()}">
                     <p class="listing-panel__title">Unfinished listing</p>
+
+                    <!--/*
+                      A bar, because "step 4 of 6" is a fact and this is a
+                      question about effort. Someone deciding whether to open
+                      this again wants to know how much is left, and a
+                      two-thirds-full bar answers that at a glance where the
+                      sentence needs reading and dividing.
+
+                      aria-hidden because the sentence below says the same
+                      thing in words — a screen reader announcing a decorative
+                      bar as well would be saying it twice.
+                    */-->
+                    <div class="wizard__progress draft-progress" aria-hidden="true">
+                        <span class="wizard__bar"
+                              th:style="'width:' + ${l.wizardStep * 100 / 6} + '%'"></span>
+                    </div>
+
                     <p class="detail__lede"
                        th:text="'You stopped at step ' + ${l.wizardStep} + ' of 6.'">
                         You stopped at step 3 of 6.

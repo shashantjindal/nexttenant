@@ -1,5 +1,6 @@
 package com.nexttenant.listing.wizard;
 
+import com.nexttenant.area.AreaRepository;
 import com.nexttenant.geo.GeoPoints;
 import com.nexttenant.listing.Listing;
 import com.nexttenant.listing.ListingPrivate;
@@ -39,11 +40,17 @@ public class ListingDraftService {
     private final ListingPrivateRepository listingPrivates;
     private final Clock clock;
 
+    /* For the location fallback: a named area already knows roughly where it
+       is, which is what makes dropping a pin optional. */
+    private final AreaRepository areas;
+
     public ListingDraftService(ListingRepository listings,
                                ListingPrivateRepository listingPrivates,
+                               AreaRepository areas,
                                Clock clock) {
         this.listings = listings;
         this.listingPrivates = listingPrivates;
+        this.areas = areas;
         this.clock = clock;
     }
 
@@ -138,7 +145,7 @@ public class ListingDraftService {
         if (listing.getStatus() != ListingStatus.LIVE) {
             return;
         }
-        List<String> missing = missingForPublication(listing);
+        List<Missing> missing = missingForPublication(listing);
         if (!missing.isEmpty()) {
             throw new IncompleteListingException(missing);
         }
@@ -182,6 +189,26 @@ public class ListingDraftService {
                 throw new IllegalArgumentException("That pin is outside Mumbai");
             }
             priv.placeAt(pin);
+        } else if (!priv.hasRealPin()) {
+            // No pin given. Fall back to the centre of the area they named.
+            //
+            // This used to be where listings died. Every other question in the
+            // wizard can be answered from memory in a second; this one asks
+            // somebody to find their own building on a map and drag a marker
+            // onto it, on a phone, and people simply stopped.
+            //
+            // The area already knows roughly where it is — areas.centroid is
+            // the same centre a searcher's radius is seeded from when they
+            // pick an area instead of a point. What is good enough to search
+            // from is good enough to publish from.
+            //
+            // Guarded by hasRealPin() so that re-saving step 1 after dropping
+            // a pin, without touching the map, cannot quietly replace a real
+            // pin with a locality centre.
+            areas.findByName(areaName)
+                    .map(area -> GeoPoints.of(area.latitude(), area.longitude()))
+                    .filter(GeoPoints::isWithinMumbai)
+                    .ifPresent(priv::placeAtAreaCentre);
         }
         priv.setSocietyName(societyName);
         priv.setFullAddress(fullAddress);
@@ -270,7 +297,7 @@ public class ListingDraftService {
     public void publish(UUID listingId, UUID userId) {
         Listing draft = requireOwnedDraft(listingId, userId);
 
-        List<String> missing = missingForPublication(draft);
+        List<Missing> missing = missingForPublication(draft);
         if (!missing.isEmpty()) {
             throw new IncompleteListingException(missing);
         }
@@ -297,34 +324,46 @@ public class ListingDraftService {
 
     /** What still needs filling in, phrased for a person rather than a log. */
     @Transactional(readOnly = true)
-    public List<String> missingForPublication(Listing draft) {
-        List<String> missing = new java.util.ArrayList<>();
+    /**
+     * Something a listing needs before it can go live, and where to fix it.
+     *
+     * <p>The step is why this is a record rather than a string. "the monthly
+     * rent" told somebody what was wrong and left them to work out which of
+     * six screens held it — on the one page whose entire job is getting them
+     * over the line. Carrying the step turns each line into a link.
+     */
+    public record Missing(String label, int step) {
+    }
+
+    public List<Missing> missingForPublication(Listing draft) {
+        List<Missing> missing = new java.util.ArrayList<>();
 
         if (draft.getAreaName() == null) {
-            missing.add("the area");
+            missing.add(new Missing("the area", 1));
         }
         if (draft.getApproxLocation() == null) {
-            // Absent because no pin was dropped: the trigger only fires when
-            // listing_private.exact_location is set.
-            missing.add("the location pin");
+            // Only reachable now when the area is unknown too — a recognised
+            // area supplies a location by itself, see locationFor(). So this
+            // means "we have nothing at all to place this flat by".
+            missing.add(new Missing("where the flat is", 1));
         }
         if (draft.getConfiguration() == null) {
-            missing.add("the flat's configuration");
+            missing.add(new Missing("the flat's configuration", 2));
         }
         if (draft.getRoomType() == null) {
-            missing.add("what kind of room it is");
+            missing.add(new Missing("what kind of room it is", 2));
         }
         if (draft.getFurnishing() == null) {
-            missing.add("the furnishing");
+            missing.add(new Missing("the furnishing", 2));
         }
         if (draft.getMonthlyRentInr() == null) {
-            missing.add("the monthly rent");
+            missing.add(new Missing("the monthly rent", 3));
         }
         if (draft.getDepositInr() == null) {
-            missing.add("the deposit");
+            missing.add(new Missing("the deposit", 3));
         }
         if (draft.getAvailableFrom() == null) {
-            missing.add("the move-in date");
+            missing.add(new Missing("the move-in date", 5));
         }
 
         return missing;
@@ -332,14 +371,14 @@ public class ListingDraftService {
 
     /** Raised when publication is attempted before the listing is complete. */
     public static class IncompleteListingException extends RuntimeException {
-        private final List<String> missing;
+        private final List<Missing> missing;
 
-        public IncompleteListingException(List<String> missing) {
+        public IncompleteListingException(List<Missing> missing) {
             super("Listing is not ready to publish");
             this.missing = List.copyOf(missing);
         }
 
-        public List<String> getMissing() {
+        public List<Missing> getMissing() {
             return missing;
         }
     }

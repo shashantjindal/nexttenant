@@ -1908,3 +1908,35 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 /* Row actions sit side by side. Without this "View" and "Take down" render
    as one run-on word, and the destructive one is the easier to hit. */
 .admin-table td a + a { margin-left: var(--s-4); }
+
+/* ---- Wizard: photos and drafts ----------------------------------------- */
+
+/* The bar on an unfinished listing's dashboard card. Tighter than the one in
+   the wizard header, which sits under a title rather than inside a card. */
+.draft-progress { margin: var(--s-3) 0 var(--s-2); max-width: 260px; }
+
+.photo-upload__busy {
+    margin: var(--s-3) 0 0;
+    font-size: var(--t-sm);
+    color: var(--c-ink-3);
+}
+
+/*
+ * Previews of files that have not been uploaded yet.
+ *
+ * Deliberately NOT identical to the uploaded grid. These are in flight, and
+ * showing them the same way would claim the upload had finished — so they are
+ * dimmed, and they carry none of the cover/remove controls, which mean nothing
+ * until the server has the file.
+ */
+.photo-grid--pending { opacity: .55; }
+.photo-tile--pending { position: relative; }
+.photo-tile--pending img { filter: grayscale(.25); }
+
+/* The missing-items list on the preview: every line is a link to its fix. */
+.wizard__missing a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.wizard__missing a:hover { color: var(--c-brand); }

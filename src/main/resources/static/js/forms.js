@@ -38,4 +38,85 @@
      * fine and expected — that one is left alone. Only the wheel is surprising,
      * because the wheel is how you move the page.
      */
+
+    /*
+     * Money fields take digits and nothing else.
+     *
+     * These are type="text" rather than type="number" on purpose — a number
+     * input will not accept "32,000", and the rest of the site renders rents
+     * with exactly those separators, so refusing to take one back is its own
+     * kind of wrong. The cost of text is that the field accepted "0234ax",
+     * which the server stripped to "0234" and saved as ₹234: a wrong number,
+     * silently, with nothing on screen to say so.
+     *
+     * Stripping as you type makes the rule visible — the letter simply never
+     * appears — instead of reporting it afterwards or, worse, not at all. The
+     * server refuses the same input independently, because this runs in the
+     * browser and anything running in the browser is a convenience.
+     *
+     * The caret is restored by hand. Assigning to value moves it to the end,
+     * so editing the start of "32000" would throw you to the far end after
+     * every keystroke.
+     */
+    document.addEventListener('input', function (event) {
+        var el = event.target;
+        if (!el || !el.hasAttribute || !el.hasAttribute('data-digits')) {
+            return;
+        }
+
+        var before = el.value;
+        var caret = el.selectionStart;
+        var after = before.replace(/[^0-9,]/g, '');
+
+        if (after !== before) {
+            el.value = after;
+            // Move the caret back by however many characters vanished before
+            // it, so it stays beside the same digit it was beside.
+            var removed = before.slice(0, caret).length
+                    - before.slice(0, caret).replace(/[^0-9,]/g, '').length;
+            try {
+                el.setSelectionRange(caret - removed, caret - removed);
+            } catch (ignored) {
+                // Some browsers refuse setSelectionRange on certain input
+                // types. Losing the caret position is worth less than the
+                // strip, so this failing must not stop it.
+            }
+        }
+    });
+
+    /*
+     * A six-digit code submits itself.
+     *
+     * Typing the last digit and then reaching for a button is a step that
+     * exists only because the form needs one. The code has exactly one valid
+     * length, so the moment six digits are present there is nothing further to
+     * ask — and on a phone, where the code was just autofilled from the
+     * keyboard bar, the button is often below the fold.
+     *
+     * Two things this deliberately does NOT do. It does not fire more than
+     * once: five wrong attempts and the code is dead, so a handler that could
+     * resubmit on a later input event would be a way to burn a person's
+     * attempts for them. And it does not remove the button, which is what
+     * anyone without JavaScript — and anyone correcting a typo before the
+     * sixth digit lands — still uses.
+     */
+    var otp = document.querySelector('input[autocomplete="one-time-code"]');
+    if (otp && otp.form) {
+        var sent = false;
+        otp.addEventListener('input', function () {
+            if (sent) {
+                return;
+            }
+            if (/^[0-9]{6}$/.test(otp.value.trim())) {
+                sent = true;
+                // requestSubmit, not submit: it runs the form's own validation
+                // and fires the submit event, where plain submit() skips both.
+                if (otp.form.requestSubmit) {
+                    otp.form.requestSubmit();
+                } else {
+                    otp.form.submit();
+                }
+            }
+        });
+    }
 }());

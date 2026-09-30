@@ -2,6 +2,8 @@ package com.nexttenant.listing;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
@@ -50,6 +52,23 @@ public class ListingPrivate {
     @Column(name = "exact_location")
     private Point exactLocation;
 
+    /**
+     * Whether the point above is a real pin or a locality centre.
+     *
+     * <p>Dropping a pin is no longer compulsory — it was the commonest place
+     * people abandoned the wizard, since every other question can be answered
+     * from memory and this one asks somebody to find their own building on a
+     * map. A recognised area supplies a usable centre instead.
+     *
+     * <p>Which means {@code exactLocation} is not always exact, and this says
+     * so. Without it a centroid would be indistinguishable from a pin, and
+     * every later reader would have to assume the worst of every row — or,
+     * more likely, would not think to ask at all.
+     */
+    @Column(name = "location_source", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private LocationSource locationSource = LocationSource.PIN;
+
     @Column(name = "full_address", columnDefinition = "text")
     private String fullAddress;
 
@@ -88,6 +107,20 @@ public class ListingPrivate {
      */
     public void placeAt(Point point) {
         this.exactLocation = point;
+        this.locationSource = LocationSource.PIN;
+    }
+
+    /**
+     * Places the flat at the centre of its locality, because no pin was given.
+     *
+     * <p>A separate method rather than a flag on { #placeAt}, so that
+     * storing something that is not the building is a deliberate call with a
+     * name that says what it is. There is no way to write a centroid while
+     * believing you wrote a pin.
+     */
+    public void placeAtAreaCentre(Point centroid) {
+        this.exactLocation = centroid;
+        this.locationSource = LocationSource.AREA_CENTROID;
     }
 
     public void setFullAddress(String fullAddress) {
@@ -100,6 +133,15 @@ public class ListingPrivate {
 
     public boolean hasLocation() {
         return exactLocation != null;
+    }
+
+    public LocationSource getLocationSource() {
+        return locationSource;
+    }
+
+    /** True when the stored point is the building, not the locality. */
+    public boolean hasRealPin() {
+        return exactLocation != null && locationSource.isExact();
     }
 
     // ---- Accessors -------------------------------------------------------
