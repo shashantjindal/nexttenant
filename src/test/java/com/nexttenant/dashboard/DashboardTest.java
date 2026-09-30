@@ -164,7 +164,14 @@ class DashboardTest {
         mockMvc.perform(post("/listings/" + listing.getId() + "/resume")
                 .with(authentication(as(owner))).with(csrf()));
         assertThat(statusOf(listing.getId())).isEqualTo(ListingStatus.LIVE);
-        mockMvc.perform(get("/flats/" + listing.getId())).andExpect(status().isOk());
+        // 301 rather than 200 because the bare id is not the canonical
+        // address any more. What this asserts is unchanged: public again, as
+        // against the 404 above. Following the redirect proves the page is
+        // really there rather than merely pointed at.
+        String canonical = mockMvc.perform(get("/flats/" + listing.getId()))
+                .andExpect(status().isMovedPermanently())
+                .andReturn().getResponse().getRedirectedUrl();
+        mockMvc.perform(get(canonical)).andExpect(status().isOk());
     }
 
     @Test

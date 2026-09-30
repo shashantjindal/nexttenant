@@ -313,6 +313,23 @@ public class Listing {
         return leaverUserId.equals(userId);
     }
 
+    /**
+     * Where this listing lives on the site.
+     *
+     * <p>Here as well as on the DTOs so that code holding the entity — the
+     * wizard finishing a publish, for one — can redirect to the canonical
+     * address directly instead of to the bare id and letting the controller
+     * bounce it. Both forms work; only one avoids a wasted round trip on the
+     * proudest moment of the flow.
+     */
+    public String path() {
+        return ListingUrls.path(
+                id,
+                areaName,
+                configuration == null ? null : configuration.getLabel(),
+                roomType == null ? null : roomType.getLabel());
+    }
+
     // ---- Accessors --------------------------------------------------------
 
     public UUID getId() {

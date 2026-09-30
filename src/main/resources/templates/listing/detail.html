@@ -238,7 +238,7 @@
                       data-saved-label="Saved &#9829;" data-unsaved-label="Save this room"
                       th:action="@{/listings/{id}/shortlist(id=${listing.id})}">
                     <input type="hidden" name="returnTo"
-                           th:value="@{/flats/{id}(id=${listing.id})}">
+                           th:value="@{${listing.path}}">
                     <button type="submit" class="btn btn--secondary"
                             th:text="${shortlisted} ? 'Saved &hearts;' : 'Save this room'">Save this room</button>
                 </form>

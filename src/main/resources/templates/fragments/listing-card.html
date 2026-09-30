@@ -102,7 +102,7 @@
 
         <!--/* The stretched link. Its text is the area name, so a screen
                reader announces "Bandra West, link" rather than "link". */-->
-        <a class="listing-card__link" th:href="@{/flats/{id}(id=${card.id})}" href="#">
+        <a class="listing-card__link" th:href="@{${card.path}}" href="#">
             <span class="listing-card__where" th:text="${card.area}">Bandra West</span>
         </a>
 

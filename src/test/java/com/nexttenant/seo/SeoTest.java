@@ -176,7 +176,14 @@ class SeoTest {
 
         // The listings ARE the search traffic: one page each, every one of
         // them targeting a query with a real intention behind it.
-        assertThat(xml).contains("https://nexttenant.test/flats/" + live.getId());
+        assertThat(xml).contains("https://nexttenant.test" + live.path());
+
+        // And the CANONICAL address, not the bare id. Submitting the id form
+        // would have Google fetch it, receive a 301, and report the submitted
+        // URL as "page with redirect" — the sitemap pointing away from the
+        // page it is meant to be nominating.
+        assertThat(xml).doesNotContain(
+                "https://nexttenant.test/flats/" + live.getId() + "</loc>");
         assertThat(xml).contains("https://nexttenant.test/</loc>");
         assertThat(xml).contains("https://nexttenant.test/flats</loc>");
     }

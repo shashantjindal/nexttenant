@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,8 +48,15 @@ public class ListingDetailController {
     public record GalleryPhoto(String full, String thumb) {
     }
 
+    /**
+     * @return a view name, or a {@link RedirectView} when the address needs
+     *         correcting. Object rather than String because {@code "redirect:"}
+     *         issues a 302, and "found elsewhere, keep asking here" is the
+     *         wrong thing to tell a crawler about a permanent canonical form —
+     *         a 302 leaves the standing on the URL we want retired.
+     */
     @GetMapping("/flats/{id}")
-    public String detail(@PathVariable String id,
+    public Object detail(@PathVariable String id,
                          @org.springframework.security.core.annotation.AuthenticationPrincipal
                                  com.nexttenant.auth.AuthenticatedUser viewer,
                          Model model) {
@@ -60,6 +68,26 @@ public class ListingDetailController {
                 // but is hidden" would let anyone confirm a listing's status
                 // after it stopped being public.
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        // One listing, one address.
+        //
+        // The words in the path are decoration — the id is what identifies the
+        // listing — so infinitely many spellings resolve here, including the
+        // bare /flats/<uuid> already sitting in inboxes and in Google's index.
+        // Serving the page at all of them is duplicate content: search engines
+        // split one page's standing across many URLs, and the listing ranks
+        // worse than it would with no slug at all.
+        //
+        // 301 rather than 302 because it is permanent in the sense that
+        // matters: the old address should stop being used and its accumulated
+        // standing should transfer. If the listing is later edited and the
+        // slug changes, the previous canonical simply redirects onward.
+        String canonical = listing.path();
+        if (!canonical.equals("/flats/" + id)) {
+            RedirectView moved = new RedirectView(canonical);
+            moved.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
+            return moved;
+        }
 
         details.recordView(listingId);
 
@@ -135,7 +163,9 @@ public class ListingDetailController {
      */
     private static UUID parseId(String raw) {
         try {
-            return UUID.fromString(raw);
+            // The id is the last 36 characters, which reads both the canonical
+            // form and the bare /flats/<uuid> links already shared and indexed.
+            return ListingUrls.idFrom(raw);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }

@@ -97,4 +97,15 @@ public record ListingDetailDto(
     public String approxRadiusLabel() {
         return "%.1f km".formatted(approxRadiusMetres / 1000.0);
     }
+
+    /**
+     * The canonical address of this listing.
+     *
+     * <p>Same derivation as {@link com.nexttenant.listing.dto.ListingCardDto},
+     * from the same three labels, so the card a visitor clicks and the page
+     * they land on agree and no redirect happens in between.
+     */
+    public String path() {
+        return com.nexttenant.listing.ListingUrls.path(id, area, configuration, roomType);
+    }
 }

@@ -6,6 +6,8 @@ import com.nexttenant.listing.Listing;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import com.nexttenant.listing.ListingUrls;
+
 import java.util.UUID;
 
 /**
@@ -66,6 +68,18 @@ public record ListingCardDto(
                 listing.isZeroBrokerage(),
                 coverPhotoUrl
         );
+    }
+
+    /**
+     * Where this listing lives on the site.
+     *
+     * <p>Built here rather than in each template so every link on the site —
+     * cards, dashboard, emails, sitemap — emits the same canonical address.
+     * A template writing its own would eventually write the bare id form, and
+     * every one of those costs a redirect hop.
+     */
+    public String path() {
+        return ListingUrls.path(id, area, configuration, roomType);
     }
 
     private static String formatWalk(Short minutes) {

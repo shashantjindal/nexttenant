@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -35,8 +36,20 @@ class ListingDetailPageTest {
                 .getContent().getFirst();
     }
 
+    /**
+     * Fetches a listing page by id, following the canonical redirect.
+     *
+     * <p>{@code /flats/<uuid>} is a real, supported address — it is what every
+     * link shared before slugs existed looks like — but it is not the
+     * canonical one, so it answers 301. Following it here keeps every test
+     * below about what the page renders rather than about its address.
+     */
     private String pageFor(UUID id) throws Exception {
-        return mockMvc.perform(get("/flats/" + id))
+        String canonical = mockMvc.perform(get("/flats/" + id))
+                .andExpect(status().isMovedPermanently())
+                .andReturn().getResponse().getRedirectedUrl();
+
+        return mockMvc.perform(get(canonical))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
     }
@@ -95,6 +108,58 @@ class ListingDetailPageTest {
     void unknownIdsAre404(String id) throws Exception {
         mockMvc.perform(get("/flats/" + id))
                 .andExpect(status().is4xxClientError());
+    }
+
+    // ---- The address ------------------------------------------------------
+
+    @Test
+    @DisplayName("the canonical address carries the words people search for")
+    void theCanonicalAddress() throws Exception {
+        Listing listing = anyLiveListing();
+
+        String canonical = mockMvc.perform(get("/flats/" + listing.getId()))
+                .andExpect(status().isMovedPermanently())
+                .andReturn().getResponse().getRedirectedUrl();
+
+        assertThat(canonical).isEqualTo(listing.path());
+        assertThat(canonical).endsWith(listing.getId().toString());
+        // 301 and not 302: a 302 tells a crawler to keep asking at the old
+        // URL, so the page's standing stays split across both addresses
+        // instead of consolidating on the one we want indexed.
+        mockMvc.perform(get(canonical)).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("the words are decoration — a wrong slug still finds the listing")
+    void aWrongSlugStillResolves() throws Exception {
+        Listing listing = anyLiveListing();
+
+        // Someone edits the URL, or a listing's area changes after a link was
+        // shared. The id is the identity, so this resolves and corrects itself
+        // rather than 404ing on a link that was valid when it was sent.
+        mockMvc.perform(get("/flats/something-entirely-wrong-" + listing.getId()))
+                .andExpect(status().isMovedPermanently())
+                .andExpect(redirectedUrl(listing.path()));
+    }
+
+    @Test
+    @DisplayName("a hidden listing 404s rather than redirecting to a slug naming its area")
+    void theRedirectCannotLeakAHiddenListing() throws Exception {
+        Listing listing = anyLiveListing();
+        UUID id = listing.getId();
+
+        jdbc.sql("UPDATE listings SET status = 'PAUSED' WHERE id = ?").param(id).update();
+        try {
+            // Order matters in the controller and this is what pins it. If the
+            // canonical redirect ran before the visibility check, the Location
+            // header would hand a stranger the area and configuration of a
+            // listing that is deliberately no longer public — a leak through a
+            // redirect, which is easy to miss because the page itself 404s.
+            mockMvc.perform(get("/flats/" + id))
+                    .andExpect(status().isNotFound());
+        } finally {
+            jdbc.sql("UPDATE listings SET status = 'LIVE' WHERE id = ?").param(id).update();
+        }
     }
 
     @Test

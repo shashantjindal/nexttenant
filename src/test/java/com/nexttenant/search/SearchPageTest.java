@@ -28,7 +28,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SearchPageTest {
 
     private static final Pattern CARD_ID =
-            Pattern.compile("href=\"/flats/([0-9a-f-]{36})\"");
+            Pattern.compile(
+                    // The slug in front is decoration; the id is the last 36
+                    // characters, which is what this needs to pull out.
+                    "href=\"/flats/[^\"]*?"
+                            + "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\"");
 
     @Autowired
     private MockMvc mockMvc;

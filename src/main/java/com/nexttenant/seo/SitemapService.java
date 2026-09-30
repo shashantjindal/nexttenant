@@ -1,6 +1,9 @@
 package com.nexttenant.seo;
 
 import com.nexttenant.common.SiteProperties;
+import com.nexttenant.listing.Configuration;
+import com.nexttenant.listing.ListingUrls;
+import com.nexttenant.listing.RoomType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,8 +113,13 @@ public class SitemapService {
         // A projection rather than loading entities: emitting a URL needs an id
         // and a timestamp, and loading several hundred full listings with their
         // amenities arrays to read two columns would be work for nothing.
+        // The three label columns come along because a sitemap URL has to be
+        // the CANONICAL one, character for character. Emit the bare id form
+        // and every entry redirects: Google reports the submitted URL as "page
+        // with redirect" and indexes it under the other address, which is the
+        // sitemap working against itself.
         jdbc.sql("""
-                        SELECT id, updated_at
+                        SELECT id, updated_at, area_name, configuration, room_type
                           FROM listings
                          WHERE status = 'LIVE'
                          ORDER BY updated_at DESC
@@ -119,12 +127,51 @@ public class SitemapService {
                         """)
                 .param("limit", MAX_URLS)
                 .query((rs, n) -> new Entry(
-                        "/flats/" + rs.getObject("id", UUID.class),
+                        ListingUrls.path(
+                                rs.getObject("id", UUID.class),
+                                rs.getString("area_name"),
+                                // Stored as enum names ('BHK_2'); the slug is
+                                // built from the labels ('2 BHK') so that it
+                                // matches what ListingDetailDto produces.
+                                configurationLabel(rs.getString("configuration")),
+                                roomTypeLabel(rs.getString("room_type"))),
                         rs.getTimestamp("updated_at").toInstant()))
                 .list()
                 .forEach(entries::add);
 
         return entries;
+    }
+
+    /**
+     * A stored enum name as its display label, or null if it is neither.
+     *
+     * <p>The catch is deliberate and is not defensive habit. If a value ever
+     * reaches the column that the enum does not know — a migration part
+     * applied, a hand-edited row — throwing here fails the whole document, and
+     * a sitemap is all-or-nothing: one bad row and every other listing loses
+     * its entry. Degrading to a shorter slug costs that one listing a few
+     * words in its URL and keeps the rest of the file valid.
+     */
+    private static String configurationLabel(String name) {
+        if (name == null) {
+            return null;
+        }
+        try {
+            return Configuration.valueOf(name).getLabel();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static String roomTypeLabel(String name) {
+        if (name == null) {
+            return null;
+        }
+        try {
+            return RoomType.valueOf(name).getLabel();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /**

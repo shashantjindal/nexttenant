@@ -259,7 +259,10 @@ public class WizardController {
         }
 
         drafts.publish(id, user.id());
-        return "redirect:/flats/" + id;
+        // Straight to the canonical address rather than the bare id, which
+        // would 301 onward. Nothing breaks either way; this just does not
+        // make the first view of a brand new listing a round trip.
+        return "redirect:" + draft.path();
     }
 
     /**
