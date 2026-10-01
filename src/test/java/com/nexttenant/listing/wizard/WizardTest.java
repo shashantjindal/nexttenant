@@ -30,6 +30,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -246,6 +247,76 @@ class WizardTest {
         assertThat(published.getPublishedAt()).isNotNull();
         assertThat(published.getExpiresAt()).isNotNull();
         assertThat(published.getMonthlyRentInr()).isEqualTo(32000);
+    }
+
+    // ---- Finishing is publishing -------------------------------------------
+
+    @Test
+    @DisplayName("finishing the last screen puts the listing live, with nothing left to press")
+    void finishingTheLastScreenPublishes() throws Exception {
+        UUID id = startDraft(owner);
+        fillScreenOne(id);
+        for (int i = 0; i < PhotoService.MIN_PHOTOS_TO_PUBLISH; i++) {
+            photos.upload(id, tinyJpeg(), "room" + i + ".jpg");
+        }
+
+        // No POST to /publish anywhere in this test. That button was a second
+        // deliberate decision asked of somebody who had already answered every
+        // question, and anyone who reached it and did not press it had done
+        // the whole job for nothing.
+        mockMvc.perform(step(id, 2, owner)
+                        .param("monthlyRent", "32000").param("deposit", "64000")
+                        .param("brokerage", "0").param("buyout", "0"))
+                .andExpect(redirectedUrl("/list/" + id + "/preview"));
+
+        Listing published = listings.findById(id).orElseThrow();
+        assertThat(published.getStatus()).isEqualTo(ListingStatus.LIVE);
+        assertThat(published.getPublishedAt()).isNotNull();
+        assertThat(published.getExpiresAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("finishing with something still missing does not publish")
+    void anIncompleteListingStaysADraft() throws Exception {
+        UUID id = startDraft(owner);
+        fillScreenOne(id);
+        // No photos: the one requirement that cannot be met by typing.
+
+        mockMvc.perform(step(id, 2, owner)
+                .param("monthlyRent", "32000").param("deposit", "64000")
+                .param("brokerage", "0").param("buyout", "0"));
+
+        assertThat(listings.findById(id).orElseThrow().getStatus())
+                .isEqualTo(ListingStatus.DRAFT);
+
+        // And the page says what is outstanding, with a button that will work
+        // once it is not. Without this, somebody who fixed the last thing
+        // would have no way to go live at all.
+        String html = mockMvc.perform(get("/list/" + id + "/preview")
+                        .with(authentication(as(owner))))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("Still needed before this can go live");
+        assertThat(html).contains("Publish listing");
+    }
+
+    @Test
+    @DisplayName("a live listing's preview offers editing, not publishing")
+    void aLivePreviewOffersEditing() throws Exception {
+        UUID id = completeAllSteps();
+        mockMvc.perform(post("/list/" + id + "/publish")
+                .with(authentication(as(owner))).with(csrf()));
+
+        String html = mockMvc.perform(get("/list/" + id + "/preview")
+                        .with(authentication(as(owner))))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("Your listing is live");
+        assertThat(html).contains("Edit listing");
+        assertThat(html).contains("View it live");
+        // Offering to publish something already published is the kind of
+        // button people press, wonder about, and then go looking for what it
+        // did.
+        assertThat(html).doesNotContain("Publish listing");
     }
 
     @Test

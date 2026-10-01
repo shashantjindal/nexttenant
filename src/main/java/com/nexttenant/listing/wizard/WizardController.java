@@ -10,6 +10,7 @@ import com.nexttenant.listing.Furnishing;
 import com.nexttenant.listing.HandoverType;
 import com.nexttenant.listing.Listing;
 import com.nexttenant.listing.ListingDetailService;
+import com.nexttenant.listing.ListingStatus;
 import com.nexttenant.listing.RoomType;
 import com.nexttenant.photo.PhotoService;
 import org.springframework.http.HttpStatus;
@@ -162,12 +163,18 @@ public class WizardController {
     }
 
     /**
-     * The preview, after the six steps.
+     * What the listing looks like to everybody else.
      *
-     * <p>Built by the same method that renders the live page, so the preview
-     * cannot drift from the real thing. A separate preview renderer would
-     * diverge, and the divergence would only surface after someone published
-     * something different from what they approved.
+     * <p>Built by the same method that renders the live page, so it cannot
+     * drift from the real thing. A separate preview renderer would diverge,
+     * and the divergence would only surface after somebody published something
+     * different from what they approved.
+     *
+     * <p>This is no longer a gate before publishing — finishing screen two
+     * publishes. It is now two pages wearing one URL: for a live listing, "here
+     * is what people see and here is where to change it"; for one still
+     * missing something, the list of what is outstanding and a button that
+     * works once it is not.
      */
     @GetMapping("/list/{id}/preview")
     public String preview(@PathVariable UUID id,
@@ -177,6 +184,10 @@ public class WizardController {
         addCommon(model, draft, TOTAL_STEPS);
         model.addAttribute("preview", details.preview(draft));
         model.addAttribute("missing", missingFor(draft));
+        model.addAttribute("isLive", draft.getStatus() == ListingStatus.LIVE);
+        // The public address, so "View it" goes to the real page rather than
+        // this rehearsal of it.
+        model.addAttribute("publicPath", draft.path());
         return "listing/wizard/preview";
     }
 
@@ -230,6 +241,25 @@ public class WizardController {
         } catch (InvalidAmountException e) {
             redirect.addFlashAttribute("error", e.getMessage());
             return "redirect:/list/%s/2".formatted(id);
+        }
+
+        // Finishing the last screen IS publishing.
+        //
+        // There used to be a preview with a Publish button after it, and that
+        // button was a second deliberate decision asked of somebody who had
+        // already answered every question. Anyone who reached it and did not
+        // press it had done the entire job for nothing — and the preview page
+        // gives them no new information at that point, because they have just
+        // typed all of it.
+        //
+        // So the listing goes live and the preview becomes a page about a live
+        // listing: here is what people see, here is where to change it.
+        // Nothing is lost by it being live first — editing is immediate, and
+        // taking it down is one click away on the dashboard.
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
+        if (draft.getStatus() == ListingStatus.DRAFT && missingFor(draft).isEmpty()) {
+            drafts.publish(id, user.id());
+            redirect.addFlashAttribute("notice", "Your listing is live.");
         }
         return "redirect:/list/%s/preview".formatted(id);
     }
