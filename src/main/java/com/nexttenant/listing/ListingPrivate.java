@@ -80,6 +80,21 @@ public class ListingPrivate {
     @Column(name = "society_name", length = 120)
     private String societyName;
 
+    /**
+     * A Google Maps link the leaver pasted.
+     *
+     * <p>Replaces dragging a pin, which asked somebody to find their own
+     * building on a map, on a phone — the commonest place listings were
+     * abandoned. Pasting a link is something people already do.
+     *
+     * <p>Here and not on {@link Listing} for the same reason as the society
+     * name: a Maps link <em>is</em> an address. Published, it would make the
+     * approximate circle decorative. Released with the phone number when a
+     * request is accepted, through the same choke point as everything else.
+     */
+    @Column(name = "maps_link", columnDefinition = "text")
+    private String mapsLink;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     @Generated(event = EventType.INSERT)
     private Instant createdAt;
@@ -129,6 +144,14 @@ public class ListingPrivate {
 
     public void setSocietyName(String societyName) {
         this.societyName = societyName;
+    }
+
+    public void setMapsLink(String mapsLink) {
+        this.mapsLink = mapsLink;
+    }
+
+    public String getMapsLink() {
+        return mapsLink;
     }
 
     public boolean hasLocation() {

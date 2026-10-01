@@ -1940,3 +1940,141 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     text-underline-offset: 2px;
 }
 .wizard__missing a:hover { color: var(--c-brand); }
+
+/* ---- Wizard: choices as buttons ---------------------------------------- */
+
+/*
+ * A radio group that looks like a row of buttons.
+ *
+ * These replaced native <select>s. A select on a phone opens a scroll wheel:
+ * two taps, and the options hidden until you commit to looking. With three or
+ * four choices there is nothing to hide, and showing them all makes the
+ * question answerable at a glance.
+ *
+ * Still radios underneath, which is the point. Keyboard arrows, screen reader
+ * grouping, "pick exactly one" semantics and no-JavaScript submission all come
+ * from the input; the styling only changes what it looks like.
+ */
+.choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+
+.choice {
+    position: relative;
+    display: inline-flex;
+}
+
+/*
+ * The input is hidden from sight but NOT from the accessibility tree, which is
+ * why this is clip-and-shrink rather than display:none. A display:none radio
+ * is not focusable, so the whole group becomes unreachable by keyboard — the
+ * exact thing using real radios was meant to preserve.
+ */
+.choice input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    margin: 0;
+}
+
+.choice span {
+    display: inline-block;
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-pill);
+    background: var(--c-surface);
+    font-size: var(--t-sm);
+    cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.choice span:hover { border-color: var(--c-brand); }
+
+.choice input:checked + span {
+    background: var(--c-brand);
+    border-color: var(--c-brand);
+    color: var(--c-brand-ink);
+}
+
+/* Focus has to be visible on the SPAN, since the input it belongs to is not
+   on screen. Without this a keyboard user moves through the group blind. */
+.choice input:focus-visible + span {
+    outline: 2px solid var(--c-brand);
+    outline-offset: 2px;
+}
+
+/* ---- Field labelling --------------------------------------------------- */
+
+.field__optional,
+.field__private {
+    display: inline-block;
+    margin-left: var(--s-2);
+    padding: 1px 6px;
+    border-radius: var(--r-sm);
+    font-size: var(--t-xs);
+    font-weight: 500;
+    text-transform: lowercase;
+    letter-spacing: 0;
+}
+.field__optional { background: var(--c-surface-2); color: var(--c-ink-3); }
+
+/* Gold, not grey: "private" is a promise being made, not a detail. */
+.field__private { background: var(--c-gold); color: var(--c-gold-ink); }
+
+/* ---- Area search ------------------------------------------------------- */
+
+[data-area-picker] { position: relative; }
+
+.area-picker__input {
+    width: 100%;
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    background: var(--c-surface);
+    font-size: 16px;   /* below this, iOS Safari zooms the page on focus */
+}
+.area-picker__input:focus { border-color: var(--c-brand); outline: none; }
+
+.area-picker__results {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    margin: var(--s-1) 0 0;
+    padding: var(--s-1);
+    list-style: none;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.area-picker__result {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--s-3);
+    width: 100%;
+    padding: var(--s-3) var(--s-3);
+    border: none;
+    border-radius: var(--r-sm);
+    background: none;
+    font: inherit;
+    font-size: var(--t-sm);
+    text-align: left;
+    cursor: pointer;
+}
+.area-picker__result:hover { background: var(--c-brand-tint); color: var(--c-brand); }
+
+.area-picker__group { font-size: var(--t-xs); color: var(--c-ink-3); }
+
+.area-picker__chosen {
+    margin: var(--s-2) 0 0;
+    font-size: var(--t-sm);
+    color: var(--c-brand);
+    font-weight: 500;
+}

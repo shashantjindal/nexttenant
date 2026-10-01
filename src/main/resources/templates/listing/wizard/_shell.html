@@ -82,10 +82,10 @@
            than to a preview: there is nothing to preview, it is already out
            there. */-->
     <button type="submit" class="btn btn--primary" th:unless="${editing}"
-            th:text="${step == 6} ? 'Preview listing' : 'Continue'">Continue</button>
+            th:text="${step == 2} ? 'Preview listing' : 'Continue'">Continue</button>
 
     <button type="submit" class="btn btn--primary" th:if="${editing}"
-            th:text="${step == 6} ? 'Save and view listing' : 'Save and continue'">Save</button>
+            th:text="${step == 2} ? 'Save and view listing' : 'Save and continue'">Save</button>
 </div>
 
 </body>

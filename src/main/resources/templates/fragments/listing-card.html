@@ -106,8 +106,15 @@
             <span class="listing-card__where" th:text="${card.area}">Bandra West</span>
         </a>
 
+        <!--/* The walk time is optional now that the wizard no longer asks for
+               it — the station comes from the area instead. Without this guard
+               the line rendered as " from Kanjurmarg", a sentence with its
+               subject missing. */-->
         <div class="listing-card__station" th:if="${card.station != null}">
-            <span th:text="${card.walkTime}">8 min walk</span> from
+            <th:block th:if="${card.walkTime}">
+                <span th:text="${card.walkTime}">8 min walk</span> from
+            </th:block>
+            <th:block th:unless="${card.walkTime}">Near</th:block>
             <span th:text="${card.station}">Bandra</span>
         </div>
 

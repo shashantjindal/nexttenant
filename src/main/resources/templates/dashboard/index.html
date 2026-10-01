@@ -71,7 +71,7 @@
                     <p class="listing-panel__title">Unfinished listing</p>
 
                     <!--/*
-                      A bar, because "step 4 of 6" is a fact and this is a
+                      A bar, because "step 1 of 2" is a fact and this is a
                       question about effort. Someone deciding whether to open
                       this again wants to know how much is left, and a
                       two-thirds-full bar answers that at a glance where the
@@ -83,12 +83,12 @@
                     */-->
                     <div class="wizard__progress draft-progress" aria-hidden="true">
                         <span class="wizard__bar"
-                              th:style="'width:' + ${l.wizardStep * 100 / 6} + '%'"></span>
+                              th:style="'width:' + ${l.wizardStep * 100 / 2} + '%'"></span>
                     </div>
 
                     <p class="detail__lede"
-                       th:text="'You stopped at step ' + ${l.wizardStep} + ' of 6.'">
-                        You stopped at step 3 of 6.
+                       th:text="'You stopped at step ' + ${l.wizardStep} + ' of 2.'">
+                        You stopped at step 1 of 2.
                     </p>
                     <a class="btn btn--primary"
                        th:href="@{/list/{id}/{step}(id=${l.id}, step=${l.wizardStep})}">

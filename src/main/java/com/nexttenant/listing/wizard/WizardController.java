@@ -43,7 +43,18 @@ import java.util.UUID;
 @Controller
 public class WizardController {
 
-    private static final int TOTAL_STEPS = 6;
+    /**
+     * Two.
+     *
+     * <p>It was six, asking for 33 fields and 15 checkboxes to collect seven
+     * required answers. What this competes with is a leaver typing four lines
+     * into a WhatsApp group, and against that bar the old flow was designed as
+     * though filling it in were free.
+     *
+     * <p>Nothing was deleted. Everything optional moved to "add more detail",
+     * offered once the listing is live and reached only by people who want it.
+     */
+    private static final int TOTAL_STEPS = 2;
 
     private final ListingDraftService drafts;
     private final ListingDetailService details;
@@ -96,48 +107,58 @@ public class WizardController {
         addCommon(model, draft, step);
 
         switch (step) {
-            case 1 -> {
-                model.addAttribute("areaGroups", areas.findGrouped());
-                drafts.privateFor(id).ifPresent(p -> {
-                    model.addAttribute("priv", p);
-                    // The pin coordinates are unpacked HERE rather than in the
-                    // template. A template that calls T(GeoPoints).latitudeOf()
-                    // needs a null guard wrapped round it, and a null guard in
-                    // Thymeleaf is a ternary — which is exactly the construct
-                    // that was malformed and crashed this page. Putting two
-                    // plain Doubles on the model removes the need for any
-                    // expression at all.
-                    if (p.getExactLocation() != null) {
-                        model.addAttribute("pinLat",
-                                com.nexttenant.geo.GeoPoints.latitudeOf(p.getExactLocation()));
-                        model.addAttribute("pinLng",
-                                com.nexttenant.geo.GeoPoints.longitudeOf(p.getExactLocation()));
-                    }
-                });
-            }
+            case 1 -> addBasicsOptions(model);
             case 2 -> {
-                model.addAttribute("configurations", Configuration.values());
-                model.addAttribute("roomTypes", RoomType.values());
-                model.addAttribute("handoverTypes", HandoverType.values());
-                model.addAttribute("furnishings", Furnishing.values());
-                model.addAttribute("amenityOptions", AMENITIES);
-                model.addAttribute("perkOptions", PERKS);
-            }
-            case 4 -> {
-                model.addAttribute("depositPaidToOptions", DepositPaidTo.values());
-                model.addAttribute("agreementOptions", AgreementHandling.values());
-            }
-            case 5 -> model.addAttribute("genders", FlatmateGender.values());
-            case 6 -> {
                 model.addAttribute("photos", photos.forListing(id));
                 model.addAttribute("minPhotos", PhotoService.MIN_PHOTOS_TO_PUBLISH);
                 model.addAttribute("maxPhotos", PhotoService.MAX_PHOTOS);
+                drafts.privateFor(id).ifPresent(p -> model.addAttribute("priv", p));
             }
             default -> {
             }
         }
 
         return "listing/wizard/step" + step;
+    }
+
+    /** The choices on screen one, all rendered as buttons rather than selects. */
+    private void addBasicsOptions(Model model) {
+        model.addAttribute("areaGroups", areas.findGrouped());
+        model.addAttribute("configurations", Configuration.values());
+        // MASTER_ROOM is deliberately absent: it exists for listings that
+        // already carry it and is not worth a fifth button on the screen that
+        // decides whether somebody lists at all.
+        model.addAttribute("roomTypes", List.of(
+                RoomType.PRIVATE_ROOM, RoomType.SHARED_ROOM,
+                RoomType.HALL, RoomType.ENTIRE_FLAT));
+        model.addAttribute("furnishings", Furnishing.values());
+        model.addAttribute("flatTypes", com.nexttenant.listing.FlatType.values());
+        model.addAttribute("genders", FlatmateGender.values());
+    }
+
+    /**
+     * Everything the two screens no longer ask for, on one optional page.
+     *
+     * <p>Offered after publishing rather than before it. All of it is genuinely
+     * useful — amenities, house rules, who holds the deposit — and none of it
+     * decides whether a room can go live, so none of it belongs in front of a
+     * leaver deciding whether this is worth the effort.
+     */
+    @GetMapping("/list/{id}/more")
+    public String moreDetail(@PathVariable UUID id,
+                             @AuthenticationPrincipal AuthenticatedUser user,
+                             Model model) {
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
+        addCommon(model, draft, TOTAL_STEPS);
+
+        model.addAttribute("handoverTypes", HandoverType.values());
+        model.addAttribute("amenityOptions", AMENITIES);
+        model.addAttribute("perkOptions", PERKS);
+        model.addAttribute("depositPaidToOptions", DepositPaidTo.values());
+        model.addAttribute("agreementOptions", AgreementHandling.values());
+        drafts.privateFor(id).ifPresent(p -> model.addAttribute("priv", p));
+
+        return "listing/wizard/more";
     }
 
     /**
@@ -159,128 +180,113 @@ public class WizardController {
         return "listing/wizard/preview";
     }
 
-    // ---- Step 1: where ----------------------------------------------------
+    // ---- Screen 1: the basics ---------------------------------------------
 
     @PostMapping("/list/{id}/1")
-    public String saveLocation(@PathVariable UUID id,
-                               @AuthenticationPrincipal AuthenticatedUser user,
-                               @RequestParam(required = false) String areaName,
-                               @RequestParam(required = false) String station,
-                               @RequestParam(required = false) Short walkMinutes,
-                               @RequestParam(required = false) Short floor,
-                               @RequestParam(required = false) Boolean hasLift,
-                               @RequestParam(required = false) Double latitude,
-                               @RequestParam(required = false) Double longitude,
-                               @RequestParam(required = false) String societyName,
-                               @RequestParam(required = false) String fullAddress,
-                               Model model) {
+    public String saveBasics(@PathVariable UUID id,
+                             @AuthenticationPrincipal AuthenticatedUser user,
+                             @RequestParam(required = false) String areaName,
+                             @RequestParam(required = false) Configuration configuration,
+                             @RequestParam(required = false) RoomType roomType,
+                             @RequestParam(required = false) Furnishing furnishing,
+                             @RequestParam(required = false) com.nexttenant.listing.FlatType flatType,
+                             @RequestParam(required = false) FlatmateGender flatmateGender,
+                             @RequestParam(required = false) String availableFrom,
+                             @RequestParam(required = false) Short existingFlatmates,
+                             RedirectAttributes redirect) {
+        Listing draft = drafts.requireOwnedDraft(id, user.id());
         try {
-            drafts.saveLocation(id, user.id(), areaName, station, walkMinutes, floor, hasLift,
-                    latitude, longitude, societyName, fullAddress);
-        } catch (IllegalArgumentException e) {
-            Listing draft = drafts.requireOwnedDraft(id, user.id());
-            addCommon(model, draft, 1);
-            model.addAttribute("areaGroups", areas.findGrouped());
-            model.addAttribute("error", e.getMessage());
-            return "listing/wizard/step1";
+            drafts.saveBasics(id, user.id(), areaName, configuration, roomType,
+                    furnishing, flatType, flatmateGender,
+                    parseDate(availableFrom, draft.getAvailableFrom(),
+                            LocalDate.now(clock.withZone(IST))),
+                    existingFlatmates);
+        } catch (InvalidDateException | IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/list/%s/1".formatted(id);
         }
         return next(id, 2);
     }
 
-    // ---- Step 2: the flat -------------------------------------------------
+    // ---- Screen 2: money, photos and the two optional extras ---------------
 
     @PostMapping("/list/{id}/2")
-    public String saveFlat(@PathVariable UUID id,
-                           @AuthenticationPrincipal AuthenticatedUser user,
-                           @RequestParam(required = false) Configuration configuration,
-                           @RequestParam(required = false) RoomType roomType,
-                           @RequestParam(required = false) HandoverType handoverType,
-                           @RequestParam(required = false) Short existingFlatmates,
-                           @RequestParam(required = false) Furnishing furnishing,
-                           @RequestParam(required = false) List<String> amenities,
-                           @RequestParam(required = false) List<String> perks) {
-        drafts.saveFlat(id, user.id(), configuration, roomType, handoverType,
-                existingFlatmates, furnishing,
-                amenities == null ? List.of() : amenities,
-                perks == null ? List.of() : perks);
-        return next(id, 3);
-    }
-
-    // ---- Step 3: the money ------------------------------------------------
-
-    @PostMapping("/list/{id}/3")
-    public String saveMoney(@PathVariable UUID id,
-                            @AuthenticationPrincipal AuthenticatedUser user,
-                            @RequestParam(required = false) String monthlyRent,
-                            @RequestParam(required = false) String deposit,
-                            @RequestParam(required = false) String maintenance,
-                            @RequestParam(defaultValue = "false") boolean maintenanceIncluded,
-                            @RequestParam(required = false) String brokerage,
-                            @RequestParam(required = false) String buyout,
-                            RedirectAttributes redirect) {
+    public String saveMoneyAndExtras(@PathVariable UUID id,
+                                     @AuthenticationPrincipal AuthenticatedUser user,
+                                     @RequestParam(required = false) String monthlyRent,
+                                     @RequestParam(required = false) String deposit,
+                                     @RequestParam(required = false) String brokerage,
+                                     @RequestParam(required = false) String buyout,
+                                     @RequestParam(required = false) String mapsLink,
+                                     @RequestParam(required = false) String description,
+                                     RedirectAttributes redirect) {
         try {
-            drafts.saveMoney(id, user.id(),
+            drafts.saveMoneyAndExtras(id, user.id(),
                     rupees("Monthly rent", monthlyRent),
                     rupees("Security deposit", deposit),
-                    rupees("Society maintenance", maintenance),
-                    maintenanceIncluded,
                     orZero(rupees("Brokerage", brokerage)),
-                    orZero(rupees("Buy-out", buyout)));
+                    orZero(rupees("Buy-out", buyout)),
+                    mapsLink, description);
         } catch (InvalidAmountException e) {
-            // Back to the same step, not onward. Nothing was saved, and
-            // carrying on to step 4 would leave a wrong or empty amount behind
-            // with the person believing they had answered.
             redirect.addFlashAttribute("error", e.getMessage());
-            return "redirect:/list/%s/3".formatted(id);
+            return "redirect:/list/%s/2".formatted(id);
         }
-        return next(id, 4);
+        return "redirect:/list/%s/preview".formatted(id);
     }
 
-    // ---- Step 4: handover terms -------------------------------------------
+    // ---- Add more detail, after publishing --------------------------------
 
-    @PostMapping("/list/{id}/4")
-    public String saveTerms(@PathVariable UUID id,
-                            @AuthenticationPrincipal AuthenticatedUser user,
-                            @RequestParam(required = false) Boolean ownerInformed,
-                            @RequestParam(required = false) DepositPaidTo depositPaidTo,
-                            @RequestParam(required = false) Boolean registeredAgreement,
-                            @RequestParam(required = false) AgreementHandling agreementHandling,
-                            @RequestParam(required = false) Short noticePeriodDays,
-                            @RequestParam(required = false) Boolean bachelorsAllowed) {
-        drafts.saveTerms(id, user.id(), ownerInformed, depositPaidTo, registeredAgreement,
-                agreementHandling, noticePeriodDays, bachelorsAllowed);
-        return next(id, 5);
-    }
-
-    // ---- Step 5: flatmates and rules --------------------------------------
-
-    @PostMapping("/list/{id}/5")
-    public String saveRules(@PathVariable UUID id,
-                            @AuthenticationPrincipal AuthenticatedUser user,
-
-                            @RequestParam(required = false) FlatmateGender flatmateGender,
-                            @RequestParam(required = false) String flatmateProfessions,
-                            @RequestParam(required = false) Boolean nonVegAllowed,
-                            @RequestParam(required = false) Boolean petsAllowed,
-                            @RequestParam(required = false) Boolean smokingAllowed,
-                            @RequestParam(required = false) Boolean guestsAllowed,
-                            @RequestParam(required = false) String houseRulesNote,
-                            @RequestParam(required = false) String availableFrom,
-                            RedirectAttributes redirect) {
-        Listing draft = drafts.requireOwnedDraft(id, user.id());
+    /**
+     * Saves the optional screen.
+     *
+     * <p>One handler for what used to be four, because these are now answered
+     * on one page and none of them gates anything. The service calls
+     * underneath are unchanged — this is a different doorway into the same
+     * rooms.
+     */
+    @PostMapping("/list/{id}/more")
+    public String saveMoreDetail(@PathVariable UUID id,
+                                 @AuthenticationPrincipal AuthenticatedUser user,
+                                 @RequestParam(required = false) HandoverType handoverType,
+                                 @RequestParam(required = false) List<String> amenities,
+                                 @RequestParam(required = false) List<String> perks,
+                                 @RequestParam(required = false) String maintenance,
+                                 @RequestParam(defaultValue = "false") boolean maintenanceIncluded,
+                                 @RequestParam(required = false) Short floor,
+                                 @RequestParam(required = false) Boolean hasLift,
+                                 @RequestParam(required = false) String societyName,
+                                 @RequestParam(required = false) String fullAddress,
+                                 @RequestParam(required = false) Boolean ownerInformed,
+                                 @RequestParam(required = false) DepositPaidTo depositPaidTo,
+                                 @RequestParam(required = false) Boolean registeredAgreement,
+                                 @RequestParam(required = false) AgreementHandling agreementHandling,
+                                 @RequestParam(required = false) Short noticePeriodDays,
+                                 @RequestParam(required = false) Boolean bachelorsAllowed,
+                                 @RequestParam(required = false) String flatmateProfessions,
+                                 @RequestParam(required = false) Boolean nonVegAllowed,
+                                 @RequestParam(required = false) Boolean petsAllowed,
+                                 @RequestParam(required = false) Boolean smokingAllowed,
+                                 @RequestParam(required = false) Boolean guestsAllowed,
+                                 @RequestParam(required = false) String houseRulesNote,
+                                 RedirectAttributes redirect) {
         try {
-            drafts.saveRules(id, user.id(), flatmateGender,
+            drafts.saveMoreDetail(id, user.id(),
+                    handoverType, amenities, perks,
+                    rupees("Society maintenance", maintenance), maintenanceIncluded,
+                    floor, hasLift, societyName, fullAddress,
+                    ownerInformed, depositPaidTo, registeredAgreement, agreementHandling,
+                    noticePeriodDays, bachelorsAllowed,
                     flatmateProfessions, nonVegAllowed, petsAllowed, smokingAllowed,
-                    guestsAllowed, houseRulesNote,
-                    parseDate(availableFrom, draft.getAvailableFrom(), LocalDate.now(clock.withZone(IST))));
-        } catch (InvalidDateException e) {
+                    guestsAllowed, houseRulesNote);
+        } catch (InvalidAmountException e) {
             redirect.addFlashAttribute("error", e.getMessage());
-            return "redirect:/list/%s/5".formatted(id);
+            return "redirect:/list/%s/more".formatted(id);
         }
-        return next(id, 6);
+        redirect.addFlashAttribute("notice", "Saved.");
+        return "redirect:/list/%s/more".formatted(id);
     }
 
-    // ---- Step 6: publish --------------------------------------------------
+    // ---- Publish ----------------------------------------------------------
 
     @PostMapping("/list/{id}/publish")
     public String publish(@PathVariable UUID id,

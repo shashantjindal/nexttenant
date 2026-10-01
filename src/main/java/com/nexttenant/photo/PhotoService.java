@@ -23,8 +23,17 @@ public class PhotoService {
 
     private static final Logger log = LoggerFactory.getLogger(PhotoService.class);
 
-    /** Enough for a room without becoming a slideshow. */
-    public static final int MAX_PHOTOS = 10;
+    /**
+     * Twenty.
+     *
+     * <p>Was ten. A flat takeover is not one room — people photograph the
+     * room, the kitchen, both bathrooms, the balcony, the building entrance
+     * and the furniture they are selling on, and ten ran out before the
+     * furniture. The thing stopping a listing becoming a slideshow is that
+     * nobody uploads twenty photos for fun, not a limit set low enough to
+     * cut off the ones who would.
+     */
+    public static final int MAX_PHOTOS = 20;
 
     /** "Minimum 3 required" — from the wizard's photo step. */
     public static final int MIN_PHOTOS_TO_PUBLISH = 3;

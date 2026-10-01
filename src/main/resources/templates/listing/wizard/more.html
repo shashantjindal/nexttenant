@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--/*
+  "Add more detail" — everything the two-screen flow stopped demanding.
+
+  This is four of the old six screens on one page, and none of it is required.
+  That is the whole argument for the page existing: every field here is
+  genuinely useful to a searcher, and not one of them decides whether a room
+  can go live, so not one of them belongs in front of a leaver still deciding
+  whether this is worth the effort.
+
+  One page rather than four because the audience is different. Nobody arrives
+  here by accident; they arrive having already published, wanting to make
+  their listing better. For that person, scrolling one page beats clicking
+  through four.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Add more detail — NextTenant</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+
+    <div class="wizard__head">
+        <div class="wizard__meta">
+            <span class="wizard__step">Optional &middot; nothing here is required</span>
+            <a class="wizard__exit" th:href="@{/dashboard}">Done</a>
+        </div>
+        <h1 class="wizard__title">Add more detail</h1>
+        <p class="wizard__lede">
+            Your listing is already live. These answer the questions people ask
+            before they agree to come and see it.
+        </p>
+    </div>
+
+    <form method="post" th:action="@{/list/{id}/more(id=${draft.id})}" class="wizard__form">
+
+        <!-- ================= The flat ================= -->
+        <fieldset class="wizard__group">
+            <legend>What comes with it</legend>
+
+            <label class="field">
+                <span class="field__label">What is included</span>
+                <select name="handoverType">
+                    <option value="">Not stated</option>
+                    <option th:each="h : ${handoverTypes}" th:value="${h}" th:text="${h.label}"
+                            th:selected="${h == draft.handoverType}">Room only</option>
+                </select>
+            </label>
+
+            <div class="field">
+                <span class="field__label">What the flat has</span>
+                <div class="check-grid">
+                    <label class="check" th:each="a : ${amenityOptions}">
+                        <input type="checkbox" name="amenities" th:value="${a.code}"
+                               th:checked="${draft.amenities.contains(a.code)}">
+                        <span th:text="${a.label}">Lift</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="field">
+                <span class="field__label">Perks</span>
+                <div class="check-grid">
+                    <label class="check" th:each="p : ${perkOptions}">
+                        <input type="checkbox" name="perks" th:value="${p.code}"
+                               th:checked="${draft.perks.contains(p.code)}">
+                        <span th:text="${p.label}">Balcony</span>
+                    </label>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- ================= The building ================= -->
+        <fieldset class="wizard__group">
+            <legend>The building</legend>
+
+            <label class="field">
+                <span class="field__label">Floor</span>
+                <input type="text" name="floor" inputmode="numeric"
+                       data-digits pattern="[0-9]*" maxlength="3"
+                       th:value="${draft.floor}" placeholder="5">
+            </label>
+
+            <label class="field">
+                <span class="field__label">Lift in building</span>
+                <select name="hasLift">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.hasLift == true}">Yes</option>
+                    <option value="false" th:selected="${draft.hasLift == false}">No</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Society maintenance</span>
+                <div class="field__money">
+                    <span class="field__prefix">&#8377;</span>
+                    <input type="text" name="maintenance" inputmode="numeric"
+                           data-digits data-ghost pattern="[0-9,]*"
+                           th:value="${draft.maintenanceInr}" placeholder="2500">
+                </div>
+            </label>
+
+            <label class="check">
+                <input type="checkbox" name="maintenanceIncluded" value="true"
+                       th:checked="${draft.maintenanceIncluded}">
+                <span>Already included in the rent</span>
+            </label>
+
+            <!--/*
+              Both of these are PRIVATE and the page has to say so. A society
+              name is an address — "Rustomjee Elanza, Malad West" locates the
+              building exactly — so publishing it would make the approximate
+              circle decorative. They go out with the phone number when a
+              request is accepted, and never before.
+            */-->
+            <label class="field">
+                <span class="field__label">
+                    Society or building name
+                    <span class="field__private">private</span>
+                </span>
+                <input type="text" name="societyName" maxlength="120"
+                       th:value="${priv != null} ? ${priv.societyName} : ''">
+            </label>
+
+            <label class="field">
+                <span class="field__label">
+                    Full address
+                    <span class="field__private">private</span>
+                </span>
+                <textarea name="fullAddress" rows="2"
+                          th:text="${priv != null} ? ${priv.fullAddress} : ''"></textarea>
+                <small class="wizard__hint">
+                    Never published. Sent with your number only when you accept
+                    someone's request.
+                </small>
+            </label>
+        </fieldset>
+
+        <!-- ================= Handover terms ================= -->
+        <fieldset class="wizard__group">
+            <legend>Deposit and paperwork</legend>
+
+            <label class="field">
+                <span class="field__label">Does the owner know this room is changing hands?</span>
+                <select name="ownerInformed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.ownerInformed == true}">Yes</option>
+                    <option value="false" th:selected="${draft.ownerInformed == false}">Not yet</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Who holds the deposit today?</span>
+                <select name="depositPaidTo">
+                    <option value="">Not stated</option>
+                    <option th:each="d : ${depositPaidToOptions}" th:value="${d}" th:text="${d.label}"
+                            th:selected="${d == draft.depositPaidTo}">The owner</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Is the agreement registered?</span>
+                <select name="registeredAgreement">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.registeredAgreement == true}">Yes</option>
+                    <option value="false" th:selected="${draft.registeredAgreement == false}">No</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">How does the paperwork transfer?</span>
+                <select name="agreementHandling">
+                    <option value="">Not stated</option>
+                    <option th:each="a : ${agreementOptions}" th:value="${a}" th:text="${a.label}"
+                            th:selected="${a == draft.agreementHandling}">New agreement</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Notice period left (days)</span>
+                <input type="text" name="noticePeriodDays" inputmode="numeric"
+                       data-digits pattern="[0-9]*" maxlength="3"
+                       th:value="${draft.noticePeriodDays}" placeholder="30">
+            </label>
+
+            <label class="field">
+                <span class="field__label">Does the society allow bachelors?</span>
+                <select name="bachelorsAllowed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.bachelorsAllowed == true}">Yes</option>
+                    <option value="false" th:selected="${draft.bachelorsAllowed == false}">No</option>
+                </select>
+            </label>
+        </fieldset>
+
+        <!-- ================= Flatmates and rules ================= -->
+        <fieldset class="wizard__group">
+            <legend>Flatmates and house rules</legend>
+
+            <label class="field">
+                <span class="field__label">What they do</span>
+                <input type="text" name="flatmateProfessions" maxlength="160"
+                       th:value="${draft.flatmateProfessions}"
+                       placeholder="Working professionals">
+            </label>
+
+            <label class="field">
+                <span class="field__label">Non-veg cooking</span>
+                <select name="nonVegAllowed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.nonVegAllowed == true}">Allowed</option>
+                    <option value="false" th:selected="${draft.nonVegAllowed == false}">Not allowed</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Pets</span>
+                <select name="petsAllowed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.petsAllowed == true}">Allowed</option>
+                    <option value="false" th:selected="${draft.petsAllowed == false}">Not allowed</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Smoking</span>
+                <select name="smokingAllowed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.smokingAllowed == true}">Allowed</option>
+                    <option value="false" th:selected="${draft.smokingAllowed == false}">Not allowed</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Overnight guests</span>
+                <select name="guestsAllowed">
+                    <option value="">Not stated</option>
+                    <option value="true" th:selected="${draft.guestsAllowed == true}">Allowed</option>
+                    <option value="false" th:selected="${draft.guestsAllowed == false}">Not allowed</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Anything else about the house</span>
+                <textarea name="houseRulesNote" rows="3" maxlength="1000"
+                          th:text="${draft.houseRulesNote}"
+                          placeholder="Quiet after 11, we split the cleaning"></textarea>
+            </label>
+        </fieldset>
+
+        <div class="wizard__nav">
+            <a class="btn btn--ghost" th:href="@{/dashboard}">Back to dashboard</a>
+            <button type="submit" class="btn btn--primary">Save</button>
+        </div>
+    </form>
+</main>
+
+</body>
+</html>

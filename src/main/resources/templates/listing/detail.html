@@ -77,8 +77,13 @@
                 </h1>
 
                 <p class="detail__subtitle" th:if="${listing.station}">
-                    <span th:text="${listing.walkTime}">8 min walk</span>
-                    from <span th:text="${listing.station}">Bandra</span> station
+                    <!--/* Walk time is optional since the wizard stopped
+                           asking; the station now comes from the area. */-->
+                    <th:block th:if="${listing.walkTime}">
+                        <span th:text="${listing.walkTime}">8 min walk</span> from
+                    </th:block>
+                    <th:block th:unless="${listing.walkTime}">Near</th:block>
+                    <span th:text="${listing.station}">Bandra</span> station
                     <span th:if="${listing.floorLabel}" th:text="'· ' + ${listing.floorLabel}">· 7th floor</span>
                 </p>
             </header>
@@ -213,8 +218,7 @@
                     <p class="detail__lede">
                         Map needs JavaScript. This room is in
                         <strong th:text="${listing.area}">Bandra West</strong>,
-                        about <span th:text="${listing.walkTime}">8 min walk</span>
-                        from <span th:text="${listing.station}">Bandra</span> station.
+                        near <span th:text="${listing.station}">Bandra</span> station.
                     </p>
                 </noscript>
             </section>

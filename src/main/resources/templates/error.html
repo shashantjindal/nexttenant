@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--/*
+  The error page.
+
+  Spring Boot's fallback — "Whitelabel Error Page ... no explicit mapping for
+  /error" — is a dead end with a stack trace on it. In production the trace is
+  switched off, which makes it worse rather than better: a bare grey page with
+  a status code and nowhere to go.
+
+  Thymeleaf resolves "error" automatically for any unhandled status, so this
+  file replaces that everywhere by existing.
+
+  The links are the point. Whatever went wrong, the person was trying to do
+  something, and the recovery from almost everything here is one of three
+  places: back to what they were browsing, back to their own listings, or back
+  to the start.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Something went wrong — NextTenant</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="empty" style="margin-top: var(--s-10)">
+
+        <!--/*
+          404 is not an error, it is a wrong address, and saying "something
+          went wrong" to somebody who mistyped a URL sends them looking for a
+          fault that is not there.
+        */-->
+        <th:block th:if="${status != null and status == 404}">
+            <p class="empty__title">That page is not here</p>
+            <p class="empty__body">
+                The link may be old, or the listing may have been taken down.
+                Rooms come down as soon as they are taken, which is usually
+                what this means.
+            </p>
+        </th:block>
+
+        <th:block th:if="${status != null and status == 403}">
+            <p class="empty__title">That is not yours to open</p>
+            <p class="empty__body">
+                You may be signed in as somebody else, or the listing may
+                belong to another account.
+            </p>
+        </th:block>
+
+        <th:block th:unless="${status != null and (status == 404 or status == 403)}">
+            <p class="empty__title">Something went wrong</p>
+            <p class="empty__body">
+                Nothing you did caused this and nothing you had entered is
+                lost &mdash; every step of a listing saves as you go.
+            </p>
+        </th:block>
+
+        <!--/* Three ways out, because the right one depends on what they were
+               doing and the page cannot know. */-->
+        <div class="admin-pager" style="justify-content: center; flex-wrap: wrap">
+            <a class="btn btn--primary" th:href="@{/flats}">Browse rooms</a>
+            <a class="btn btn--secondary" th:href="@{/dashboard}">Your listings</a>
+            <a class="btn btn--ghost" th:href="@{/}">Home</a>
+        </div>
+
+        <!--/* Shown so somebody reporting this has something to quote. The
+               message and trace are deliberately not here: in production they
+               are switched off anyway, and where they are not, they say more
+               about our internals than the reader needs. */-->
+        <p class="auth__fine" th:if="${status != null}" th:text="'Error ' + ${status}">
+            Error 500
+        </p>
+    </div>
+
+</main>
+
+</body>
+</html>

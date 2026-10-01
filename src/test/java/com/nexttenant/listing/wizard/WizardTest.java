@@ -34,7 +34,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The six-step listing wizard.
+ * The two-screen listing wizard.
+ *
+ * <p>It was six screens asking 33 fields and 15 checkboxes to collect seven
+ * required answers, which is why it is now two.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -99,10 +102,7 @@ class WizardTest {
     void draftResumesAtItsStep() throws Exception {
         UUID id = startDraft(owner);
 
-        mockMvc.perform(step(id, 1, owner)
-                .param("areaName", "Bandra West")
-                .param("latitude", "19.0596")
-                .param("longitude", "72.8295"));
+        mockMvc.perform(step(id, 1, owner).param("areaName", "Bandra West"));
 
         // wizard_step is a column, not a session attribute, so the position
         // survives a new browser, a new device and a server restart.
@@ -121,7 +121,7 @@ class WizardTest {
         mockMvc.perform(get("/list/" + id + "/1").with(authentication(as(stranger))))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(step(id, 3, stranger).param("monthlyRent", "1"))
+        mockMvc.perform(step(id, 2, stranger).param("monthlyRent", "1"))
                 .andExpect(status().isNotFound());
 
         mockMvc.perform(post("/list/" + id + "/publish")
@@ -148,10 +148,10 @@ class WizardTest {
         // This used to 404: requireOwnedDraft filtered on status = DRAFT, so
         // the "Edit" button on the dashboard led nowhere for every listing
         // anybody had actually published.
-        mockMvc.perform(get("/list/" + id + "/3").with(authentication(as(owner))))
+        mockMvc.perform(get("/list/" + id + "/2").with(authentication(as(owner))))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(step(id, 3, owner)
+        mockMvc.perform(step(id, 2, owner)
                         .param("monthlyRent", "35000").param("deposit", "70000"))
                 .andExpect(status().is3xxRedirection());
 
@@ -172,7 +172,7 @@ class WizardTest {
         java.time.Instant publishedAt = before.getPublishedAt();
         java.time.Instant expiresAt = before.getExpiresAt();
 
-        mockMvc.perform(step(id, 3, owner)
+        mockMvc.perform(step(id, 2, owner)
                 .param("monthlyRent", "31000").param("deposit", "62000"));
         // The button at the end of the edit flow posts publish; it must be a
         // no-op on something already live.
@@ -194,7 +194,7 @@ class WizardTest {
         // constraint violation marks the transaction rollback-only and cannot
         // be caught and turned into a message — the request would die at commit
         // with an error naming neither the field nor the page.
-        mockMvc.perform(step(id, 3, owner).param("monthlyRent", "").param("deposit", ""))
+        mockMvc.perform(step(id, 2, owner).param("monthlyRent", "").param("deposit", ""))
                 .andExpect(status().is3xxRedirection());
 
         Listing unchanged = listings.findById(id).orElseThrow();
@@ -209,7 +209,7 @@ class WizardTest {
 
         // The same POST that is refused on a live listing is fine here. The
         // rule is about what may be PUBLISHED, not about what may be typed.
-        mockMvc.perform(step(id, 3, owner).param("monthlyRent", "").param("deposit", ""))
+        mockMvc.perform(step(id, 2, owner).param("monthlyRent", "").param("deposit", ""))
                 .andExpect(status().is3xxRedirection());
 
         assertThat(listings.findById(id).orElseThrow().getMonthlyRentInr()).isNull();
@@ -222,9 +222,9 @@ class WizardTest {
 
         // Widening which statuses are editable must not widen WHO may edit
         // them. 404, not 403 — a 403 would confirm the listing exists.
-        mockMvc.perform(get("/list/" + id + "/3").with(authentication(as(stranger))))
+        mockMvc.perform(get("/list/" + id + "/2").with(authentication(as(stranger))))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(step(id, 3, stranger).param("monthlyRent", "1"))
+        mockMvc.perform(step(id, 2, stranger).param("monthlyRent", "1"))
                 .andExpect(status().isNotFound());
 
         assertThat(listings.findById(id).orElseThrow().getMonthlyRentInr()).isEqualTo(32000);
@@ -252,14 +252,20 @@ class WizardTest {
     @DisplayName("money fields accept what people actually type")
     void moneyParsingIsLenient() throws Exception {
         UUID id = startDraft(owner);
-        mockMvc.perform(step(id, 3, owner)
+        mockMvc.perform(step(id, 2, owner)
                 // The rest of the site renders rents with separators, so
                 // rejecting them here would be technically defensible and
                 // irritating.
                 .param("monthlyRent", "32,000")
                 .param("deposit", "₹64000")
-                .param("maintenance", " 2500 ")
                 .param("buyout", "15000"));
+
+        // Maintenance moved to the optional screen when the wizard shrank to
+        // two. It goes through the same parser, which is the point of checking
+        // it here rather than letting the two doorways drift apart.
+        mockMvc.perform(post("/list/" + id + "/more")
+                .with(authentication(as(owner))).with(csrf())
+                .param("maintenance", " 2500 "));
 
         Listing draft = listings.findById(id).orElseThrow();
         assertThat(draft.getMonthlyRentInr()).isEqualTo(32000);
@@ -288,21 +294,19 @@ class WizardTest {
     }
 
     @Test
-    @DisplayName("a pin outside Mumbai is rejected rather than stored")
-    void pinMustBeInMumbai() throws Exception {
+    @DisplayName("the area places the flat; there is no pin to get wrong")
+    void theAreaPlacesTheFlat() throws Exception {
         UUID id = startDraft(owner);
+        mockMvc.perform(step(id, 1, owner).param("areaName", "Bandra West"));
 
-        // Swapped latitude and longitude are both valid coordinates, so only a
-        // bounds check notices — this one lands in the Indian Ocean.
-        String html = mockMvc.perform(step(id, 1, owner)
-                        .param("areaName", "Bandra West")
-                        .param("latitude", "72.8295")
-                        .param("longitude", "19.0596"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        assertThat(html).contains("outside Mumbai");
-        assertThat(drafts.privateFor(id).orElseThrow().getExactLocation()).isNull();
+        // This replaces a test for a pin outside Mumbai. There is no longer a
+        // way to enter a coordinate at all, so the class of mistake it guarded
+        // against � a swapped latitude and longitude landing the flat in the
+        // Indian Ocean � cannot be made.
+        var priv = drafts.privateFor(id).orElseThrow();
+        assertThat(priv.getExactLocation()).isNotNull();
+        assertThat(priv.getLocationSource())
+                .isEqualTo(com.nexttenant.listing.LocationSource.AREA_CENTROID);
     }
 
     // ---- Privacy ----------------------------------------------------------
@@ -328,62 +332,78 @@ class WizardTest {
     }
 
     @Test
-    @DisplayName("the pin is stored privately and the public point is derived from it")
-    void pinGoesToPrivateAndTriggersTheJitter() throws Exception {
+    @DisplayName("the exact point stays private and the public one is derived from it")
+    void locationGoesToPrivateAndTriggersTheJitter() throws Exception {
         UUID id = completeAllSteps();
 
         var priv = drafts.privateFor(id).orElseThrow();
         assertThat(priv.getExactLocation()).isNotNull();
-        assertThat(priv.getSocietyName()).isEqualTo("Sunbeam Apartments");
 
-        // The trigger ran: the public column is populated, and differs.
-        Listing draft = listings.findById(id).orElseThrow();
-        assertThat(draft.getApproxLocation()).isNotNull();
-        assertThat(com.nexttenant.geo.GeoPoints.latitudeOf(draft.getApproxLocation()))
-                .isNotEqualTo(19.0596);
+        // The trigger ran: the public column is populated from the private
+        // one, by the database, with no Java in the path that could skip it.
+        assertThat(listings.findById(id).orElseThrow().getApproxLocation()).isNotNull();
     }
 
     // ---- Helper -----------------------------------------------------------
 
     private UUID completeAllSteps() throws Exception {
-        // Throws from tinyJpeg(); declared on the method signature already.
         UUID id = startDraft(owner);
+        fillScreenOne(id);
+        fillScreenTwo(id);
+        fillOptionalDetail(id);
 
-        mockMvc.perform(step(id, 1, owner)
-                .param("areaName", "Bandra West").param("station", "Bandra")
-                .param("walkMinutes", "8").param("floor", "7").param("hasLift", "true")
-                .param("latitude", "19.0596").param("longitude", "72.8295")
-                .param("societyName", "Sunbeam Apartments")
-                .param("fullAddress", "Flat 702, 14th Road, Bandra West"));
-
-        mockMvc.perform(step(id, 2, owner)
-                .param("configuration", "BHK_2").param("roomType", "PRIVATE_ROOM")
-                .param("handoverType", "ROOM_WITH_FURNITURE")
-                .param("existingFlatmates", "2").param("furnishing", "SEMI_FURNISHED")
-                .param("amenities", "LIFT").param("amenities", "WIFI"));
-
-        mockMvc.perform(step(id, 3, owner)
-                .param("monthlyRent", "32000").param("deposit", "64000")
-                .param("maintenance", "2500").param("buyout", "15000"));
-
-        mockMvc.perform(step(id, 4, owner)
-                .param("ownerInformed", "true").param("depositPaidTo", "EXISTING_TENANT")
-                .param("registeredAgreement", "true")
-                .param("agreementHandling", "TRANSFER_EXISTING")
-                .param("noticePeriodDays", "30").param("bachelorsAllowed", "true"));
-
-        mockMvc.perform(step(id, 5, owner)
-                .param("availableFrom", "2026-11-01")
-                .param("flatmateGender", "ANY"));
-
-        // Step 6 is photos, and publication needs the minimum. Uploaded
-        // through PhotoService rather than as multipart, because what is under
-        // test here is the wizard, not the upload plumbing.
+        // Photos are required to publish, uploaded through PhotoService rather
+        // than as multipart because what is under test here is the wizard, not
+        // the upload plumbing.
         for (int i = 0; i < PhotoService.MIN_PHOTOS_TO_PUBLISH; i++) {
             photos.upload(id, tinyJpeg(), "room" + i + ".jpg");
         }
-
         return id;
+    }
+
+    /** The eight compulsory answers, as the first screen posts them. */
+    private void fillScreenOne(UUID id) throws Exception {
+        mockMvc.perform(step(id, 1, owner)
+                .param("areaName", "Bandra West")
+                .param("configuration", "BHK_2")
+                .param("roomType", "PRIVATE_ROOM")
+                .param("furnishing", "SEMI_FURNISHED")
+                .param("flatType", "GATED_SOCIETY")
+                .param("flatmateGender", "ANY")
+                .param("availableFrom", "2026-11-01")
+                .param("existingFlatmates", "2"));
+    }
+
+    /**
+     * The optional screen.
+     *
+     * <p>Included because this helper is named for producing a COMPLETE
+     * listing, and since the wizard shrank to two screens a published listing
+     * no longer has handover terms unless somebody goes and adds them. That is
+     * the intended product behaviour; it is not what a fixture called
+     * "complete" should mean.
+     */
+    private void fillOptionalDetail(UUID id) throws Exception {
+        mockMvc.perform(post("/list/" + id + "/more")
+                .with(authentication(as(owner))).with(csrf())
+                .param("handoverType", "ROOM_WITH_FURNITURE")
+                .param("amenities", "LIFT").param("amenities", "WIFI")
+                .param("floor", "7").param("hasLift", "true")
+                .param("societyName", "Sunbeam Apartments")
+                .param("fullAddress", "Flat 702, 14th Road, Bandra West")
+                .param("ownerInformed", "true")
+                .param("depositPaidTo", "EXISTING_TENANT")
+                .param("registeredAgreement", "true")
+                .param("agreementHandling", "TRANSFER_EXISTING")
+                .param("noticePeriodDays", "30")
+                .param("bachelorsAllowed", "true"));
+    }
+
+    private void fillScreenTwo(UUID id) throws Exception {
+        mockMvc.perform(step(id, 2, owner)
+                .param("monthlyRent", "32000").param("deposit", "64000")
+                .param("brokerage", "0").param("buyout", "15000")
+                .param("description", "Easy-going flatmates."));
     }
 
     /** A minimal valid JPEG. */
@@ -418,7 +438,7 @@ class WizardTest {
     void everyStepRenders() throws Exception {
         UUID id = startDraft(owner);
 
-        for (int n = 1; n <= 6; n++) {
+        for (int n = 1; n <= 2; n++) {
             mockMvc.perform(get("/list/" + id + "/" + n).with(authentication(as(owner))))
                     .andExpect(status().isOk());
         }
@@ -427,16 +447,19 @@ class WizardTest {
 
         // Now with data, which takes the other branch of every null check —
         // in particular the dropped map pin, whose null guard was the bug.
-        mockMvc.perform(step(id, 1, owner)
-                .param("areaName", "Bandra West").param("station", "Bandra")
-                .param("walkMinutes", "8").param("floor", "7").param("hasLift", "true")
-                .param("latitude", "19.0596").param("longitude", "72.8295"));
+        fillScreenOne(id);
+        fillScreenTwo(id);
 
-        for (int n = 1; n <= 6; n++) {
+        for (int n = 1; n <= 2; n++) {
             mockMvc.perform(get("/list/" + id + "/" + n).with(authentication(as(owner))))
                     .andExpect(status().isOk());
         }
         mockMvc.perform(get("/list/" + id + "/preview").with(authentication(as(owner))))
+                .andExpect(status().isOk());
+
+        // And the optional screen, which is four of the old six on one page
+        // and is the one nobody would notice was broken.
+        mockMvc.perform(get("/list/" + id + "/more").with(authentication(as(owner))))
                 .andExpect(status().isOk());
     }
 }

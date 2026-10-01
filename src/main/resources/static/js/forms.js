@@ -100,6 +100,33 @@
      * anyone without JavaScript — and anyone correcting a typo before the
      * sixth digit lands — still uses.
      */
+    /*
+     * The example number gets out of the way when you tap the field.
+     *
+     * A placeholder reading "32000" in a rent box looks like a value already
+     * entered — grey text in a field is how every form on the internet shows
+     * something it has filled in for you. People tapped in, saw a number, and
+     * were not sure whether they were adding to it or replacing it.
+     *
+     * Clearing it on focus and restoring it on blur keeps the example for
+     * anybody who has not got there yet, and removes the ambiguity for the one
+     * person actually looking at the field.
+     */
+    document.addEventListener('focusin', function (event) {
+        var el = event.target;
+        if (el && el.hasAttribute && el.hasAttribute('data-ghost') && el.placeholder) {
+            el.setAttribute('data-ghost-text', el.placeholder);
+            el.placeholder = '';
+        }
+    });
+
+    document.addEventListener('focusout', function (event) {
+        var el = event.target;
+        if (el && el.hasAttribute && el.hasAttribute('data-ghost-text')) {
+            el.placeholder = el.getAttribute('data-ghost-text');
+        }
+    });
+
     var otp = document.querySelector('input[autocomplete="one-time-code"]');
     if (otp && otp.form) {
         var sent = false;

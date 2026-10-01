@@ -118,14 +118,14 @@ class DashboardTest {
     @DisplayName("a draft is shown so it can be resumed, not hidden")
     void draftsAppearOnTheDashboard() throws Exception {
         Listing draft = listings.saveAndFlush(new Listing(owner.getId()));
-        draft.advanceWizardTo(3);
+        draft.advanceWizardTo(1);
         listings.saveAndFlush(draft);
 
         String html = mockMvc.perform(get("/dashboard").with(authentication(as(owner))))
                 .andReturn().getResponse().getContentAsString();
 
         // A draft that vanished from the dashboard is a draft nobody finishes.
-        assertThat(html).contains("Unfinished listing").contains("step 3 of 6");
+        assertThat(html).contains("Unfinished listing").contains("step 1 of 2");
     }
 
     @Test

@@ -1,86 +1,190 @@
 <!DOCTYPE html>
+<!--/*
+  Screen two of two: photos and money.
+
+  Photos come FIRST on this screen and not last in the flow, which is the
+  single biggest ordering change. They are the highest-effort thing asked for
+  and they are required, and they used to be screen six of six — so somebody
+  answered thirty-odd questions and then hit a wall needing three photos they
+  did not have to hand. Everything saved; nothing published. The dashboard
+  filled up with listings stopped at "step 6 of 6".
+
+  The upload form is its own <form>, outside the money form. Two separate
+  submissions: photos go the moment they are chosen, the money posts when the
+  person is done. Nesting forms is invalid HTML and browsers resolve it by
+  discarding one of them.
+*/-->
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><title>Tell us about the flat — NextTenant</title></head>
+<head><title>Photos and money — NextTenant</title></head>
 <body>
 
 <main id="content" class="page-width wizard">
     <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
-                       'Tell us about the flat',
-                       'People filter on exactly these fields, so be accurate rather than generous.')}"></div>
+                       'Photos and money',
+                       'Three photos minimum. Rooms with photos get several times more requests.')}"></div>
 
+    <p class="auth__error" th:if="${photoError}" th:text="${photoError}" role="alert">error</p>
+    <p class="auth__notice" th:if="${photoNotice}" th:text="${photoNotice}">added</p>
+
+    <!-- ================= Photos ================= -->
+    <fieldset class="wizard__group">
+        <legend>Photos</legend>
+
+        <form method="post" th:action="@{/list/{id}/photos(id=${draft.id})}"
+              enctype="multipart/form-data" class="photo-upload" data-autosubmit>
+            <label class="field">
+                <span class="field__label">Add photos</span>
+                <!--/* accept= filters the picker for convenience only. The
+                       server decodes every upload regardless: a file extension
+                       and a MIME type are both supplied by the client and
+                       neither is evidence of anything. */-->
+                <input type="file" name="file" accept="image/*" multiple required>
+            </label>
+
+            <!--/* Hidden by photo-upload.js once that script is running to do
+                   its job. Without the script this is the only way to upload,
+                   so it cannot be removed from the markup. */-->
+            <button type="submit" class="btn btn--secondary" data-autosubmit-fallback>
+                Upload
+            </button>
+
+            <p class="photo-upload__busy" hidden>Uploading&hellip;</p>
+        </form>
+
+        <div class="photo-count">
+            <span th:text="${#lists.size(photos)} + ' of ' + ${maxPhotos} + ' photos'">0 of 20</span>
+            <span class="photo-count__need"
+                  th:if="${#lists.size(photos) < minPhotos}"
+                  th:text="'Add ' + (${minPhotos} - ${#lists.size(photos)}) + ' more to publish'">Add 3 more</span>
+            <span class="photo-count__ok" th:if="${#lists.size(photos) >= minPhotos}">Enough to publish</span>
+        </div>
+
+        <div class="photo-grid" th:if="${!photos.isEmpty()}">
+            <figure class="photo-tile" th:each="photo : ${photos}">
+                <img th:src="@{/photos/{id}/thumb(id=${photo.id})}" alt="Listing photo" loading="lazy">
+                <figcaption>
+                    <span class="photo-tile__cover" th:if="${photo.cover}">Cover</span>
+                    <div class="photo-tile__actions">
+                        <form method="post" th:if="${!photo.cover}"
+                              th:action="@{/list/{lid}/photos/{pid}/cover(lid=${draft.id}, pid=${photo.id})}">
+                            <button type="submit" class="btn btn--ghost">Make cover</button>
+                        </form>
+                        <form method="post"
+                              th:action="@{/list/{lid}/photos/{pid}/delete(lid=${draft.id}, pid=${photo.id})}">
+                            <button type="submit" class="btn btn--ghost">Remove</button>
+                        </form>
+                    </div>
+                </figcaption>
+            </figure>
+        </div>
+
+        <p class="wizard__hint">
+            Photos are re-encoded on upload, which removes the location data your
+            phone stores inside every picture. Without that, the exact address of
+            your flat would be readable from the image file &mdash; and the
+            approximate circle on your listing would mean nothing.
+        </p>
+    </fieldset>
+
+    <!-- ================= Money ================= -->
     <form method="post" th:action="@{/list/{id}/2(id=${draft.id})}" class="wizard__form">
 
         <fieldset class="wizard__group">
-            <legend>Layout</legend>
+            <legend>The money</legend>
 
             <label class="field">
-                <span class="field__label">Configuration</span>
-                <select name="configuration" required>
-                    <option value="">Choose</option>
-                    <option th:each="c : ${configurations}" th:value="${c}" th:text="${c.label}"
-                            th:selected="${c == draft.configuration}">2 BHK</option>
-                </select>
+                <span class="field__label">Monthly rent for this room</span>
+                <div class="field__money">
+                    <span class="field__prefix">&#8377;</span>
+                    <!--/* data-placeholder rather than placeholder: the example
+                           number reads as a real value already entered, so the
+                           script clears it the moment the field is focused and
+                           puts it back if the field is left empty. */-->
+                    <input type="text" name="monthlyRent" inputmode="numeric"
+                           data-digits data-ghost pattern="[0-9,]*"
+                           th:value="${draft.monthlyRentInr}" placeholder="32000" required>
+                </div>
             </label>
 
             <label class="field">
-                <span class="field__label">What you are handing over</span>
-                <select name="roomType" required>
-                    <option value="">Choose</option>
-                    <option th:each="r : ${roomTypes}" th:value="${r}" th:text="${r.label}"
-                            th:selected="${r == draft.roomType}">Private room</option>
-                </select>
+                <span class="field__label">Security deposit</span>
+                <div class="field__money">
+                    <span class="field__prefix">&#8377;</span>
+                    <input type="text" name="deposit" inputmode="numeric"
+                           data-digits data-ghost pattern="[0-9,]*"
+                           th:value="${draft.depositInr}" placeholder="64000" required>
+                </div>
             </label>
 
             <label class="field">
-                <span class="field__label">What comes with it</span>
-                <select name="handoverType">
-                    <option value="">Choose</option>
-                    <option th:each="h : ${handoverTypes}" th:value="${h}" th:text="${h.label}"
-                            th:selected="${h == draft.handoverType}">Room with furniture</option>
-                </select>
+                <span class="field__label">Brokerage you are asking for</span>
+                <div class="field__money">
+                    <span class="field__prefix">&#8377;</span>
+                    <!--/* Prefilled 0, not blank. The claim this product makes
+                           is that takeovers are broker-free; an empty required
+                           box asks for a number, where a zero asks only to be
+                           confirmed. */-->
+                    <input type="text" name="brokerage" inputmode="numeric"
+                           data-digits pattern="[0-9,]*" required
+                           th:value="${draft.brokerageInr} ?: 0">
+                </div>
+                <small class="wizard__hint">
+                    Zero carries the badge and gets far more requests. This is a
+                    takeover, not a brokerage.
+                </small>
             </label>
 
             <label class="field">
-                <span class="field__label">Flatmates staying on after you leave</span>
-                <input type="number" name="existingFlatmates" min="0" max="12"
-                       inputmode="numeric" th:value="${draft.existingFlatmates}">
+                <span class="field__label">Buy-out for what you leave behind</span>
+                <div class="field__money">
+                    <span class="field__prefix">&#8377;</span>
+                    <input type="text" name="buyout" inputmode="numeric"
+                           data-digits pattern="[0-9,]*" required
+                           th:value="${draft.buyoutInr} ?: 0">
+                </div>
+                <small class="wizard__hint">
+                    Furniture, appliances, curtains &mdash; whatever you are
+                    selling on. Zero if there is nothing.
+                </small>
             </label>
         </fieldset>
 
+        <!-- ================= Optional ================= -->
         <fieldset class="wizard__group">
-            <legend>Furnishing and amenities</legend>
+            <legend>Worth adding</legend>
 
             <label class="field">
-                <span class="field__label">Furnishing</span>
-                <select name="furnishing" required>
-                    <option value="">Choose</option>
-                    <option th:each="f : ${furnishings}" th:value="${f}" th:text="${f.label}"
-                            th:selected="${f == draft.furnishing}">Semi-furnished</option>
-                </select>
+                <span class="field__label">
+                    Google Maps link
+                    <span class="field__optional">optional</span>
+                </span>
+                <input type="url" name="mapsLink" maxlength="2048"
+                       th:value="${priv != null} ? ${priv.mapsLink} : ''"
+                       placeholder="https://maps.app.goo.gl/…">
+                <!--/* Private, and said so plainly. A Maps link IS an address;
+                       published it would make the approximate circle
+                       decorative, which is why it sits with the phone number
+                       rather than on the listing. */-->
+                <small class="wizard__hint">
+                    Never shown publicly. Sent along with your number only when
+                    you accept someone's request, so they can find the building.
+                </small>
             </label>
 
-            <div class="field">
-                <span class="field__label">What the flat has</span>
-                <div class="check-grid">
-                    <label class="check" th:each="a : ${amenityOptions}">
-                        <input type="checkbox" name="amenities" th:value="${a.code}"
-                               th:checked="${draft.amenities.contains(a.code)}">
-                        <span th:text="${a.label}">Lift</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="field">
-                <span class="field__label">Perks</span>
-                <div class="check-grid">
-                    <label class="check" th:each="p : ${perkOptions}">
-                        <input type="checkbox" name="perks" th:value="${p.code}"
-                               th:checked="${draft.perks.contains(p.code)}">
-                        <span th:text="${p.label}">Balcony</span>
-                    </label>
-                </div>
-            </div>
+            <label class="field">
+                <span class="field__label">
+                    Anything else worth saying
+                    <span class="field__optional">optional</span>
+                </span>
+                <textarea name="description" rows="4" maxlength="1500"
+                          th:text="${draft.description}"
+                          placeholder="Easy-going flatmates, everything already set up, five minutes from the metro."></textarea>
+                <small class="wizard__hint">
+                    The only part in your own words. It is usually what makes
+                    someone pick this room over an identical one.
+                </small>
+            </label>
         </fieldset>
 
         <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
