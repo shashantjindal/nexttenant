@@ -4,7 +4,12 @@ import com.nexttenant.auth.AuthenticatedUser;
 import com.nexttenant.listing.Listing;
 import com.nexttenant.listing.ListingPrivate;
 import com.nexttenant.listing.ListingPrivateRepository;
+import com.nexttenant.listing.Configuration;
+import com.nexttenant.listing.FlatType;
+import com.nexttenant.listing.FlatmateGender;
+import com.nexttenant.listing.Furnishing;
 import com.nexttenant.listing.ListingRepository;
+import com.nexttenant.listing.RoomType;
 import com.nexttenant.listing.LocationSource;
 import com.nexttenant.user.AgeBracket;
 import com.nexttenant.user.Gender;
@@ -75,11 +80,11 @@ class WizardValidationTest {
     @Test
     @DisplayName("a money field with letters in it is refused, not quietly salvaged")
     void junkInAMoneyFieldIsRefused() throws Exception {
-        mockMvc.perform(post("/list/" + draft.getId() + "/3")
+        mockMvc.perform(post("/list/" + draft.getId() + "/2")
                         .with(authentication(signedIn())).with(csrf())
                         .param("monthlyRent", "0234ax")
                         .param("deposit", "64000"))
-                .andExpect(redirectedUrl("/list/" + draft.getId() + "/3"))
+                .andExpect(redirectedUrl("/list/" + draft.getId() + "/2"))
                 .andExpect(flash().attributeExists("error"));
 
         // The bug this replaces: non-digits were stripped, so "0234ax" became
@@ -96,11 +101,11 @@ class WizardValidationTest {
     void separatorsStillWork() throws Exception {
         // Refusing these would be defensible and would irritate everybody: the
         // rest of the site renders rents with exactly these separators.
-        mockMvc.perform(post("/list/" + draft.getId() + "/3")
+        mockMvc.perform(post("/list/" + draft.getId() + "/2")
                         .with(authentication(signedIn())).with(csrf())
                         .param("monthlyRent", "32,000")
                         .param("deposit", "₹ 64000"))
-                .andExpect(redirectedUrl("/list/" + draft.getId() + "/4"));
+                .andExpect(redirectedUrl("/list/" + draft.getId() + "/preview"));
 
         Listing after = listings.findById(draft.getId()).orElseThrow();
         assertThat(after.getMonthlyRentInr()).isEqualTo(32000);
@@ -110,11 +115,11 @@ class WizardValidationTest {
     @Test
     @DisplayName("nothing typed is still nothing, not an error")
     void emptyIsNotJunk() throws Exception {
-        mockMvc.perform(post("/list/" + draft.getId() + "/3")
+        mockMvc.perform(post("/list/" + draft.getId() + "/2")
                         .with(authentication(signedIn())).with(csrf())
                         .param("monthlyRent", "")
                         .param("deposit", ""))
-                .andExpect(redirectedUrl("/list/" + draft.getId() + "/4"));
+                .andExpect(redirectedUrl("/list/" + draft.getId() + "/preview"));
     }
 
     // ---- The move-in date --------------------------------------------------
@@ -122,10 +127,10 @@ class WizardValidationTest {
     @Test
     @DisplayName("a move-in date in the past is refused")
     void pastMoveInDateIsRefused() throws Exception {
-        mockMvc.perform(post("/list/" + draft.getId() + "/5")
+        mockMvc.perform(post("/list/" + draft.getId() + "/1")
                         .with(authentication(signedIn())).with(csrf())
                         .param("availableFrom", LocalDate.now().minusMonths(2).toString()))
-                .andExpect(redirectedUrl("/list/" + draft.getId() + "/5"))
+                .andExpect(redirectedUrl("/list/" + draft.getId() + "/1"))
                 .andExpect(flash().attributeExists("error"));
 
         assertThat(listings.findById(draft.getId()).orElseThrow().getAvailableFrom()).isNull();
@@ -142,11 +147,11 @@ class WizardValidationTest {
         // "available now" in October. Refusing to let its owner save an edit
         // to house rules, over a field they did not touch, would be the
         // validation making the listing worse.
-        mockMvc.perform(post("/list/" + draft.getId() + "/5")
+        mockMvc.perform(post("/list/" + draft.getId() + "/1")
                         .with(authentication(signedIn())).with(csrf())
                         .param("availableFrom", past.toString())
                         .param("houseRulesNote", "Quiet after 11"))
-                .andExpect(redirectedUrl("/list/" + draft.getId() + "/6"));
+                .andExpect(redirectedUrl("/list/" + draft.getId() + "/2"));
 
         assertThat(listings.findById(draft.getId()).orElseThrow().getAvailableFrom())
                 .isEqualTo(past);
@@ -155,7 +160,7 @@ class WizardValidationTest {
     @Test
     @DisplayName("the picker will not offer a date that has gone")
     void thePickerHasAFloor() throws Exception {
-        String html = mockMvc.perform(get("/list/" + draft.getId() + "/5")
+        String html = mockMvc.perform(get("/list/" + draft.getId() + "/1")
                         .with(authentication(signedIn())))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -166,20 +171,26 @@ class WizardValidationTest {
                 + LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")) + "\"");
     }
 
-    // ---- The location pin --------------------------------------------------
+    // ---- Where the flat gets placed ----------------------------------------
+
+    /** Screen one, with everything filled in but the area, which varies. */
+    private void screenOne(String area) {
+        drafts.saveBasics(draft.getId(), owner.getId(), area,
+                Configuration.BHK_2, RoomType.PRIVATE_ROOM, Furnishing.SEMI_FURNISHED,
+                FlatType.GATED_SOCIETY, FlatmateGender.ANY,
+                LocalDate.now().plusMonths(1), (short) 2);
+    }
 
     @Test
-    @DisplayName("a named area places the flat, so no pin is needed")
+    @DisplayName("a named area places the flat, so no pin is ever asked for")
     void anAreaIsEnoughToPlaceAFlat() {
-        drafts.saveLocation(draft.getId(), owner.getId(),
-                "Powai", "Kanjurmarg", (short) 10, (short) 3, true,
-                null, null, null, null);
+        screenOne("Powai");
 
         ListingPrivate priv = listingPrivates.findById(draft.getId()).orElseThrow();
 
-        // This is the change that matters most of the eight. Dropping a pin
-        // asked somebody to find their own building on a map, on a phone, and
-        // it was the commonest place people stopped.
+        // The pin question is gone from the product entirely. It asked
+        // somebody to find their own building on a map, on a phone, and it was
+        // the commonest place people stopped.
         assertThat(priv.hasLocation()).isTrue();
         assertThat(priv.getLocationSource()).isEqualTo(LocationSource.AREA_CENTROID);
 
@@ -196,51 +207,56 @@ class WizardValidationTest {
     }
 
     @Test
+    @DisplayName("the station comes from the area rather than from the person")
+    void theStationIsDerived() {
+        screenOne("Powai");
+
+        // One of the two questions that disappeared without its answer going
+        // with it. Every area already knew its own station.
+        assertThat(listings.findById(draft.getId()).orElseThrow().getNearestStation())
+                .isNotBlank();
+    }
+
+    @Test
     @DisplayName("a derived location says it is derived")
     void aCentroidDoesNotPretendToBeAPin() {
-        drafts.saveLocation(draft.getId(), owner.getId(),
-                "Powai", "Kanjurmarg", (short) 10, null, null,
-                null, null, null, null);
-
-        ListingPrivate priv = listingPrivates.findById(draft.getId()).orElseThrow();
+        screenOne("Powai");
 
         // exact_location is a column whose whole meaning is that it holds the
         // truth. A locality centre in it, unannounced, would leave the table
         // lying about itself — and invisibly, since a centroid looks exactly
         // like a pin.
-        assertThat(priv.hasRealPin()).isFalse();
+        assertThat(listingPrivates.findById(draft.getId()).orElseThrow().hasRealPin())
+                .isFalse();
     }
 
     @Test
-    @DisplayName("a real pin is never replaced by a centroid")
+    @DisplayName("a pin from the old wizard survives a re-save")
     void resavingDoesNotDowngradeARealPin() {
-        drafts.saveLocation(draft.getId(), owner.getId(),
-                "Powai", "Kanjurmarg", (short) 10, null, null,
-                19.1176, 72.9060, null, null);
-        assertThat(listingPrivates.findById(draft.getId()).orElseThrow().hasRealPin()).isTrue();
+        // Listings created before the pin was removed still carry real ones.
+        // Editing such a listing posts no coordinates — there is no longer a
+        // map to post them from — and must not quietly replace the building
+        // its owner marked with the middle of their neighbourhood.
+        ListingPrivate priv = new ListingPrivate(draft.getId());
+        priv.placeAt(com.nexttenant.geo.GeoPoints.of(19.1176, 72.9060));
+        listingPrivates.saveAndFlush(priv);
 
-        // Coming back to step 1 to fix the walk time, without touching the
-        // map, posts no coordinates. That must not quietly throw away the pin
-        // they already placed.
-        drafts.saveLocation(draft.getId(), owner.getId(),
-                "Powai", "Kanjurmarg", (short) 4, null, null,
-                null, null, null, null);
+        screenOne("Powai");
 
-        ListingPrivate priv = listingPrivates.findById(draft.getId()).orElseThrow();
-        assertThat(priv.hasRealPin()).isTrue();
-        assertThat(priv.getLocationSource()).isEqualTo(LocationSource.PIN);
+        ListingPrivate after = listingPrivates.findById(draft.getId()).orElseThrow();
+        assertThat(after.hasRealPin()).isTrue();
+        assertThat(after.getLocationSource()).isEqualTo(LocationSource.PIN);
     }
 
     @Test
     @DisplayName("an unrecognised area leaves the flat unplaced rather than guessing")
     void anUnknownAreaPlacesNothing() {
-        drafts.saveLocation(draft.getId(), owner.getId(),
-                "Nowhere In Particular", null, null, null, null,
-                null, null, null, null);
+        screenOne("Nowhere In Particular");
 
         assertThat(listingPrivates.findById(draft.getId())
                 .map(ListingPrivate::hasLocation).orElse(false)).isFalse();
     }
+
 
     // ---- What is still missing ---------------------------------------------
 
@@ -259,7 +275,7 @@ class WizardValidationTest {
                 .filteredOn(m -> m.label().equals("the monthly rent"))
                 .singleElement()
                 .extracting(ListingDraftService.Missing::step)
-                .isEqualTo(3);
+                .isEqualTo(2);
     }
 
     @Test
@@ -273,7 +289,7 @@ class WizardValidationTest {
         // As plain text this list named the problem and left somebody to work
         // out which of six screens held it — on the page whose entire job is
         // getting them over the line.
-        assertThat(html).contains("href=\"/list/" + draft.getId() + "/3\"");
+        assertThat(html).contains("href=\"/list/" + draft.getId() + "/2\"");
         assertThat(html).contains("the monthly rent");
     }
 
@@ -282,7 +298,7 @@ class WizardValidationTest {
     @Test
     @DisplayName("the wizard header offers publishing, not exiting")
     void theHeaderSaysPublish() throws Exception {
-        String html = mockMvc.perform(get("/list/" + draft.getId() + "/3")
+        String html = mockMvc.perform(get("/list/" + draft.getId() + "/2")
                         .with(authentication(signedIn())))
                 .andReturn().getResponse().getContentAsString();
 

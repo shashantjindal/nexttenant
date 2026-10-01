@@ -347,6 +347,7 @@ public class DevDataSeeder implements CommandLineRunner {
             case SHARED_ROOM -> 0.62;
             case PRIVATE_ROOM -> 1.0;
             case MASTER_ROOM -> 1.25;
+            case HALL -> 0.5;
             case ENTIRE_FLAT -> 2.1;
         };
         double furnishingFactor = switch (furnishing) {

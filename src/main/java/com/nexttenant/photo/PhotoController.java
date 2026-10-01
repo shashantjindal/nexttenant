@@ -27,6 +27,16 @@ import java.util.UUID;
 @Controller
 public class PhotoController {
 
+    /**
+     * The wizard screen photos live on.
+     *
+     * <p>A constant rather than four copies of a string. It was "/6" in four
+     * places, and when the wizard went from six screens to two every upload
+     * redirected to a step that no longer existed — a 404 immediately after a
+     * successful upload, which reads as the upload having failed.
+     */
+    private static final String PHOTO_STEP = "/2";
+
     private final PhotoService photos;
     private final PhotoRepository repository;
     private final PhotoStorage storage;
@@ -112,7 +122,7 @@ public class PhotoController {
             redirect.addFlashAttribute("photoNotice",
                     stored == 1 ? "Photo added" : stored + " photos added");
         }
-        return "redirect:/list/" + listingId + "/6";
+        return "redirect:/list/" + listingId + PHOTO_STEP;
     }
 
     @PostMapping("/list/{listingId}/photos/{photoId}/delete")
@@ -120,7 +130,7 @@ public class PhotoController {
                          @AuthenticationPrincipal AuthenticatedUser user) {
         drafts.requireOwnedDraft(listingId, user.id());
         photos.delete(listingId, photoId);
-        return "redirect:/list/" + listingId + "/6";
+        return "redirect:/list/" + listingId + PHOTO_STEP;
     }
 
     /**
@@ -139,7 +149,7 @@ public class PhotoController {
         // reorder() puts the listed ids first and appends the rest, so naming
         // one id is enough to promote it.
         photos.reorder(listingId, List.of(photoId));
-        return "redirect:/list/" + listingId + "/6";
+        return "redirect:/list/" + listingId + PHOTO_STEP;
     }
 
     @PostMapping("/list/{listingId}/photos/order")
@@ -148,6 +158,6 @@ public class PhotoController {
                           @RequestParam("id") List<UUID> orderedIds) {
         drafts.requireOwnedDraft(listingId, user.id());
         photos.reorder(listingId, orderedIds);
-        return "redirect:/list/" + listingId + "/6";
+        return "redirect:/list/" + listingId + PHOTO_STEP;
     }
 }

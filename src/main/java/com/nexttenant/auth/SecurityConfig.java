@@ -32,6 +32,20 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        // These two live UNDER /flats and must not be public,
+                        // so they are declared first — Spring Security takes
+                        // the first matching rule, not the most specific.
+                        //
+                        // Without this, /flats/**'s permitAll let a signed-out
+                        // visitor reach the handlers, which read
+                        // @AuthenticationPrincipal and dereference it. The
+                        // result was a NullPointerException: a 500 rendered as
+                        // a blank white page, at the exact moment somebody was
+                        // trying to ask about a room. Matched here, they get
+                        // the login screen instead, and the entry point
+                        // remembers where they were going.
+                        .requestMatchers("/flats/*/request", "/flats/*/report").authenticated()
+
                         // Public: the whole browse experience works signed out.
                         // Requiring a login to look at listings would cost most
                         // of the organic search traffic the product depends on.
@@ -211,6 +225,10 @@ public class SecurityConfig {
                         .deleteCookies("SESSION")
                 )
 
+                .requestCache(cache -> cache.requestCache(requestCache()))
+
+
+
                 .exceptionHandling(ex -> ex
                         // An unauthenticated request to a private page goes to
                         // the login screen rather than returning a bare 403.
@@ -232,5 +250,24 @@ public class SecurityConfig {
     @Bean
     public SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
+    }
+
+    /**
+     * Remembers where somebody was going when they were sent to log in.
+     *
+     * <p>Spring Security fills this automatically when the entry point fires,
+     * and with a form login it would also empty it automatically. This app
+     * authenticates by OTP across three screens, so nothing reads it back —
+     * which meant a visitor who clicked "Request contact" signed in and landed
+     * on their dashboard, with the room they wanted gone from the screen and
+     * from their mind.
+     *
+     * <p>Declared as a bean so {@code AuthController} and the filter chain
+     * share one instance rather than each making their own and neither seeing
+     * the other's saved request.
+     */
+    @Bean
+    public org.springframework.security.web.savedrequest.RequestCache requestCache() {
+        return new org.springframework.security.web.savedrequest.HttpSessionRequestCache();
     }
 }

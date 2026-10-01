@@ -49,7 +49,10 @@
 
             <div class="listing-card__where" th:text="${preview.area}">Bandra West</div>
             <div class="listing-card__station" th:if="${preview.station}">
-                <span th:text="${preview.walkTime}">8 min walk</span> from
+                <th:block th:if="${preview.walkTime}">
+                    <span th:text="${preview.walkTime}">8 min walk</span> from
+                </th:block>
+                <th:block th:unless="${preview.walkTime}">Near</th:block>
                 <span th:text="${preview.station}">Bandra</span>
                 <span th:if="${preview.floorLabel}" th:text="'· ' + ${preview.floorLabel}">· 7th floor</span>
             </div>

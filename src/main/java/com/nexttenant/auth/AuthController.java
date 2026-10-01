@@ -37,10 +37,50 @@ public class AuthController {
     private final UserAccounts accounts;
     private final SessionLogin sessionLogin;
 
-    public AuthController(OtpService otp, UserAccounts accounts, SessionLogin sessionLogin) {
+    private final org.springframework.security.web.savedrequest.RequestCache requestCache;
+
+    public AuthController(OtpService otp, UserAccounts accounts, SessionLogin sessionLogin,
+                          org.springframework.security.web.savedrequest.RequestCache requestCache) {
         this.otp = otp;
         this.accounts = accounts;
         this.sessionLogin = sessionLogin;
+        this.requestCache = requestCache;
+    }
+
+    /**
+     * Where to send somebody once they are signed in.
+     *
+     * <p>Back to whatever sent them to log in, if anything did. Clicking
+     * "Request contact" on a room and arriving, three screens later, at a
+     * dashboard is the kind of thing that loses the request entirely — by the
+     * time you have found the listing again you have thought better of it.
+     *
+     * <p>The path is rebuilt from the saved request rather than using its
+     * {@code getRedirectUrl()}, which is absolute. Behind a proxy that
+     * absolute URL can carry the wrong scheme or host, and a relative path
+     * cannot leave the site at all — so this cannot become an open redirect
+     * even if something unexpected ends up in the cache.
+     */
+    private String afterSignIn(jakarta.servlet.http.HttpServletRequest request,
+                               jakarta.servlet.http.HttpServletResponse response) {
+        var saved = requestCache.getRequest(request, response);
+        if (saved == null) {
+            return "redirect:/dashboard";
+        }
+        requestCache.removeRequest(request, response);
+
+        String url = saved.getRedirectUrl();
+        int path = url.indexOf('/', url.indexOf("//") + 2);
+        if (path < 0) {
+            return "redirect:/dashboard";
+        }
+        String relative = url.substring(path);
+
+        // A saved GET of the login screens themselves would loop.
+        if (relative.startsWith("/login")) {
+            return "redirect:/dashboard";
+        }
+        return "redirect:" + relative;
     }
 
     // ---- Step 1: the address ----------------------------------------------
@@ -139,7 +179,7 @@ public class AuthController {
 
                 LoginFlow.clear(session);
                 sessionLogin.signIn(user, request, response);
-                yield "redirect:/dashboard";
+                yield afterSignIn(request, response);
             }
             case OtpResult.WrongCode wrong -> {
                 model.addAttribute("error",
@@ -244,7 +284,7 @@ public class AuthController {
         LoginFlow.clear(session);
         sessionLogin.signIn(user, request, response);
 
-        return "redirect:/dashboard";
+        return afterSignIn(request, response);
     }
 
     // ---- Shared model plumbing --------------------------------------------

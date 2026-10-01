@@ -109,6 +109,27 @@ public class Listing {
     private Furnishing furnishing;
 
     /**
+     * Gated society or standalone building.
+     *
+     * <p>Asked because people ask: it decides whether a watchman logs visitors,
+     * what hours guests may come, and how the building treats tenants.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "flat_type", length = 20)
+    private FlatType flatType;
+
+    /**
+     * The leaver's own words.
+     *
+     * <p>Every other field on a listing is a dropdown, and no dropdown says
+     * "the flatmates are easy going and we cook together on Sundays" — which
+     * is the part that makes somebody choose this room over an identical one
+     * at the same price.
+     */
+    @Column(name = "description", columnDefinition = "text")
+    private String description;
+
+    /**
      * Maps to {@code TEXT[]}. Kept as free strings for now: the exact
      * vocabulary comes from the wizard's checkbox list, and inventing it here
      * would mean guessing at the product. Held privately and exposed as an
@@ -391,6 +412,52 @@ public class Listing {
 
     public Furnishing getFurnishing() {
         return furnishing;
+    }
+
+    public FlatType getFlatType() {
+        return flatType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * Everything the first screen of the wizard asks for.
+     *
+     * <p>One method rather than eight setters because these are answered
+     * together and saved together: a listing with a configuration but no room
+     * type is not a state any screen can produce, and offering the setters
+     * separately would invite one.
+     */
+    public void setBasics(String areaName, Configuration configuration, RoomType roomType,
+                          Furnishing furnishing, FlatType flatType,
+                          FlatmateGender flatmateGender, LocalDate availableFrom,
+                          Short existingFlatmates) {
+        this.areaName = areaName;
+        this.configuration = configuration;
+        this.roomType = roomType;
+        this.furnishing = furnishing;
+        this.flatType = flatType;
+        this.flatmateGender = flatmateGender;
+        this.availableFrom = availableFrom;
+        this.existingFlatmates = existingFlatmates;
+    }
+
+    /**
+     * The nearest station, derived rather than asked for.
+     *
+     * <p>The wizard used to make people type this. Every area already knows
+     * its own station, so the question was asking for something the system
+     * had — and it is the single most useful fact about a Mumbai address, so
+     * dropping the question had to not mean dropping the answer.
+     */
+    public void setStation(String nearestStation) {
+        this.nearestStation = nearestStation;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     /** Immutable view: callers cannot reach in and mutate the entity's array. */

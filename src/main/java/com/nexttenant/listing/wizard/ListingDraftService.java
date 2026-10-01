@@ -156,132 +156,177 @@ public class ListingDraftService {
         return listingPrivates.findById(listingId);
     }
 
-    // ---- Step 1: where ----------------------------------------------------
+    // ========================================================================
+    // The two-screen flow.
+    //
+    // Three methods where there were six, and the old ones are gone rather
+    // than kept beside these. A save path no screen can reach is a path that
+    // drifts from the one that is used, silently, until somebody wires it back
+    // up and finds it no longer agrees.
+    //
+    // Nothing the old screens collected was lost: saveMoreDetail writes all of
+    // it, from an optional page offered once a listing is live.
+    // ========================================================================
 
     /**
-     * Records the location.
+     * Screen one: the eight things a room cannot be listed without.
      *
-     * <p>The only place an exact coordinate enters the system. It goes to
-     * {@link ListingPrivate}; saving it fires the database trigger that
-     * recomputes the public jittered point. No Java code performs that
-     * calculation, so none can skip it.
+     * <p>Also where the flat gets placed. The area is the only location
+     * question now — its centroid supplies a point, and its station supplies
+     * the station, so two questions disappeared without either answer being
+     * lost.
      */
     @Transactional
-    public void saveLocation(UUID listingId, UUID userId,
-                             String areaName, String station, Short walkMinutes,
-                             Short floor, Boolean hasLift,
-                             Double latitude, Double longitude,
-                             String societyName, String fullAddress) {
+    public void saveBasics(UUID listingId, UUID userId,
+                           String areaName,
+                           com.nexttenant.listing.Configuration configuration,
+                           com.nexttenant.listing.RoomType roomType,
+                           com.nexttenant.listing.Furnishing furnishing,
+                           com.nexttenant.listing.FlatType flatType,
+                           com.nexttenant.listing.FlatmateGender flatmateGender,
+                           java.time.LocalDate availableFrom,
+                           Short existingFlatmates) {
         Listing draft = requireOwnedDraft(listingId, userId);
-        draft.setLocationDetails(areaName, station, walkMinutes, floor, hasLift);
+
+        var area = areas.findByName(areaName);
+
+        draft.setBasics(areaName, configuration, roomType, furnishing, flatType,
+                flatmateGender, availableFrom, existingFlatmates);
+
+        // Derived, not asked. Every area knows its own station, and it is the
+        // most useful single fact about a Mumbai address — so the question
+        // could go without the answer going with it.
+        area.ifPresent(a -> draft.setStation(a.nearestStation()));
+
         advanceIfDraft(draft, 2);
+        refuseIfLiveAndIncomplete(draft);
+        listings.saveAndFlush(draft);
+
+        placeFromAreaIfUnplaced(listingId, area.orElse(null));
+    }
+
+    /**
+     * Screen two: money, and the two optional things worth having.
+     *
+     * <p>The Maps link goes to {@link ListingPrivate}, never to the listing. A
+     * Maps link is an address written another way; published, it would make
+     * the approximate circle decorative.
+     */
+    @Transactional
+    public void saveMoneyAndExtras(UUID listingId, UUID userId,
+                                   Integer rent, Integer deposit,
+                                   int brokerage, int buyout,
+                                   String mapsLink, String description) {
+        Listing draft = requireOwnedDraft(listingId, userId);
+
+        // Maintenance is not asked for on the short flow, so whatever it
+        // already holds is preserved rather than being blanked by a screen
+        // that never mentioned it.
+        draft.setMoney(rent, deposit, draft.getMaintenanceInr(),
+                draft.isMaintenanceIncluded(), brokerage, buyout);
+        draft.setDescription(trimToNull(description));
+
         refuseIfLiveAndIncomplete(draft);
         listings.saveAndFlush(draft);
 
         ListingPrivate priv = listingPrivates.findById(listingId)
                 .orElseGet(() -> new ListingPrivate(listingId));
-
-        if (latitude != null && longitude != null) {
-            Point pin = GeoPoints.of(latitude, longitude);
-            // A rough bounds check, so a mis-dragged pin or a swapped pair is
-            // caught here rather than becoming a listing in the Arabian Sea.
-            if (!GeoPoints.isWithinMumbai(pin)) {
-                throw new IllegalArgumentException("That pin is outside Mumbai");
-            }
-            priv.placeAt(pin);
-        } else if (!priv.hasRealPin()) {
-            // No pin given. Fall back to the centre of the area they named.
-            //
-            // This used to be where listings died. Every other question in the
-            // wizard can be answered from memory in a second; this one asks
-            // somebody to find their own building on a map and drag a marker
-            // onto it, on a phone, and people simply stopped.
-            //
-            // The area already knows roughly where it is — areas.centroid is
-            // the same centre a searcher's radius is seeded from when they
-            // pick an area instead of a point. What is good enough to search
-            // from is good enough to publish from.
-            //
-            // Guarded by hasRealPin() so that re-saving step 1 after dropping
-            // a pin, without touching the map, cannot quietly replace a real
-            // pin with a locality centre.
-            areas.findByName(areaName)
-                    .map(area -> GeoPoints.of(area.latitude(), area.longitude()))
-                    .filter(GeoPoints::isWithinMumbai)
-                    .ifPresent(priv::placeAtAreaCentre);
-        }
-        priv.setSocietyName(societyName);
-        priv.setFullAddress(fullAddress);
+        priv.setMapsLink(trimToNull(mapsLink));
         listingPrivates.saveAndFlush(priv);
     }
 
-    // ---- Step 2: the flat -------------------------------------------------
+    /**
+     * Places a flat at its area's centre, if nothing better is known.
+     *
+     * <p>Extracted so both the short flow and the old location screen go
+     * through one rule. {@code hasRealPin()} is what stops a re-save quietly
+     * replacing a pin somebody dropped with the middle of their neighbourhood.
+     */
+    private void placeFromAreaIfUnplaced(UUID listingId, com.nexttenant.area.Area area) {
+        if (area == null) {
+            return;
+        }
+        ListingPrivate priv = listingPrivates.findById(listingId)
+                .orElseGet(() -> new ListingPrivate(listingId));
+        if (priv.hasRealPin()) {
+            return;
+        }
+        Point centre = GeoPoints.of(area.latitude(), area.longitude());
+        if (GeoPoints.isWithinMumbai(centre)) {
+            priv.placeAtAreaCentre(centre);
+            listingPrivates.saveAndFlush(priv);
+        }
+    }
 
+    /**
+     * The optional screen, offered once a listing is live.
+     *
+     * <p>One method for what used to be four steps. It reads long because the
+     * list genuinely is long — and that length is the argument for this screen
+     * existing at all rather than sitting in front of publishing.
+     *
+     * <p>Every argument may be null, and null means "left blank", not "clear
+     * it". The page renders what is already stored, so a blank field is a
+     * field nobody filled in either time.
+     */
     @Transactional
-    public void saveFlat(UUID listingId, UUID userId,
-                         com.nexttenant.listing.Configuration configuration,
-                         com.nexttenant.listing.RoomType roomType,
-                         com.nexttenant.listing.HandoverType handoverType,
-                         Short existingFlatmates,
-                         com.nexttenant.listing.Furnishing furnishing,
-                         List<String> amenities, List<String> perks) {
+    public void saveMoreDetail(UUID listingId, UUID userId,
+                               com.nexttenant.listing.HandoverType handoverType,
+                               List<String> amenities, List<String> perks,
+                               Integer maintenance, boolean maintenanceIncluded,
+                               Short floor, Boolean hasLift,
+                               String societyName, String fullAddress,
+                               Boolean ownerInformed,
+                               com.nexttenant.listing.DepositPaidTo depositPaidTo,
+                               Boolean registeredAgreement,
+                               com.nexttenant.listing.AgreementHandling agreementHandling,
+                               Short noticePeriodDays, Boolean bachelorsAllowed,
+                               String flatmateProfessions,
+                               Boolean nonVegAllowed, Boolean petsAllowed,
+                               Boolean smokingAllowed, Boolean guestsAllowed,
+                               String houseRulesNote) {
         Listing draft = requireOwnedDraft(listingId, userId);
-        draft.setFlatDetails(configuration, roomType, handoverType, existingFlatmates, furnishing);
+
+        draft.setFlatDetails(draft.getConfiguration(), draft.getRoomType(),
+                handoverType, draft.getExistingFlatmates(), draft.getFurnishing());
         draft.setAmenities(amenities);
         draft.setPerks(perks);
-        advanceIfDraft(draft, 3);
-        refuseIfLiveAndIncomplete(draft);
-        listings.save(draft);
-    }
+        // Area, station and walk time are not on this screen, so they are
+        // passed back unchanged. A page that never mentioned a field must not
+        // be the page that clears it.
+        draft.setLocationDetails(draft.getAreaName(), draft.getNearestStation(),
+                draft.getMinutesToStation(), floor, hasLift);
 
-    // ---- Step 3: the money ------------------------------------------------
+        draft.setMoney(draft.getMonthlyRentInr(), draft.getDepositInr(), maintenance,
+                maintenanceIncluded, draft.getBrokerageInr(), draft.getBuyoutInr());
 
-    @Transactional
-    public void saveMoney(UUID listingId, UUID userId,
-                          Integer rent, Integer deposit, Integer maintenance,
-                          boolean maintenanceIncluded, int brokerage, int buyout) {
-        Listing draft = requireOwnedDraft(listingId, userId);
-        draft.setMoney(rent, deposit, maintenance, maintenanceIncluded, brokerage, buyout);
-        advanceIfDraft(draft, 4);
-        refuseIfLiveAndIncomplete(draft);
-        listings.save(draft);
-    }
-
-    // ---- Step 4: handover terms -------------------------------------------
-
-    @Transactional
-    public void saveTerms(UUID listingId, UUID userId,
-                          Boolean ownerInformed,
-                          com.nexttenant.listing.DepositPaidTo depositPaidTo,
-                          Boolean registeredAgreement,
-                          com.nexttenant.listing.AgreementHandling agreementHandling,
-                          Short noticePeriodDays, Boolean bachelorsAllowed) {
-        Listing draft = requireOwnedDraft(listingId, userId);
         draft.setHandoverTerms(ownerInformed, depositPaidTo, registeredAgreement,
                 agreementHandling, noticePeriodDays, bachelorsAllowed);
-        advanceIfDraft(draft, 5);
+
+        // Gender is answered on screen one and is not on this page either.
+        draft.setFlatmateRules(draft.getFlatmateGender(), flatmateProfessions,
+                nonVegAllowed, petsAllowed, smokingAllowed, guestsAllowed,
+                houseRulesNote);
+
         refuseIfLiveAndIncomplete(draft);
-        listings.save(draft);
+        listings.saveAndFlush(draft);
+
+        ListingPrivate priv = listingPrivates.findById(listingId)
+                .orElseGet(() -> new ListingPrivate(listingId));
+        priv.setSocietyName(trimToNull(societyName));
+        priv.setFullAddress(trimToNull(fullAddress));
+        listingPrivates.saveAndFlush(priv);
     }
 
-    // ---- Step 5: flatmates and rules --------------------------------------
-
-    @Transactional
-    public void saveRules(UUID listingId, UUID userId,
-                          com.nexttenant.listing.FlatmateGender gender,
-                          String professions,
-                          Boolean nonVeg, Boolean pets, Boolean smoking, Boolean guests,
-                          String note, java.time.LocalDate availableFrom) {
-        Listing draft = requireOwnedDraft(listingId, userId);
-        draft.setFlatmateRules(gender, professions,
-                nonVeg, pets, smoking, guests, note);
-        draft.setAvailableFrom(availableFrom);
-        advanceIfDraft(draft, 6);
-        refuseIfLiveAndIncomplete(draft);
-        listings.save(draft);
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
-    // ---- Step 6: publish --------------------------------------------------
+    // ---- Publishing --------------------------------------------------------
 
     /**
      * Publishes the draft.
@@ -348,22 +393,31 @@ public class ListingDraftService {
             missing.add(new Missing("where the flat is", 1));
         }
         if (draft.getConfiguration() == null) {
-            missing.add(new Missing("the flat's configuration", 2));
+            missing.add(new Missing("the flat's configuration", 1));
         }
         if (draft.getRoomType() == null) {
-            missing.add(new Missing("what kind of room it is", 2));
+            missing.add(new Missing("what kind of room it is", 1));
         }
         if (draft.getFurnishing() == null) {
-            missing.add(new Missing("the furnishing", 2));
+            missing.add(new Missing("the furnishing", 1));
         }
         if (draft.getMonthlyRentInr() == null) {
-            missing.add(new Missing("the monthly rent", 3));
+            missing.add(new Missing("the monthly rent", 2));
         }
         if (draft.getDepositInr() == null) {
-            missing.add(new Missing("the deposit", 3));
+            missing.add(new Missing("the deposit", 2));
         }
         if (draft.getAvailableFrom() == null) {
-            missing.add(new Missing("the move-in date", 5));
+            missing.add(new Missing("the move-in date", 1));
+        }
+        if (draft.getFlatType() == null) {
+            missing.add(new Missing("whether it is a society or a standalone building", 1));
+        }
+        if (draft.getFlatmateGender() == null) {
+            // Required now that it is one tap on screen one. It is also the
+            // filter searchers lean on hardest, so a listing without it is
+            // one that quietly misses the searches it should appear in.
+            missing.add(new Missing("who can take the room", 1));
         }
 
         return missing;
