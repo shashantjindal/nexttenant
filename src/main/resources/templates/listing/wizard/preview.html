@@ -1,13 +1,28 @@
 <!DOCTYPE html>
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><title>Preview and publish — NextTenant</title></head>
+<head><title>Your listing — NextTenant</title></head>
 <body>
 
 <main id="content" class="page-width wizard">
+    <!--/* The heading changes with the state. "This is exactly what someone
+           looking sees" was written for a rehearsal before publishing; for a
+           listing that is already live it is just true, and saying so is the
+           thing the page most needs to do. */-->
+    <!--/*
+      One call with conditional arguments, NOT two blocks with th:if.
+
+      th:replace outranks th:if in Thymeleaf's precedence order, so the replace
+      happens first and the condition is discarded along with the element that
+      carried it — both headings rendered, one above the other, on the same
+      page. The condition has to live inside the arguments, where nothing
+      outranks it.
+    */-->
     <div th:replace="~{listing/wizard/_shell :: head(${step}, ${totalSteps},
-                       'This is exactly what someone looking sees',
-                       'Your phone number is not on this page and never will be.')}"></div>
+                       ${isLive} ? 'Your listing is live' : 'Almost there',
+                       ${isLive}
+                         ? 'This is exactly what people see. Your phone number is not on it and never will be.'
+                         : 'This is what people will see once it is live.')}"></div>
 
 
     <div class="notice notice--relaxed" th:if="${!missing.isEmpty()}">
@@ -97,9 +112,12 @@
 
         <div class="preview-block">
             <h2 class="detail__heading">What is NOT on this page</h2>
-            <!--/* Stated explicitly at the moment it matters most: the leaver is
-                   about to publish, and this is where the privacy promise stops
-                   being marketing copy and becomes something they can check. */-->
+            <!--/* Stated explicitly at the moment it matters most. It used to
+                   be the moment before publishing; now it is the moment just
+                   after, which is if anything the more useful one — this is
+                   when somebody wonders what they have just put on the
+                   internet, and the answer is here rather than in a settings
+                   page they would have to go looking for. */-->
             <ul class="preview-absent">
                 <li>Your phone number</li>
                 <li>Your full address</li>
@@ -110,13 +128,42 @@
         </div>
     </section>
 
-    <div class="wizard__nav">
-        <a class="btn btn--ghost" th:href="@{/list/{id}/6(id=${draft.id})}">Back to photos</a>
+    <!--/*
+      Two different pages behind one URL, and the difference is whether the
+      listing is already live.
 
-        <form method="post" th:action="@{/list/{id}/publish(id=${draft.id})}">
-            <button type="submit" class="btn btn--primary"
-                    th:disabled="${!missing.isEmpty()}">Publish listing</button>
-        </form>
+      It is live by the time most people see this: finishing the last screen
+      publishes. The Publish button below is only for the case where something
+      was still missing then — somebody who fixes it and comes back needs a way
+      to go live, and a page that merely told them they were ready would be
+      taunting them.
+    */-->
+    <div th:if="${isLive}">
+        <div class="wizard__nav" style="flex-wrap: wrap; gap: var(--s-3)">
+            <a class="btn btn--primary" th:href="@{${publicPath}}">View it live</a>
+            <a class="btn btn--secondary" th:href="@{/list/{id}/1(id=${draft.id})}">Edit listing</a>
+            <a class="btn btn--ghost" th:href="@{/list/{id}/more(id=${draft.id})}">Add more detail</a>
+            <a class="btn btn--ghost" th:href="@{/dashboard}">Done</a>
+        </div>
+
+        <!--/* Said plainly, because "it is live" is a claim about the world
+               and somebody who does not believe it will go hunting. */-->
+        <p class="auth__fine">
+            Already visible to people searching. Every change you make shows up
+            straight away &mdash; there is nothing further to confirm. Pause or
+            take it down any time from your dashboard.
+        </p>
+    </div>
+
+    <div th:unless="${isLive}">
+        <div class="wizard__nav">
+            <a class="btn btn--ghost" th:href="@{/list/{id}/2(id=${draft.id})}">Back</a>
+
+            <form method="post" th:action="@{/list/{id}/publish(id=${draft.id})}">
+                <button type="submit" class="btn btn--primary"
+                        th:disabled="${!missing.isEmpty()}">Publish listing</button>
+            </form>
+        </div>
     </div>
 
     <p class="wizard__hint" style="text-align:center;">
