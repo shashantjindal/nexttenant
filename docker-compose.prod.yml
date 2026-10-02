@@ -94,16 +94,28 @@ services:
     # and diagnosing something.
     #
     # Caddy reaches both as app-blue:8080 and app-green:8080 over Docker's
-    # private network, which is unaffected by these lines.
+    # private network, which is unaffected by these lines — so these bindings
+    # are a DIAGNOSTIC CONVENIENCE, not a requirement. Nothing breaks if they
+    # move.
+    #
+    # Which is why they are overridable. 8080 is also what `./gradlew bootRun`
+    # uses, so bringing this stack up on a machine that is already running the
+    # development server fails with
+    #
+    #     Bind for 127.0.0.1:8080 failed: port is already allocated
+    #
+    # Set NT_BLUE_PORT and NT_GREEN_PORT in the environment (or in nt.env's
+    # sibling .env) to move them, rather than editing this file and then having
+    # to remember not to commit it.
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${NT_BLUE_PORT:-8080}:8080"
 
   app-green:
     <<: *app
     # 8081 on the host so you can curl either one by name while diagnosing.
     # Inside the network it is still port 8080, like its twin.
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:${NT_GREEN_PORT:-8081}:8080"
 
   caddy:
     image: caddy:2-alpine

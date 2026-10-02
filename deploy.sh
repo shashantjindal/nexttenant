@@ -53,6 +53,14 @@ fail() { printf '\n\033[1;31m!!! %s\033[0m\n' "$*" >&2; exit 1; }
 [ -f nt.env ]          || fail "No nt.env here — the app would start without its secrets."
 [ -f Caddyfile ]       || fail "No Caddyfile here. Copy Caddyfile.example and set your domain."
 
+# The Caddyfile has to name the two upstreams, or Caddy is still proxying to a
+# service called `app` that no longer exists and every request is a 502 the
+# moment the old container goes. Checked here, before anything is touched,
+# because the symptom otherwise appears halfway through a deploy.
+grep -q 'app-blue' Caddyfile || fail "Caddyfile still points at the old single 'app' upstream.
+Update it from Caddyfile.example — the reverse_proxy line needs both app-blue
+and app-green, with the health checks — then run this again."
+
 # ---- Build once -------------------------------------------------------------
 # Only app-blue declares `build:` in the compose file; it produces the
 # nexttenant:latest tag that BOTH containers run. Building before anything is
@@ -98,7 +106,42 @@ wait_until_healthy() {
     fail "$service was not healthy after ${BOOT_TIMEOUT}s. The other container is still serving the previous version. Check: $COMPOSE logs $service"
 }
 
+# ---- One-time: retire the single-container stack ----------------------------
+#
+# Before blue/green there was one app service, called `app`, bound to
+# 127.0.0.1:8080. It is not in this compose file any more, so `docker compose`
+# leaves it running as an orphan — and it still holds port 8080, which is the
+# port app-blue wants. The first deploy after the upgrade therefore dies with
+#
+#     Bind for 127.0.0.1:8080 failed: port is already allocated
+#
+# halfway through, which is the worst moment to meet it.
+#
+# Removed between green and blue, not before either: green binds 8081, so it
+# can come up and start taking traffic while the old container is still
+# serving. Only once green is healthy is the old one dropped and 8080 freed.
+# That makes the upgrade itself zero-downtime rather than a cutover.
+#
+# This whole block can be deleted once every environment has deployed past it.
+retire_single_container_stack() {
+    local old
+    old="$(docker ps -aq \
+            --filter "label=com.docker.compose.project=$(basename "$PWD")" \
+            --filter "label=com.docker.compose.service=app" 2>/dev/null || true)"
+
+    [ -n "$old" ] || return 0
+
+    say "Removing the old single-container 'app' (pre-blue/green), which still holds port 8080"
+    docker rm -f $old > /dev/null
+}
+
 for service in "${CONTAINERS[@]}"; do
+    # app-green is first in CONTAINERS and binds 8081, so it is already healthy
+    # and serving by the time the old container is dropped.
+    if [ "$service" = "app-blue" ]; then
+        retire_single_container_stack
+    fi
+
     say "Restarting $service on the new image"
 
     # --force-recreate because the image tag has not changed. Without it Docker

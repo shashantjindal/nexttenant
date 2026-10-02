@@ -34,6 +34,38 @@ Then `ntc ps`, `ntc logs -f app-blue app-green`, and so on, from any directory.
 
 ---
 
+## "port is already allocated"
+
+```
+Bind for 127.0.0.1:8080 failed: port is already allocated
+```
+
+Something else already holds 8080. Two causes, both ordinary:
+
+**On your own machine** — `./gradlew bootRun` is running. The development
+server and `app-blue` both want 8080. Stop the dev server, or move the
+containers out of its way:
+
+```bash
+NT_BLUE_PORT=9080 NT_GREEN_PORT=9081 docker compose -f docker-compose.prod.yml up -d
+```
+
+Those two ports are a diagnostic convenience only — Caddy reaches the
+containers over Docker's private network and does not care what they are.
+
+**On the server, the first time after the blue/green upgrade** — the old
+single `app` container is still running and still holding 8080. `docker compose`
+leaves it alone because it is no longer in the compose file. `./deploy.sh`
+removes it for you, at the right moment: after `app-green` is up and serving on
+8081, so nothing is down in between. If you hit this by running `up -d` by hand
+instead, let the script do it:
+
+```bash
+./deploy.sh
+```
+
+---
+
 ## There are two app containers
 
 `app-blue` and `app-green`, identical, both taking traffic, with Caddy
