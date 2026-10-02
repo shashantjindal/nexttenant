@@ -39,3 +39,7 @@ data/photos/
 # domain. Neither belongs in version control.
 nt.env
 Caddyfile
+
+# Diagnostics written by deploy.sh when a deploy leaves the site unreachable.
+# Worth reading and worth keeping off the repository.
+deploy-failure-*.log

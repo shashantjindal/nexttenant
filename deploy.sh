@@ -187,14 +187,52 @@ verify_site_responds() {
             printf '    %s responds %s %s\n' "$domain" "$code" "$when"
             ;;
         *)
+            # ---- Keep the evidence --------------------------------------
+            #
+            # Written to a file BEFORE anything else, because the first
+            # instinct when the site is down is to recreate Caddy — and that
+            # works, and it throws away the only record of why it was needed.
+            # That is exactly how the cause of the outage during the blue/green
+            # migration was lost: by the time anybody thought to look, the
+            # container holding the logs had been replaced.
+            #
+            # Cheap to write, and the one artefact worth having.
+            local evidence="deploy-failure-$(date -u +%Y%m%dT%H%M%SZ).log"
+            {
+                echo "=== $domain returned $code $when"
+                echo
+                echo "=== docker ps"
+                docker ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}' 2>&1
+                echo
+                echo "=== caddy logs"
+                $COMPOSE logs caddy --tail 200 --no-color 2>&1
+                echo
+                echo "=== can caddy reach the containers by name"
+                for upstream in app-blue app-green; do
+                    printf '%s: ' "$upstream"
+                    docker exec "$($COMPOSE ps -q caddy)" \
+                            wget -qO- --timeout=3 \
+                            "http://$upstream:8080/actuator/health/readiness" 2>&1 \
+                        || echo "(unreachable)"
+                    echo
+                done
+                echo "=== networks"
+                docker inspect -f '{{.Name}}{{range $k,$v := .NetworkSettings.Networks}} -> {{$k}} ({{$v.NetworkID}}){{end}}' \
+                        $($COMPOSE ps -q) 2>&1
+            } > "$evidence" 2>&1
+
             fail "$domain returned $code $when, although the containers report healthy.
-That combination means the proxy cannot reach them — the containers are fine and
-the site is not. Do NOT run this again until it is understood.
+That combination means the proxy is not reaching them: the containers are fine
+and the site is not.
 
-  $COMPOSE logs caddy --tail 40
-  docker exec \$($COMPOSE ps -q caddy) wget -qO- --timeout=3 http://app-blue:8080/actuator/health/readiness
+Everything needed to diagnose it is in ./$evidence — READ IT, or send it on,
+BEFORE touching anything. Recreating Caddy usually clears this and destroys the
+evidence with it, which is how the last occurrence went unexplained.
 
-If Caddy cannot reach the containers by name, recreating it reattaches it:
+The site may still be up: only $service was replaced, and the other container
+was left alone deliberately. Check before doing anything drastic.
+
+When you need it back more than you need the cause:
   $COMPOSE up -d --force-recreate caddy"
             ;;
     esac
