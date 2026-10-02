@@ -2768,3 +2768,32 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
        content rather than as breathing room. */
     .results__list .listing-card__tags { margin-top: var(--s-1); }
 }
+
+/*
+ * The description, which only the wide results layout has room for.
+ *
+ * Hidden everywhere else — the landing page's three-across grid has 250px
+ * columns, and a paragraph in one pushes the rest of the page down. The card
+ * fragment is shared by four pages, so the decision belongs here rather than
+ * as a branch in the markup.
+ */
+.listing-card__blurb { display: none; }
+
+@media (min-width: 768px) {
+    .results__list .listing-card__blurb {
+        /* -webkit-box is still the only line clamp with real support. The
+           prefixes are not legacy cruft; they are the spelling that works. */
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+
+        font-size: var(--t-sm);
+        color: var(--c-ink-2);
+        margin: var(--s-1) 0 0;
+
+        /* Three lines of ~60 characters. Past that the eye stops scanning and
+           starts reading, which is the wrong mode for a results page. */
+        max-width: 56ch;
+    }
+}

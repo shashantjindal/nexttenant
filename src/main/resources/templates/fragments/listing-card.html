@@ -195,6 +195,29 @@
             <span class="listing-card__available" th:if="${card.availableFrom}"
                   th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
         </div>
+
+        <!--/* The leaver's own words.
+
+               Every other line on this card is a dropdown answer, so a page of
+               results reads as a page of the same table. This is the only part
+               that can say "the flatmates are easy going and we cook together
+               on Sundays", which is most of what somebody is choosing between
+               once rent and area have narrowed the list.
+
+               Rendered on every card and HIDDEN by default in CSS, shown only
+               inside .results__list. The three-across grid has columns 250px
+               wide; a paragraph there pushes everything below it off the
+               screen. Hiding it in CSS rather than branching here keeps one
+               fragment serving both layouts — which is the whole reason this
+               file is shared by four pages.
+
+               Clamped to three lines by CSS, not truncated here: where to stop
+               depends on the width it renders at, which this template does not
+               know. */-->
+        <p class="listing-card__blurb" th:if="${card.description}"
+           th:text="${card.description}">
+            Bright room, two easy-going flatmates, five minutes from the station.
+        </p>
     </div>
 </article>
 

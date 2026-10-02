@@ -53,6 +53,26 @@ public record ListingCardDto(
         boolean zeroBrokerage,
 
         /**
+         * The leaver's own words, trimmed to a couple of lines, or null.
+         *
+         * <p>Every other field on a card is a dropdown answer, so twenty cards
+         * read as twenty rows of the same table. This is the only part that can
+         * say "we cook together on Sundays" — which is most of what somebody is
+         * actually choosing between once the rent and the area have narrowed
+         * the list.
+         *
+         * <p>Shown only in the wide results layout, where there is room for it
+         * beside the photo. The three-across grid on the landing page hides it:
+         * a column 250px wide cannot carry prose without the card growing a
+         * paragraph that pushes everything below it off the screen.
+         *
+         * <p>Carried raw rather than pre-truncated, because where to stop
+         * depends on the width it is rendered at, and that is CSS's question
+         * rather than this record's.
+         */
+        String description,
+
+        /**
          * Thumbnails for the card, in order, cover first.
          *
          * <p>A list rather than a single cover URL because the card opens on a
@@ -86,6 +106,7 @@ public record ListingCardDto(
                 listing.getFurnishing() == null ? null : listing.getFurnishing().getLabel(),
                 openToLabel(listing),
                 listing.isZeroBrokerage(),
+                listing.getDescription(),
                 photoUrls == null ? java.util.List.of() : java.util.List.copyOf(photoUrls)
         );
     }

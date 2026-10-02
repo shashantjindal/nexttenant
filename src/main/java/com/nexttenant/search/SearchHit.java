@@ -66,6 +66,7 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
                 // word on most cards and crowd out the few that differ.
                 openToLabel(rs.getString("flatmate_gender")),
                 brokerage == 0,
+                rs.getString("description"),
                 photoUrls(rs)
         );
 

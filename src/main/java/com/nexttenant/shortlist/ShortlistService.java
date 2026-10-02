@@ -167,7 +167,7 @@ public class ShortlistService {
                                l.monthly_rent_inr, l.deposit_inr, l.maintenance_inr,
                                l.maintenance_included, l.brokerage_inr, l.buyout_inr,
                                l.configuration, l.room_type, l.furnishing, l.flatmate_gender,
-                               l.available_from, l.published_at,
+                               l.available_from, l.published_at, l.description,
                                CAST(s.created_at AS text) AS sort_value,
                                -- Same shape as the search query, because both
                                -- feed SearchHit. A shared row mapper is a

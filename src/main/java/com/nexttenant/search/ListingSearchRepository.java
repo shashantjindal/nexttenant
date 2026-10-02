@@ -66,6 +66,12 @@ public class ListingSearchRepository {
                        l.maintenance_included, l.brokerage_inr, l.buyout_inr,
                        l.configuration, l.room_type, l.furnishing, l.flatmate_gender,
                        l.available_from, l.published_at,
+                       -- The leaver's own words, for the wide results layout.
+                       -- Selected here rather than fetched per card: twenty
+                       -- extra round trips to show two lines of text would be
+                       -- a worse trade than one extra column on a query that
+                       -- is already reading the row.
+                       l.description,
                        -- The cursor value for this row. Safe to interpolate:
                        -- the column name comes from the SortOrder enum.
                        CAST(l.%s AS text) AS sort_value,
