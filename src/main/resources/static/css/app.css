@@ -2309,3 +2309,24 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 @media (hover: none) {
     .listing-card__nav { opacity: 1; width: 26px; height: 26px; font-size: 16px; }
 }
+
+/* ---- Area filter: localities with their sublocalities ------------------ */
+
+/*
+ * The indent is the whole point. Flat, a West sublocality sat between the two
+ * Andheri parents with its parent printed on the right as the only clue; the
+ * hierarchy was in the data and nowhere on the screen.
+ */
+.area-group { margin-bottom: var(--s-2); }
+
+.area-group__parent { font-weight: 600; }
+
+.area-group__child {
+    padding-left: var(--s-5);
+    font-size: var(--t-sm);
+    color: var(--c-ink-2);
+}
+
+/* A hairline down the children, so the group reads as one block rather than a
+   list that happens to be indented. */
+.area-group__child { border-left: 1px solid var(--c-line); margin-left: var(--s-2); }

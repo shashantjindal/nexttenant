@@ -62,7 +62,10 @@ public class SearchController {
         // all and area-filter.js hides the sublocalities until they are searched
         // for — see the comment in search/index.html. findTopLevel() is still
         // right for anywhere that wants a short list.
-        model.addAttribute("allAreas", areas.findAllActive());
+        // Grouped, not flat. A flat alphabetical list put "Andheri Link Road"
+        // between "All of Andheri East" and "All of Andheri West" - the
+        // hierarchy was in the data and nowhere on the screen.
+        model.addAttribute("areaGroups", areas.findGrouped());
         model.addAttribute("configurations", Configuration.values());
         model.addAttribute("roomTypes", RoomType.values());
         model.addAttribute("furnishings", Furnishing.values());

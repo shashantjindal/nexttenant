@@ -114,54 +114,55 @@
                     </div>
 
                     <!--/*
-                      Every area is rendered, localities AND the sublocalities
-                      inside them — about two hundred labels. area-filter.js
-                      hides the sublocalities as soon as it runs, so the list
-                      opens as eighty-odd localities and typing "diamond"
-                      reveals Diamond Garden.
+                      GROUPED, not a flat alphabetical list.
 
-                      Rendering them and hiding them, rather than fetching them
-                      when searched: the whole set is a few kilobytes of
-                      reference data that changes once a year, and a checkbox
-                      that arrives over the network is a checkbox that is
-                      missing when the network is slow.
+                      Flat, "Andheri Link Road" sat between "All of Andheri
+                      East" and "All of Andheri West" — a West sublocality
+                      wedged between the two parents, with its parent printed
+                      on the right as the only clue. The hierarchy was in the
+                      data and nowhere on the screen.
 
-                      With JavaScript off nothing is hidden and all two hundred
-                      are listed — long, but every one of them works.
+                      Now each locality is a heading with its sublocalities
+                      indented beneath it, and ticking the locality ticks all
+                      of them. The server has always expanded a locality to
+                      its children (expandWithChildren) — this makes that
+                      visible rather than something you have to know.
                     */-->
-                    <div class="filters__scroll" id="area-list"
-                         th:attr="data-area-count=${allAreas.size()}">
-                        <label class="check" th:each="a : ${allAreas}"
-                               th:attr="data-name=${a.name},
-                                        data-station=${a.nearestStation},
-                                        data-parent=${a.parentName} ?: '',
-                                        data-sub=${a.sublocality} ? 'true' : 'false'">
-                            <input type="checkbox" name="area" th:value="${a.name}"
-                                   th:checked="${form.hasArea(a.name)}">
+                    <div class="filters__scroll" id="area-list">
 
-                            <!--/*
-                              A locality that HAS sublocalities is labelled
-                              "All of Chembur", because that is what ticking it
-                              does — ListingSearchService expands it to every
-                              sublocality underneath.
+                        <div class="area-group" th:each="g : ${areaGroups}"
+                             th:attr="data-group=${g.parent.name}">
 
-                              It used to read just "Chembur", sitting between
-                              "Chedda Nagar" and "Chembur Colony" and carrying
-                              "Chembur" as its own second line. Indistinguishable
-                              from its children, so the one option most people
-                              want — the whole area — looked like the narrowest.
-                            */-->
-                            <span th:if="${a.hasChildren()}"
-                                  th:text="'All of ' + ${a.name}">All of Chembur</span>
-                            <span th:unless="${a.hasChildren()}" th:text="${a.name}">Bandra West</span>
+                            <label class="check area-group__parent"
+                                   th:attr="data-name=${g.parent.name},
+                                            data-station=${g.parent.nearestStation},
+                                            data-parent='',
+                                            data-sub='false'">
+                                <input type="checkbox" name="area"
+                                       th:value="${g.parent.name}"
+                                       th:checked="${form.hasArea(g.parent.name)}"
+                                       th:attr="data-parent-box=${g.hasChildren()} ? 'true' : null">
+                                <span th:text="${g.parent.name}">Andheri East</span>
+                                <small class="check__whole" th:if="${g.hasChildren()}">whole area</small>
+                                <small th:unless="${g.hasChildren()}"
+                                       th:text="${g.parent.nearestStation}">Andheri</small>
+                            </label>
 
-                            <small th:if="${a.hasChildren()}" class="check__whole">whole area</small>
-                            <!--/* A sublocality's second line names its
-                                   locality, not its station: "Diamond Garden —
-                                   Chembur" is what tells you where it is. */-->
-                            <small th:unless="${a.hasChildren()}"
-                                   th:text="${a.sublocality} ? ${a.parentName} : ${a.nearestStation}">Bandra</small>
-                        </label>
+                            <!--/* Indented, and each one still its own
+                                   checkbox: somebody who wants only Chakala
+                                   must be able to say so. */-->
+                            <label class="check area-group__child"
+                                   th:each="c : ${g.children}"
+                                   th:attr="data-name=${c.name},
+                                            data-station=${c.nearestStation},
+                                            data-parent=${g.parent.name},
+                                            data-sub='true'">
+                                <input type="checkbox" name="area" th:value="${c.name}"
+                                       th:checked="${form.hasArea(c.name)}"
+                                       th:attr="data-child-of=${g.parent.name}">
+                                <span th:text="${c.name}">Chakala</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!--/*

@@ -95,7 +95,62 @@
             }
         });
 
+        /*
+         * Then tidy up by group, which per-label matching cannot do.
+         *
+         * Two things need fixing once the labels have decided for themselves.
+         * A group where nothing matched should disappear entirely rather than
+         * leave an empty heading behind. And a group where only CHILDREN
+         * matched — typing "chakala" — needs its parent shown anyway, because
+         * a sublocality floating with no heading above it is the flat list
+         * this change exists to replace.
+         */
+        Array.prototype.forEach.call(
+                list.querySelectorAll('.area-group'), function (group) {
+            var parent = group.querySelector('.area-group__parent');
+            var children = Array.prototype.slice.call(
+                    group.querySelectorAll('.area-group__child'));
+
+            var anyChildVisible = children.some(function (c) {
+                return !c.hidden;
+            });
+
+            if (anyChildVisible && parent) {
+                parent.hidden = false;
+            }
+            group.hidden = (!parent || parent.hidden) && !anyChildVisible;
+        });
+
         return matches;
+    }
+
+    /**
+     * Ticking a locality ticks everything inside it.
+     *
+     * <p>The server has always treated a locality as all of its sublocalities
+     * — see expandWithChildren — so this changes nothing about the results.
+     * What it changes is that you can SEE what you selected, instead of
+     * having to know a rule nothing on the page states.
+     *
+     * <p>The reverse matters as much: untick one sublocality and the locality
+     * stops being ticked, because "all of Andheri East" is no longer what you
+     * asked for. The box goes indeterminate rather than empty, which says
+     * "some of these" — the one honest answer when four of nine are chosen.
+     */
+    function syncGroup(group) {
+        var parent = group.querySelector('.area-group__parent input');
+        var children = Array.prototype.slice.call(
+                group.querySelectorAll('.area-group__child input'));
+        if (!parent || children.length === 0) {
+            return;
+        }
+
+        var ticked = children.filter(function (c) {
+            return c.checked;
+        }).length;
+
+        parent.checked = ticked === children.length;
+        parent.indeterminate = ticked > 0 && ticked < children.length;
     }
 
     function suggest(query) {
@@ -170,7 +225,28 @@
      */
     list.addEventListener('change', function (event) {
         var input = event.target;
-        if (!input || input.name !== 'area' || !input.checked) {
+        if (!input || input.name !== 'area') {
+            return;
+        }
+
+        var group = input.closest('.area-group');
+        if (group) {
+            if (input.hasAttribute('data-parent-box')) {
+                // Ticking the locality ticks all of it; unticking clears it.
+                // Done here rather than left to the server so the page shows
+                // what was chosen.
+                Array.prototype.forEach.call(
+                        group.querySelectorAll('.area-group__child input'),
+                        function (child) {
+                            child.checked = input.checked;
+                        });
+                input.indeterminate = false;
+            } else {
+                syncGroup(group);
+            }
+        }
+
+        if (!input.checked) {
             return;
         }
         if (!box.value) {
@@ -182,6 +258,11 @@
         // Focus stays in the box so the next area can simply be typed.
         box.focus();
     });
+
+    // Reflect any selection restored on a back-navigation before the first
+    // paint: without this a group with four of nine children ticked shows an
+    // empty parent box, which reads as "none of these".
+    Array.prototype.forEach.call(list.querySelectorAll(".area-group"), syncGroup);
 
     // Collapse the sublocalities on load, and honour a query the browser
     // restored on a back-navigation.
