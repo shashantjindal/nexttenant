@@ -25,7 +25,17 @@ public record Area(
         double longitude,
         int radiusMetres,
         Short parentId,
-        String parentName
+        String parentName,
+
+        /**
+         * True when sublocalities sit under this area.
+         *
+         * <p>Which makes it a different kind of choice from its children:
+         * ticking it in the filter selects every one of them. The UI needs
+         * this to label it "All of Chembur" rather than letting it sit among
+         * its own sublocalities looking like the narrowest option.
+         */
+        boolean hasChildren
 ) {
 
     /** True for a sublocality — Diamond Garden rather than Chembur. */

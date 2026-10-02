@@ -151,6 +151,38 @@
         }
     });
 
+    /*
+     * Ticking an area clears the search, ready for the next one.
+     *
+     * This filter has always been multi-select, and it did not look it. You
+     * typed "chembur", ticked it, and the list stayed filtered to Chembur —
+     * so adding Powai meant noticing the box still had text in it and
+     * clearing it by hand. Most people stopped at one area, which on a site
+     * with this little supply is the difference between some results and
+     * none.
+     *
+     * Clearing on tick makes the next search the obvious next action. The
+     * ticked area stays visible regardless (see filterLocally), so nothing
+     * disappears at the moment it is chosen.
+     *
+     * Only on TICK. Clearing when somebody unticks would yank the list out
+     * from under them mid-correction.
+     */
+    list.addEventListener('change', function (event) {
+        var input = event.target;
+        if (!input || input.name !== 'area' || !input.checked) {
+            return;
+        }
+        if (!box.value) {
+            return;
+        }
+        box.value = '';
+        hint.textContent = '';
+        filterLocally('');
+        // Focus stays in the box so the next area can simply be typed.
+        box.focus();
+    });
+
     // Collapse the sublocalities on load, and honour a query the browser
     // restored on a back-navigation.
     filterLocally(normalise(box.value));

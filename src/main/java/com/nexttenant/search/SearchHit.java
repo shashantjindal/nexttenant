@@ -61,6 +61,10 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
                 walkMinutes == null ? null : walkMinutes + " min walk",
                 formatAvailability(availableFrom == null ? null : availableFrom.toLocalDate()),
                 labelOf(rs.getString("furnishing"), Furnishing.class),
+                // ANY earns no tag: it is the common answer and says nothing
+                // a searcher can act on, so printing it would put the same
+                // word on most cards and crowd out the few that differ.
+                openToLabel(rs.getString("flatmate_gender")),
                 brokerage == 0,
                 coverUrl(rs)
         );
@@ -75,6 +79,25 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
      * search never loads. Both are covered by tests, and a single test asserts
      * the two agree, so the duplication cannot drift silently.
      */
+    /**
+     * The gender restriction as a tag, or null when there is none.
+     *
+     * <p>Parsed from the stored enum name rather than trusted: a value the
+     * enum does not know would otherwise throw here and fail the whole page
+     * of results over one bad row.
+     */
+    private static String openToLabel(String stored) {
+        if (stored == null) {
+            return null;
+        }
+        try {
+            var gender = com.nexttenant.listing.FlatmateGender.valueOf(stored);
+            return gender == com.nexttenant.listing.FlatmateGender.ANY ? null : gender.getLabel();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     private static Integer totalMoveIn(Integer rent, Integer deposit, Integer maintenance,
                                        boolean maintenanceIncluded, int brokerage, int buyout) {
         if (rent == null || deposit == null) {

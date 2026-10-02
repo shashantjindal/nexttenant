@@ -96,9 +96,17 @@
             <small>per month</small>
         </div>
 
-        <p class="listing-card__total">
-            <span th:text="${card.totalToMoveIn}">&#8377;1,13,500</span> to move in
-        </p>
+        <!--/*
+          "₹1,13,500 to move in" used to sit here, under the rent.
+
+          It is the most useful number on the site and the worst one to meet
+          first. A card is a decision about whether to LOOK, and a six-figure
+          total beside a monthly rent reads as the price — people flinch and
+          scroll past rooms they could comfortably afford.
+
+          It is still on the listing page, broken down line by line, for
+          somebody who has already decided to read.
+        */-->
 
         <!--/* The stretched link. Its text is the area name, so a screen
                reader announces "Bandra West, link" rather than "link". */-->
@@ -110,18 +118,25 @@
                it — the station comes from the area instead. Without this guard
                the line rendered as " from Kanjurmarg", a sentence with its
                subject missing. */-->
-        <div class="listing-card__station" th:if="${card.station != null}">
-            <th:block th:if="${card.walkTime}">
-                <span th:text="${card.walkTime}">8 min walk</span> from
-            </th:block>
-            <th:block th:unless="${card.walkTime}">Near</th:block>
-            <span th:text="${card.station}">Bandra</span>
-        </div>
+        <!--/*
+          The station line is gone from the card as well.
+
+          Since the wizard stopped asking for a walk time, most of these read
+          "Near Kanjurmarg" — derived from the area already printed directly
+          above. A line that restates its neighbour costs a row of vertical
+          space on every card in the results and tells nobody anything.
+
+          Still on the listing page, with the walk time where there is one.
+        */-->
 
         <div class="listing-card__tags">
             <span class="tag" th:if="${card.configuration}" th:text="${card.configuration}">2 BHK</span>
             <span class="tag" th:if="${card.roomType}" th:text="${card.roomType}">Private room</span>
             <span class="tag" th:if="${card.furnishing}" th:text="${card.furnishing}">Semi-furnished</span>
+            <!--/* Only when the room is restricted. "Anyone" is the common
+                   answer and would put the same word on most cards, crowding
+                   out the few that differ — openTo is null in that case. */-->
+            <span class="tag tag--who" th:if="${card.openTo}" th:text="${card.openTo}">Women only</span>
             <span class="listing-card__available" th:if="${card.availableFrom}"
                   th:text="'From ' + ${card.availableFrom}">From 1 Nov</span>
         </div>

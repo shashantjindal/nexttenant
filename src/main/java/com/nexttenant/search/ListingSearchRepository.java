@@ -64,7 +64,7 @@ public class ListingSearchRepository {
                 SELECT l.id, l.area_name, l.nearest_station, l.minutes_to_station,
                        l.monthly_rent_inr, l.deposit_inr, l.maintenance_inr,
                        l.maintenance_included, l.brokerage_inr, l.buyout_inr,
-                       l.configuration, l.room_type, l.furnishing,
+                       l.configuration, l.room_type, l.furnishing, l.flatmate_gender,
                        l.available_from, l.published_at,
                        -- The cursor value for this row. Safe to interpolate:
                        -- the column name comes from the SortOrder enum.

@@ -699,11 +699,18 @@
 
 .filters__clear { font-size: var(--t-xs); }
 
+/*
+ * Tightened.
+ *
+ * A fieldset legend carries space of its own on top of this padding, and the
+ * two stacked left every filter sitting in a gap big enough to read as
+ * something having failed to render between them.
+ */
 .filters__group {
     border: none;
     border-top: 1px solid var(--c-line);
     margin: 0;
-    padding: var(--s-4) 0 0;
+    padding: var(--s-3) 0 0;
 }
 .filters__group:first-of-type { border-top: none; padding-top: 0; }
 
@@ -713,8 +720,13 @@
     font-weight: 600;
     color: var(--c-ink);
     padding: 0;
-    margin-bottom: var(--s-3);
+    margin-bottom: var(--s-2);
 }
+
+/* "All of Chembur" against the sublocalities beneath it: ticking it selects
+   every one of them, which makes it a different kind of choice, not the
+   narrowest one in a list of its own children. */
+.check__whole { color: var(--c-brand); font-weight: 600; }
 
 /* Ninety-odd areas would otherwise push every other filter off the screen. */
 .filters__scroll { max-height: 220px; overflow-y: auto; padding-right: var(--s-2); }
@@ -2138,3 +2150,8 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     color: var(--c-ink-2);
     margin: var(--s-2) 0 0;
 }
+
+/* A gender restriction on a card. Tinted rather than neutral because it is the
+   one tag that can rule a room out entirely — everything else beside it is a
+   description, this is a condition. Only rendered when there IS one. */
+.tag--who { background: var(--c-brand-tint); color: var(--c-brand); }

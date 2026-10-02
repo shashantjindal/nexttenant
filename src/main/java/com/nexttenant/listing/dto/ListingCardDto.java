@@ -39,6 +39,17 @@ public record ListingCardDto(
         String walkTime,         // "8 min walk"
         String availableFrom,    // "1 Nov"
         String furnishing,       // "Semi-furnished"
+
+        /**
+         * "Women only" / "Men only", or null when open to anyone.
+         *
+         * <p>Null rather than "Anyone", deliberately. It is the most common
+         * answer, so printing it would put an identical tag on most cards in
+         * the results and crowd out the few that differ. A restriction is
+         * worth a tag; the absence of one is not.
+         */
+        String openTo,
+
         boolean zeroBrokerage,
         String coverPhotoUrl     // null until photos exist
 ) {
@@ -65,6 +76,7 @@ public record ListingCardDto(
                 formatWalk(listing.getMinutesToStation()),
                 formatAvailability(listing.getAvailableFrom()),
                 listing.getFurnishing() == null ? null : listing.getFurnishing().getLabel(),
+                openToLabel(listing),
                 listing.isZeroBrokerage(),
                 coverPhotoUrl
         );
@@ -80,6 +92,21 @@ public record ListingCardDto(
      */
     public String path() {
         return ListingUrls.path(id, area, configuration, roomType);
+    }
+
+    /**
+     * The gender restriction as a tag, or null when there is none.
+     *
+     * <p>ANY is the common case and says nothing a searcher can act on, so it
+     * earns no tag. Only "men only" and "women only" change whether a room is
+     * worth opening.
+     */
+    private static String openToLabel(Listing listing) {
+        var gender = listing.getFlatmateGender();
+        if (gender == null || gender == com.nexttenant.listing.FlatmateGender.ANY) {
+            return null;
+        }
+        return gender.getLabel();
     }
 
     private static String formatWalk(Short minutes) {

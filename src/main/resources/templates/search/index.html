@@ -138,11 +138,29 @@
                                         data-sub=${a.sublocality} ? 'true' : 'false'">
                             <input type="checkbox" name="area" th:value="${a.name}"
                                    th:checked="${form.hasArea(a.name)}">
-                            <span th:text="${a.name}">Bandra West</span>
+
+                            <!--/*
+                              A locality that HAS sublocalities is labelled
+                              "All of Chembur", because that is what ticking it
+                              does — ListingSearchService expands it to every
+                              sublocality underneath.
+
+                              It used to read just "Chembur", sitting between
+                              "Chedda Nagar" and "Chembur Colony" and carrying
+                              "Chembur" as its own second line. Indistinguishable
+                              from its children, so the one option most people
+                              want — the whole area — looked like the narrowest.
+                            */-->
+                            <span th:if="${a.hasChildren()}"
+                                  th:text="'All of ' + ${a.name}">All of Chembur</span>
+                            <span th:unless="${a.hasChildren()}" th:text="${a.name}">Bandra West</span>
+
+                            <small th:if="${a.hasChildren()}" class="check__whole">whole area</small>
                             <!--/* A sublocality's second line names its
                                    locality, not its station: "Diamond Garden —
                                    Chembur" is what tells you where it is. */-->
-                            <small th:text="${a.sublocality} ? ${a.parentName} : ${a.nearestStation}">Bandra</small>
+                            <small th:unless="${a.hasChildren()}"
+                                   th:text="${a.sublocality} ? ${a.parentName} : ${a.nearestStation}">Bandra</small>
                         </label>
                     </div>
 
@@ -263,15 +281,25 @@
                     </label>
                 </fieldset>
 
-                <!-- Must have -->
-                <fieldset class="filters__group">
-                    <legend>Must have</legend>
-                    <label class="check" th:each="am : ${amenities}">
-                        <input type="checkbox" name="amenity" th:value="${am.code}"
-                               th:checked="${form.hasAmenity(am.code)}">
-                        <span th:text="${am.label}">Lift</span>
-                    </label>
-                </fieldset>
+                <!--/*
+                  The "Must have" amenity filter used to sit here, and it had
+                  to go when amenities left the wizard.
+
+                  They are now on the optional "add more detail" screen, which
+                  most leavers will never open. So a listing with a lift,
+                  parking and wifi almost certainly has none of them TICKED —
+                  and a filter on an unticked optional field does not narrow
+                  the results, it hides rooms that qualify.
+
+                  That failure is silent and it points the wrong way: somebody
+                  ticks "Lift", sees four rooms instead of forty, and concludes
+                  the site has nothing. A filter is a promise that what it
+                  removes did not match, and this one could not keep it.
+
+                  The backing query, the form binding and the columns are all
+                  untouched. If amenities ever become compulsory, or once
+                  enough listings carry them, this comes straight back.
+                */-->
 
                 <button type="submit" class="btn btn--primary btn--block">Show results</button>
                 </div>

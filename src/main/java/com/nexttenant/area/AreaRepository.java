@@ -36,7 +36,12 @@ public class AreaRepository {
                    ST_X(COALESCE(a.centroid, p.centroid)::geometry)  AS longitude,
                    COALESCE(a.radius_metres, p.radius_metres)        AS radius_metres,
                    a.parent_id,
-                   p.name                                            AS parent_name
+                   p.name                                            AS parent_name,
+                   -- Whether anything sits under this one. Ticking such an
+                   -- area means "all of it" (see expandWithChildren), so the
+                   -- UI has to be able to say so.
+                   EXISTS (SELECT 1 FROM areas c
+                            WHERE c.parent_id = a.id AND c.active) AS has_children
             FROM areas a
             LEFT JOIN areas p ON p.id = a.parent_id
             """;
