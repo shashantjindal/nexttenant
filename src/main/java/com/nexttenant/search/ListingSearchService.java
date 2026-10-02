@@ -45,8 +45,42 @@ public class ListingSearchService {
      * exposed it — a reminder that a test whose fixture is "whatever the seeder
      * produced" is testing the seeder as much as the code.
      */
-    private static final int[] WIDENING_LADDER = {2, 4, 8, 16, 32, 64, 128, 256};
     private static final int MAX_RADIUS_METRES = 10_000;
+
+    /**
+     * The radii a search climbs through, doubling until the ceiling.
+     *
+     * <p>This was a fixed list of eight multipliers, {2, 4, 8, ... 256}, and
+     * that carried the same bug as the {2, 4, 8} it replaced, only further
+     * out: the ladder's REACH depended on where it started. A 1&nbsp;km search
+     * climbed to the 10&nbsp;km ceiling the comment above promises; a 50&nbsp;m
+     * search stopped at 12.8&nbsp;km-worth of multiplier but a 1&nbsp;m search
+     * gave up at 256&nbsp;m and fell through to dropping filters — keeping the
+     * place and throwing away every other constraint, which is the outcome the
+     * whole design exists to avoid.
+     *
+     * <p>Generated rather than listed, so the ceiling is a property of the
+     * ladder instead of something the list has to be long enough to reach.
+     * Doubling keeps the number of queries logarithmic: 1&nbsp;m to
+     * 10&nbsp;km is fourteen rungs, and a realistic 500&nbsp;m start is five.
+     *
+     * <p>Package-private and pure so it can be tested as arithmetic. The old
+     * test for this reached through the seeded database and therefore tested
+     * the seeder as much as the code — it needed some randomly placed listing
+     * to land within 256&nbsp;m of a fixed point, which nothing guaranteed.
+     */
+    static List<Integer> wideningLadder(int fromMetres) {
+        List<Integer> rungs = new java.util.ArrayList<>();
+        if (fromMetres >= MAX_RADIUS_METRES) {
+            return rungs;
+        }
+        long radius = Math.max(1, fromMetres);
+        while (radius < MAX_RADIUS_METRES) {
+            radius *= 2;
+            rungs.add((int) Math.min(radius, MAX_RADIUS_METRES));
+        }
+        return rungs;
+    }
 
     /**
      * How far "nearby areas" reaches, centre to centre.
@@ -115,22 +149,13 @@ public class ListingSearchService {
         // Widening only makes sense when a place was specified. Without one
         // there is no radius to widen, and dropping filters is the only move.
         if (criteria.hasLocation() && criteria.cursor() == null) {
-            for (int multiplier : WIDENING_LADDER) {
-                int widened = Math.min(criteria.radiusMetres() * multiplier, MAX_RADIUS_METRES);
-                if (widened <= criteria.radiusMetres()) {
-                    break;   // already at the ceiling
-                }
-
+            for (int widened : wideningLadder(criteria.radiusMetres())) {
                 SearchCriteria wider = criteria.withRadius(widened);
                 hits = repository.search(wider);
                 if (!hits.isEmpty()) {
                     log.debug("Search widened {}m -> {}m, {} hits",
                             criteria.radiusMetres(), widened, hits.size());
                     return page(hits, wider, SearchOutcome.WIDENED, widened);
-                }
-
-                if (widened >= MAX_RADIUS_METRES) {
-                    break;
                 }
             }
         }

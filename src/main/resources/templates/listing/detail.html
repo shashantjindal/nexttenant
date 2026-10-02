@@ -289,6 +289,14 @@
                 <th:block th:if="${isOwner}">
                     <a class="btn btn--primary btn--block"
                        th:href="@{/list/{id}/1(id=${listing.id})}">Edit this listing</a>
+                    <!--/* Reachable from here because this is where somebody
+                           notices what is missing. Looking at your own live
+                           listing is the moment you see there are no house
+                           rules on it and no amenities listed — and until now
+                           the only route to that screen was the preview page,
+                           which nobody revisits. */-->
+                    <a class="btn btn--secondary btn--block"
+                       th:href="@{/list/{id}/more(id=${listing.id})}">Add more detail</a>
                     <a class="btn btn--ghost btn--block" th:href="@{/dashboard}">Your dashboard</a>
                     <p class="cost-card__note">
                         This is your listing. This is how other people see it.

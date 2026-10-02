@@ -266,28 +266,60 @@ class ListingSearchTest {
     }
 
     @Test
-    @DisplayName("the radius keeps climbing rather than giving up and dropping filters")
-    void wideningClimbsPastTheOldCeiling() {
-        // The ladder multiplies the ORIGINAL radius and used to stop at 8x, so
-        // a search that found nothing by then fell through to RELAXED: same
-        // place, every other filter discarded. Widening distance first is the
-        // design, and this asserts the climb actually goes somewhere.
+    @DisplayName("the ladder reaches the ceiling from any starting radius")
+    void theLadderAlwaysReachesTheCeiling() {
+        // Asserted as arithmetic, not through the database. The previous
+        // version of this test needed some randomly seeded listing to land
+        // within 256m of a fixed point, so it was testing the seeder as much
+        // as the code — and it failed whenever the dice came up differently.
         //
-        // The starting radius has to be small enough that 8x STILL finds
-        // nothing, or the test proves nothing at all. It began at 20m, which
-        // stopped working the moment the seed grew dense enough to put a
-        // listing within 160m of Bandra station — the assertion passed for the
-        // wrong reason and then failed for the right one.
-        //
-        // 1m is chosen so the old ceiling is 8m. Nothing is within 8m of a
-        // station in any dataset, seeded or real, which makes this independent
-        // of how many listings happen to exist.
-        int radius = 1;
-        SearchResults results = search.search(criteria()
-                .location(LAT, LNG, radius).build());
+        // What it was trying to prove is a property of the ladder, and the
+        // ladder is a pure function, so this proves it directly.
+        for (int start : new int[]{1, 50, 500, 1_000, 5_000}) {
+            assertThat(ListingSearchService.wideningLadder(start))
+                    .describedAs("ladder from %dm", start)
+                    .isNotEmpty()
+                    .last().isEqualTo(10_000);
+        }
+    }
 
-        assertThat(results.outcome()).isEqualTo(SearchOutcome.WIDENED);
-        assertThat(results.widenedToMetres()).isGreaterThan(radius * 8);
+    @Test
+    @DisplayName("a tiny radius still climbs past the old 8x ceiling")
+    void theLadderClimbsPastTheOldCeiling() {
+        // The bug this guards: the ladder used to be a fixed list of eight
+        // multipliers, so its REACH depended on where it started. From 1m it
+        // stopped at 256m and fell through to dropping filters — keeping the
+        // place and discarding every other constraint, which is exactly the
+        // outcome widening exists to avoid.
+        var rungs = ListingSearchService.wideningLadder(1);
+
+        assertThat(rungs).contains(8);           // the old ceiling
+        assertThat(rungs.getLast()).isEqualTo(10_000);
+        assertThat(rungs).isSortedAccordingTo(Integer::compareTo);
+    }
+
+    @Test
+    @DisplayName("a radius already at the ceiling has nowhere left to widen")
+    void nothingToWidenAtTheCeiling() {
+        // Without this the loop would offer a rung equal to the radius it was
+        // already searching, costing a second identical query to learn what
+        // the first one just said.
+        assertThat(ListingSearchService.wideningLadder(10_000)).isEmpty();
+        assertThat(ListingSearchService.wideningLadder(20_000)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a search that finds nothing nearby widens rather than dropping filters")
+    void wideningComesBeforeRelaxing() {
+        // The behavioural half, kept deliberately coarse: it asserts the
+        // ORDER of the two fallbacks and nothing about distances, because
+        // distances here depend on where the seeder put things.
+        SearchResults results = search.search(criteria()
+                .location(LAT, LNG, 1).build());
+
+        assertThat(results.outcome())
+                .describedAs("widening distance comes before discarding filters")
+                .isNotEqualTo(SearchOutcome.RELAXED);
         assertThat(results.cards()).isNotEmpty();
     }
 

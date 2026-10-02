@@ -111,7 +111,7 @@ class DashboardTest {
 
         assertThat(html).contains("Priya").contains("₹32,000").contains("Bandra West");
         assertThat(html).contains("12").contains("views");
-        assertThat(html).contains("Extend 14 days").contains("Mark as rented");
+        assertThat(html).contains("Extend 30 days").contains("Mark as rented");
     }
 
     @Test

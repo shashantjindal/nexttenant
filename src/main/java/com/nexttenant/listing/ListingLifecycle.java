@@ -25,8 +25,14 @@ public class ListingLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(ListingLifecycle.class);
 
-    /** "Extend 14 days" on the dashboard. */
-    public static final int EXTENSION_DAYS = 14;
+    /**
+     * "Extend" on the dashboard, and the same length as a new listing gets.
+     *
+     * <p>Thirty rather than fourteen: a fortnight is shorter than a Mumbai
+     * flat hunt, so a listing would expire while its owner was still
+     * showing people round.
+     */
+    public static final int EXTENSION_DAYS = 30;
 
     /**
      * How close to expiry the dashboard starts warning.

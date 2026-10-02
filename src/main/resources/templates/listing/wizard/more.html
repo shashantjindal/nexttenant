@@ -136,62 +136,26 @@
             </label>
         </fieldset>
 
-        <!-- ================= Handover terms ================= -->
-        <fieldset class="wizard__group">
-            <legend>Deposit and paperwork</legend>
+        <!--/*
+          The "Deposit and paperwork" fieldset used to sit here: whether the
+          owner knows, who holds the deposit, whether the agreement is
+          registered, how it transfers, notice period, bachelors allowed.
 
-            <label class="field">
-                <span class="field__label">Does the owner know this room is changing hands?</span>
-                <select name="ownerInformed">
-                    <option value="">Not stated</option>
-                    <option value="true" th:selected="${draft.ownerInformed == true}">Yes</option>
-                    <option value="false" th:selected="${draft.ownerInformed == false}">Not yet</option>
-                </select>
-            </label>
+          Gone entirely. Six questions that read like a legal form, placed in
+          front of somebody who has just published a room — and the honest
+          thing about them is that nobody filled them in. They were the
+          screen people quit on when this was step 4 of 6, and moving them
+          behind an optional link did not make anybody want to answer them.
 
-            <label class="field">
-                <span class="field__label">Who holds the deposit today?</span>
-                <select name="depositPaidTo">
-                    <option value="">Not stated</option>
-                    <option th:each="d : ${depositPaidToOptions}" th:value="${d}" th:text="${d.label}"
-                            th:selected="${d == draft.depositPaidTo}">The owner</option>
-                </select>
-            </label>
+          The listing page already handles their absence: the Handover terms
+          section renders only when something is there, so a listing without
+          them simply does not show one.
 
-            <label class="field">
-                <span class="field__label">Is the agreement registered?</span>
-                <select name="registeredAgreement">
-                    <option value="">Not stated</option>
-                    <option value="true" th:selected="${draft.registeredAgreement == true}">Yes</option>
-                    <option value="false" th:selected="${draft.registeredAgreement == false}">No</option>
-                </select>
-            </label>
-
-            <label class="field">
-                <span class="field__label">How does the paperwork transfer?</span>
-                <select name="agreementHandling">
-                    <option value="">Not stated</option>
-                    <option th:each="a : ${agreementOptions}" th:value="${a}" th:text="${a.label}"
-                            th:selected="${a == draft.agreementHandling}">New agreement</option>
-                </select>
-            </label>
-
-            <label class="field">
-                <span class="field__label">Notice period left (days)</span>
-                <input type="text" name="noticePeriodDays" inputmode="numeric"
-                       data-digits pattern="[0-9]*" maxlength="3"
-                       th:value="${draft.noticePeriodDays}" placeholder="30">
-            </label>
-
-            <label class="field">
-                <span class="field__label">Does the society allow bachelors?</span>
-                <select name="bachelorsAllowed">
-                    <option value="">Not stated</option>
-                    <option value="true" th:selected="${draft.bachelorsAllowed == true}">Yes</option>
-                    <option value="false" th:selected="${draft.bachelorsAllowed == false}">No</option>
-                </select>
-            </label>
-        </fieldset>
+          The COLUMNS and the service calls are untouched, and existing
+          listings keep everything they hold. What is gone is the asking.
+          These questions belong in the conversation that happens after two
+          people connect, which is where they were always actually answered.
+        */-->
 
         <!-- ================= Flatmates and rules ================= -->
         <fieldset class="wizard__group">

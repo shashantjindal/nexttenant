@@ -27,9 +27,15 @@
                             <span th:text="${r.requesterName}">Rahul</span><span
                                 th:if="${r.requesterAge}" th:text="', ' + ${r.requesterAge}">, 23–27</span>
                         </div>
+                        <!--/* The leaver's side names the person, so the room
+                               goes on the second line — and is a link, because
+                               somebody with several rooms listed needs to know
+                               which one this is about. */-->
                         <div class="request-row__meta">
                             <span th:text="${r.ago}">2 days ago</span>
-                            <span th:if="${r.listingArea}" th:text="' · ' + ${r.listingArea}"> · Bandra West</span>
+                            <a th:if="${r.listingArea}"
+                               th:href="@{/flats/{id}(id=${r.listingId})}"
+                               th:text="' · ' + ${r.listingArea}"> · Bandra West</a>
                         </div>
                     </div>
                     <span class="request-row__status" th:text="${r.status.label}">Waiting for a reply</span>
@@ -92,9 +98,22 @@
                 <div class="request-row__head">
                     <span class="leaver-card__initial" th:text="${s.leaverInitial}">P</span>
                     <div>
+                        <!--/*
+                          The title is the link to the room.
+
+                          There was a "View listing" button, and it rendered
+                          only while the request was PENDING — so the moment
+                          somebody got connected, the way back to the room they
+                          had been connected about disappeared. That is exactly
+                          when they want it: to check the rent before
+                          messaging, or to look at the photos again.
+                        */-->
                         <div class="request-row__name">
-                            <span th:text="${s.listingRent}">&#8377;32,000</span>
-                            <span th:if="${s.listingArea}" th:text="' · ' + ${s.listingArea}"> · Bandra West</span>
+                            <a th:href="@{/flats/{id}(id=${s.listingId})}">
+                                <span th:text="${s.listingRent}">&#8377;32,000</span>
+                                <span th:if="${s.listingArea}"
+                                      th:text="' · ' + ${s.listingArea}"> · Bandra West</span>
+                            </a>
                         </div>
                         <div class="request-row__meta"
                              th:text="'Sent ' + ${s.ago} + (${s.leaverName} != null ? ' to ' + ${s.leaverName} : '')">

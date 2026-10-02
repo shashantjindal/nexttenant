@@ -128,7 +128,7 @@
 
                         <form method="post" th:if="${l.canExtend()}"
                               th:action="@{/listings/{id}/extend(id=${l.id})}">
-                            <button type="submit" class="btn btn--ghost">Extend 14 days</button>
+                            <button type="submit" class="btn btn--ghost">Extend 30 days</button>
                         </form>
 
                         <form method="post" th:if="${l.canPause()}"

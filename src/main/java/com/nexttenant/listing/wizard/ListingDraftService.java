@@ -34,7 +34,20 @@ import java.util.UUID;
 @Service
 public class ListingDraftService {
 
-    private static final int LIVE_DAYS = 14;
+    /**
+     * How long a new listing stays up before it has to be renewed.
+     *
+     * <p>Thirty days, not a fortnight. A fortnight is shorter than a Mumbai
+     * flat hunt: notice periods run a month, people line up visits over
+     * weekends, and a listing that expires mid-search takes the room out of
+     * the results while its owner is still looking for somebody to take it.
+     *
+     * <p>Deliberately NOT tied to the move-in date. A room available in
+     * January listed in October would otherwise sit up for three months
+     * without anyone confirming it is still going — and the whole point of
+     * expiry is that silence means stale, not that the date has passed.
+     */
+    private static final int LIVE_DAYS = 30;
 
     private final ListingRepository listings;
     private final ListingPrivateRepository listingPrivates;
