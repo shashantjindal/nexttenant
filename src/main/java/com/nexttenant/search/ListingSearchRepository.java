@@ -73,9 +73,16 @@ public class ListingSearchRepository {
                        -- subquery rather than a JOIN: a join would multiply rows
                        -- by photo count and need a DISTINCT to undo it. This uses
                        -- photos_listing_ix and returns at most one row.
-                       (SELECT p.id FROM photos p
-                         WHERE p.listing_id = l.id AND p.processed_at IS NOT NULL
-                         ORDER BY p.position LIMIT 1) AS cover_photo_id
+                       -- The first few, not just the cover: the card opens on
+                       -- a collage and steps through them. Still one correlated
+                       -- subquery rather than a join, for the same reason the
+                       -- comment above gives - a join here would multiply the
+                       -- result by photo count and need a DISTINCT to undo it.
+                       (SELECT array_agg(p.id ORDER BY p.position)
+                          FROM (SELECT p.id, p.position FROM photos p
+                                 WHERE p.listing_id = l.id
+                                   AND p.processed_at IS NOT NULL
+                                 ORDER BY p.position LIMIT 5) p) AS photo_ids
                 FROM listings l
                 WHERE %s
                 ORDER BY l.%s %s, l.id %s

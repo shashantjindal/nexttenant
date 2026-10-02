@@ -151,9 +151,15 @@ public class ShortlistService {
                                l.configuration, l.room_type, l.furnishing, l.flatmate_gender,
                                l.available_from, l.published_at,
                                CAST(s.created_at AS text) AS sort_value,
-                               (SELECT p.id FROM photos p
-                                 WHERE p.listing_id = l.id AND p.processed_at IS NOT NULL
-                                 ORDER BY p.position LIMIT 1) AS cover_photo_id
+                               -- Same shape as the search query, because both
+                               -- feed SearchHit. A shared row mapper is a
+                               -- shared contract with every query behind it,
+                               -- and this pair has drifted apart once already.
+                               (SELECT array_agg(p.id ORDER BY p.position)
+                                  FROM (SELECT p.id, p.position FROM photos p
+                                         WHERE p.listing_id = l.id
+                                           AND p.processed_at IS NOT NULL
+                                         ORDER BY p.position LIMIT 5) p) AS photo_ids
                         FROM shortlists s
                         JOIN listings l ON l.id = s.listing_id
                         WHERE s.user_id = ? AND l.status = 'LIVE'

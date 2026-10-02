@@ -66,7 +66,7 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
                 // word on most cards and crowd out the few that differ.
                 openToLabel(rs.getString("flatmate_gender")),
                 brokerage == 0,
-                coverUrl(rs)
+                photoUrls(rs)
         );
 
         return new SearchHit(card, rs.getString("sort_value"), id);
@@ -137,9 +137,23 @@ public record SearchHit(ListingCardDto card, String sortValue, UUID id) {
      * <p>The query only selects photos with processed_at set, so an image whose
      * EXIF has not been discarded is never linked from a search result.
      */
-    private static String coverUrl(ResultSet rs) throws SQLException {
-        UUID coverId = rs.getObject("cover_photo_id", UUID.class);
-        return coverId == null ? null : "/photos/" + coverId + "/thumb";
+    /**
+     * Thumbnail URLs for the card, cover first.
+     *
+     * <p>Reads a Postgres array rather than a single id, because the card now
+     * opens on a collage. Null when the listing has no processed photos -
+     * array_agg over no rows returns NULL, not an empty array.
+     */
+    private static java.util.List<String> photoUrls(ResultSet rs) throws SQLException {
+        java.sql.Array array = rs.getArray("photo_ids");
+        if (array == null) {
+            return java.util.List.of();
+        }
+        UUID[] ids = (UUID[]) array.getArray();
+        return java.util.Arrays.stream(ids)
+                .filter(java.util.Objects::nonNull)
+                .map(id -> "/photos/" + id + "/thumb")
+                .toList();
     }
 
     private static Integer getInteger(ResultSet rs, String column) throws SQLException {

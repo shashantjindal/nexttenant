@@ -143,15 +143,15 @@ public class ListingDetailController {
                 // rendered without a photo while the identical card on search
                 // had one. At most three lookups, after limit() — not thirty,
                 // which is why the limit comes first.
-                .map(other -> ListingCardDto.from(other, coverThumbUrl(other.getId())))
+                .map(other -> ListingCardDto.from(other, cardPhotoUrls(other.getId())))
                 .toList();
     }
 
-    private String coverThumbUrl(UUID listingId) {
+    private java.util.List<String> cardPhotoUrls(UUID listingId) {
         return photos.servableFor(listingId).stream()
-                .findFirst()
+                .limit(5)
                 .map(p -> "/photos/" + p.getId() + "/thumb")
-                .orElse(null);
+                .toList();
     }
 
     /**

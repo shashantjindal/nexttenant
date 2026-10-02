@@ -41,16 +41,22 @@ public class ListingCatalog {
     public List<ListingCardDto> recentlyListed(int limit) {
         return listings
                 .findByStatusOrderByPublishedAtDesc(ListingStatus.LIVE, PageRequest.of(0, limit))
-                .map(listing -> ListingCardDto.from(listing, coverUrl(listing.getId())))
+                .map(listing -> ListingCardDto.from(listing, cardPhotoUrls(listing.getId())))
                 .getContent();
     }
 
     /** Thumbnail URL for the cover photo, or null if the listing has none. */
-    private String coverUrl(java.util.UUID listingId) {
+    /**
+     * The first few thumbnails, for the card's collage and its arrows.
+     *
+     * <p>Capped at five. A card is a decision about whether to open the
+     * listing, and somebody who has looked at five photos has already made it.
+     */
+    private java.util.List<String> cardPhotoUrls(java.util.UUID listingId) {
         return photos.servableFor(listingId).stream()
-                .findFirst()
+                .limit(5)
                 .map(p -> "/photos/" + p.getId() + "/thumb")
-                .orElse(null);
+                .toList();
     }
 
     @Transactional(readOnly = true)

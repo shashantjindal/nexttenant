@@ -51,7 +51,15 @@ public record ListingCardDto(
         String openTo,
 
         boolean zeroBrokerage,
-        String coverPhotoUrl     // null until photos exist
+
+        /**
+         * Thumbnails for the card, in order, cover first.
+         *
+         * <p>A list rather than a single cover URL because the card opens on a
+         * collage and steps through the photos from there. Empty when the
+         * listing has none.
+         */
+        java.util.List<String> photoUrls
 ) {
 
     private static final DateTimeFormatter DAY_MONTH =
@@ -64,7 +72,7 @@ public record ListingCardDto(
      * one place; takes only the PUBLIC entity so it has no access to private
      * data even if someone wanted to add a field.
      */
-    public static ListingCardDto from(Listing listing, String coverPhotoUrl) {
+    public static ListingCardDto from(Listing listing, java.util.List<String> photoUrls) {
         return new ListingCardDto(
                 listing.getId(),
                 Rupees.format(listing.getMonthlyRentInr()),
@@ -78,7 +86,7 @@ public record ListingCardDto(
                 listing.getFurnishing() == null ? null : listing.getFurnishing().getLabel(),
                 openToLabel(listing),
                 listing.isZeroBrokerage(),
-                coverPhotoUrl
+                photoUrls == null ? java.util.List.of() : java.util.List.copyOf(photoUrls)
         );
     }
 
@@ -90,6 +98,26 @@ public record ListingCardDto(
      * A template writing its own would eventually write the bare id form, and
      * every one of those costs a redirect hop.
      */
+    /** The first photo, or null. What the collage leads with. */
+    public String coverPhotoUrl() {
+        return photoUrls.isEmpty() ? null : photoUrls.getFirst();
+    }
+
+    /**
+     * Whether the card has enough photos to be worth a collage.
+     *
+     * <p>Two is the threshold, not three: a collage of one photo beside two
+     * empty boxes looks broken, and with two the grid still reads as a set.
+     */
+    public boolean hasCollage() {
+        return photoUrls.size() >= 2;
+    }
+
+    /** Up to three, which is what the collage shows. */
+    public java.util.List<String> collageUrls() {
+        return photoUrls.subList(0, Math.min(3, photoUrls.size()));
+    }
+
     public String path() {
         return ListingUrls.path(id, area, configuration, roomType);
     }

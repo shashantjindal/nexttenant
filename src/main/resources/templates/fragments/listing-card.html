@@ -45,8 +45,45 @@
         <!--/* loading="lazy" matters on a search page showing twenty cards:
                without it the browser fetches every image immediately,
                including the eighteen below the fold. */-->
-        <img class="listing-card__photo" th:if="${card.coverPhotoUrl}"
-             th:src="${card.coverPhotoUrl}" alt="" loading="lazy" decoding="async">
+        <!--/*
+          Frame 0 is a collage; frames 1..n are the photos one at a time.
+
+          The collage answers "what is this flat like" at a glance — one photo
+          cannot show you a room, a kitchen and a balcony. The arrows are for
+          somebody already interested, who wants to see each one properly.
+
+          Every frame is in the markup and the script only toggles a class, so
+          without JavaScript the first frame shows and the rest are hidden by
+          CSS — a collage with no arrows, which is a perfectly good card.
+        */-->
+        <div class="listing-card__frames" th:if="${card.coverPhotoUrl}"
+             th:attr="data-frames=${card.photoUrls.size() + (card.hasCollage() ? 1 : 0)}">
+
+            <div class="listing-card__frame listing-card__frame--on listing-card__collage"
+                 th:if="${card.hasCollage()}"
+                 th:classappend="'listing-card__collage--' + ${card.collageUrls().size()}">
+                <img th:each="url : ${card.collageUrls()}" th:src="${url}"
+                     alt="" loading="lazy" decoding="async">
+            </div>
+
+            <!--/* The first photo is the only one loaded eagerly when there is
+                   no collage in front of it, because then it is what the card
+                   actually shows. */-->
+            <div class="listing-card__frame" th:each="url, i : ${card.photoUrls}"
+                 th:classappend="${i.first and !card.hasCollage()} ? ' listing-card__frame--on' : ''">
+                <img class="listing-card__photo" th:src="${url}" alt=""
+                     loading="lazy" decoding="async">
+            </div>
+
+            <!--/* Hidden until the script runs. Arrows that move nothing are
+                   worse than no arrows. */-->
+            <button type="button" class="listing-card__nav listing-card__nav--prev"
+                    hidden data-card-prev aria-label="Previous photo">&#8249;</button>
+            <button type="button" class="listing-card__nav listing-card__nav--next"
+                    hidden data-card-next aria-label="Next photo">&#8250;</button>
+
+            <div class="listing-card__dots" hidden data-card-dots aria-hidden="true"></div>
+        </div>
 
         <!--/* A listing with no photos still needs to occupy the same height,
                or a grid row containing one collapses and every card beside it
