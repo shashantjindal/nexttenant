@@ -175,13 +175,35 @@ for service in "${CONTAINERS[@]}"; do
     printf '    waiting for %s to report healthy ' "$service"
     wait_until_healthy "$service"
     say "$service is healthy"
-done
 
-# Caddy only needs recreating if its own config changed, and recreating it is
-# the one thing here that IS briefly visible to users. Left out on purpose —
-# after editing the Caddyfile, reload it in place with no dropped connections:
-#
-#     docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+    # ---- Tell Caddy where the container went --------------------------------
+    #
+    # THIS IS NOT OPTIONAL, and leaving it out took the site down.
+    #
+    # A recreated container gets a NEW IP on the Docker network. Caddy resolved
+    # app-blue and app-green when its config was loaded and goes on dialling the
+    # addresses it resolved then — so after this loop had replaced both, every
+    # upstream Caddy knew about pointed at a container that no longer existed,
+    # and every request was a 502. Both containers were healthy the whole time,
+    # which is what made it baffling: `docker ps` said the deploy had worked.
+    #
+    # A reload re-resolves the names and swaps the configuration in place
+    # WITHOUT dropping a connection, so this costs nothing and keeps the
+    # zero-downtime property intact.
+    #
+    # Done after EACH container rather than once at the end, and that ordering
+    # is the whole point: when green is recreated, blue is still running at the
+    # address Caddy already holds, so traffic keeps flowing to blue while green
+    # is re-resolved — and vice versa. One reload at the end would leave a
+    # window where Caddy's only remaining good address had just been replaced.
+    #
+    # A failure here is fatal rather than a warning: carrying on would recreate
+    # the second container too, and then Caddy has no reachable upstream at all.
+    say "Reloading Caddy so it picks up $service's new address"
+    $COMPOSE exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
+        || fail "Caddy would not reload, so it is still pointing at the old $service.
+The other container is still serving. Check: $COMPOSE logs caddy --tail 40"
+done
 
 say "Deployed. Both containers are on the new image."
 $COMPOSE ps
