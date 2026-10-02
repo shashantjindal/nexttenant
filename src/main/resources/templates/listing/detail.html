@@ -2,8 +2,11 @@
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title th:text="${listing.roomType} + ' in ' + ${listing.area} + ' — NextTenant'">
-        Room in Bandra West — NextTenant
+    <!--/* Built in the controller, not here: it carries the rent, and
+           assembling that out of three model expressions in an attribute is
+           both unreadable and untestable. See ListingDetailController#meta. */-->
+    <title th:text="${pageMeta.title}">
+        Private room in 2 BHK, Bandra West — ₹28,000/month | Next Tenant
     </title>
 </head>
 <body>
@@ -39,8 +42,31 @@
                                anything we could generate, and an empty alt is
                                the right answer when there is none — the image
                                is decorative to a screen reader either way. */-->
-                        <img th:src="${photo.full}" th:alt="${photo.label} ?: ''"
-                             th:attr="loading=${i.first} ? 'eager' : 'lazy'" decoding="async">
+                        <!--/* fetchpriority="high" on the first photo only. It is
+                               the Largest Contentful Paint element on this page,
+                               and the browser otherwise discovers it at normal
+                               priority, queued behind the stylesheet and the
+                               fonts. The rest stay lazy and low.
+
+                               width and height are the 3:2 display box, not this
+                               photo's own pixels — see the note in
+                               fragments/listing-card.html for why. */-->
+                        <!--/* The fallback is a real sentence, not "". Thymeleaf
+                               REMOVES an attribute whose expression evaluates to
+                               an empty string, so `?: ''` did not produce
+                               alt="" — it produced no alt attribute at all, and
+                               a screen reader then reads out the image URL.
+                               Found by a Lighthouse accessibility audit; it had
+                               been that way since the gallery was written.
+
+                               Given the attribute has to carry something, it may
+                               as well say which photo this is and where. */-->
+                        <img th:src="${photo.full}"
+                             th:alt="${photo.label} ?: ('Photo ' + ${i.count} + ' of this '
+                                      + ${listing.roomType} + ' in ' + ${listing.area})"
+                             th:attr="loading=${i.first} ? 'eager' : 'lazy',
+                                      fetchpriority=${i.first} ? 'high' : 'low'"
+                             decoding="async" width="1200" height="800">
                         <p class="gallery__caption" th:if="${photo.label}"
                            th:text="${photo.label}">Your room</p>
                     </div>
@@ -62,7 +88,8 @@
                             th:classappend="${i.first} ? ' gallery__thumb--on' : ''"
                             th:attr="data-gallery-go=${i.index},
                                      aria-label='Photo ' + ${i.count}">
-                        <img th:src="${photo.thumb}" alt="" loading="lazy" decoding="async">
+                        <img th:src="${photo.thumb}" alt="" loading="lazy" decoding="async"
+                             width="480" height="320">
                     </button>
                 </div>
             </section>
@@ -104,6 +131,16 @@
                     <th:block th:unless="${listing.walkTime}">Near</th:block>
                     <span th:text="${listing.station}">Bandra</span> station
                     <span th:if="${listing.floorLabel}" th:text="'· ' + ${listing.floorLabel}">· 7th floor</span>
+                </p>
+
+                <!--/* The privacy promise, in a sentence, where the map used to
+                       make it in a picture. It belongs near the location rather
+                       than three sections down, because the question it answers
+                       — "why does this only say Bandra West?" — is asked here. */-->
+                <p class="detail__privacy">
+                    The exact address is shared once
+                    <span th:text="${listing.leaverFirstName}">Priya</span>
+                    accepts your request.
                 </p>
             </header>
 
@@ -177,9 +214,15 @@
                     <span class="chip" th:each="a : ${listing.amenities}" th:text="${a}">Lift</span>
                     <span class="chip chip--perk" th:each="p : ${listing.perks}" th:text="${p}">Balcony</span>
                 </div>
-                <p class="detail__lede" th:if="${listing.amenities.isEmpty()}">
-                    The leaver has not listed amenities yet.
-                </p>
+                <!--/* No empty state here, deliberately.
+
+                       This used to read "The leaver has not listed amenities
+                       yet." A line like that makes an absence into a visible
+                       hole: the reader is told the page is incomplete, and the
+                       listing looks neglected, when in truth most people simply
+                       do not tick the boxes. Nothing at all reads as "this
+                       section does not apply", which is both kinder and more
+                       accurate. */-->
             </section>
 
             <!-- Flatmates -->
@@ -207,40 +250,23 @@
                 </div>
             </section>
 
-            <!-- Approximate location -->
-            <section class="detail__section">
-                <h2 class="detail__heading">Roughly here</h2>
-                <p class="detail__lede">
-                    The circle covers about <span th:text="${listing.approxRadiusLabel}">0.5 km</span>.
-                    The exact address is shared once <span th:text="${listing.leaverFirstName}">Priya</span>
-                    accepts your request.
-                </p>
+            <!--/* THE APPROXIMATE-LOCATION MAP IS GONE.
 
-                <!--/*
-                  The map receives listing.approxLat / approxLng — the
-                  trigger-maintained jittered point, 120-300m from the truth.
-                  The exact location is not in this DTO, so it cannot be passed
-                  here even by mistake.
+                   It was a Leaflet/OpenStreetMap canvas showing a 0.5km circle
+                   around a jittered point. Removed on request.
 
-                  The circle is deliberately wider than the offset, so the real
-                  building is always somewhere inside it. A circle narrower than
-                  the jitter would exclude the true location, which is a
-                  different kind of lie.
-                */-->
-                <div id="approx-map"
-                     class="detail__map"
-                     th:attr="data-lat=${listing.approxLat},
-                              data-lng=${listing.approxLng},
-                              data-radius=${listing.approxRadiusMetres}">
-                </div>
-                <noscript>
-                    <p class="detail__lede">
-                        Map needs JavaScript. This room is in
-                        <strong th:text="${listing.area}">Bandra West</strong>,
-                        near <span th:text="${listing.station}">Bandra</span> station.
-                    </p>
-                </noscript>
-            </section>
+                   What it was actually communicating — "we do not publish the
+                   address, and you get it when the leaver says yes" — now sits
+                   as one line under the title, where it is read rather than
+                   inferred from a circle. The map cost a 42KB third-party
+                   script, two extra origins in the CSP and a large widget to
+                   say what a sentence says.
+
+                   The jittered point itself still exists and is still what the
+                   search queries run against; nothing about the privacy
+                   guarantee changed, only its illustration. The wizard's pin
+                   map is untouched — that is how a lister sets the location in
+                   the first place. */-->
 
             <!-- Similar -->
             <section class="detail__section" th:if="${!similar.isEmpty()}">
@@ -365,28 +391,14 @@
         </aside>
     </div>
 
-    <!--/*
-      Map provider, chosen by whether a Google key is configured. See
-      MapsProperties: a missing key falls back to Leaflet rather than leaving
-      a blank rectangle, because a map that vanishes because of an unset
-      environment variable is much harder to diagnose than one that renders
-      the wrong tiles.
+    <!--/* The map scripts went with the map: Leaflet and its stylesheet from
+           unpkg, or the Google Maps loader, plus approx-map.js. On the page
+           they were around 42KB of third party for one decorative circle.
 
-      Our script is loaded WITHOUT async/defer and BEFORE the Google loader,
-      because the loader calls window.hhInitApproxMap the moment it is ready.
-      Deferring ours would be a race we would lose intermittently — the worst
-      kind of bug to be handed.
-    */-->
-    <th:block th:if="${maps.hasGoogle()}">
-        <script th:src="@{/js/approx-map-google.js}"></script>
-        <script th:src="${maps.loaderUrl('hhInitApproxMap')}" async></script>
-    </th:block>
-
-    <th:block th:unless="${maps.hasGoogle()}">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-        <script th:src="@{/js/approx-map.js}" defer></script>
-    </th:block>
+           js/approx-map.js and js/approx-map-google.js are left on disk rather
+           than deleted, because dropping the map was a product decision and may
+           be reversed; nothing loads them now. The wizard pin maps
+           (js/pin-map*.js) are unaffected and still in use. */-->
     <script th:src="@{/js/gallery.js}" defer></script>
 </main>
 

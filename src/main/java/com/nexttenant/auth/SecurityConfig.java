@@ -50,13 +50,32 @@ public class SecurityConfig {
                         // Requiring a login to look at listings would cost most
                         // of the organic search traffic the product depends on.
                         .requestMatchers("/", "/flats", "/flats/**").permitAll()
+
+                        // The clean landing URLs, and the guides. These are the
+                        // pages search traffic arrives on, so a login redirect
+                        // here does not merely inconvenience a visitor — it is
+                        // what Googlebot indexes, and a site whose area pages
+                        // all return the sign-in screen ranks for nothing.
+                        //
+                        // Every one of them resolves against a lookup table and
+                        // 404s otherwise, so opening the prefix does not open an
+                        // unbounded space. See seo/LandingController.
+                        .requestMatchers("/flats-in-**", "/shared-flats-in-**",
+                                         "/flats-near-**").permitAll()
+                        .requestMatchers("/guides", "/guides/**").permitAll()
+
                         .requestMatchers("/login", "/login/**", "/logout").permitAll()
                         // Photos are public: a listing page shows them to
                         // anyone. Serving is gated on processed_at, so an
                         // unstripped image is never reachable here.
                         .requestMatchers("/photos/**").permitAll()
+                        // sitemap-*.xml as well as sitemap.xml: once the sitemap
+                        // splits, the index points at the sections, and a
+                        // section behind the login makes the index a list of
+                        // redirects to a sign-in page.
                         .requestMatchers("/css/**", "/js/**", "/images/**",
-                                         "/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
+                                         "/favicon.ico", "/robots.txt",
+                                         "/sitemap.xml", "/sitemap-*.xml").permitAll()
 
                         // Public, and it has to be. Somebody deciding whether
                         // to hand over a phone number needs to read this
@@ -72,6 +91,21 @@ public class SecurityConfig {
                         // publishing those is how a deployment leaks its own
                         // database URL.
                         .requestMatchers("/actuator/health").permitAll()
+
+                        // Readiness as well, because the proxy in front of us
+                        // load-balances across two app containers and takes one
+                        // out of rotation during a deploy. Readiness is the only
+                        // endpoint that reports OUT_OF_SERVICE the moment a
+                        // graceful shutdown begins, which is what lets the proxy
+                        // stop sending traffic BEFORE the process goes away —
+                        // /health still says UP right up to the last request.
+                        //
+                        // Safe to publish: with show-details: never it answers
+                        // {"status":"UP"} and nothing else. Were it behind the
+                        // login it would answer any health check with a 302 to
+                        // the sign-in page, which a probe reads as success —
+                        // a health check that can never fail is worse than none.
+                        .requestMatchers("/actuator/health/readiness").permitAll()
 
                         // Everything else under /actuator is ADMIN, and this
                         // line has to exist. Without it those endpoints fall

@@ -1,29 +1,88 @@
 # =============================================================================
-# Production stack: the app, and a web server in front of it.
+# Production stack: two copies of the app, and a web server in front of them.
 #
-# Two containers rather than one. Caddy is the only thing exposed to the
-# internet; it obtains and renews the HTTPS certificate by itself and passes
-# requests inward. The app is not published to the host at all — it is reachable
-# only from Caddy over Docker's private network, so there is no way to bypass
-# the certificate by hitting a port directly.
+# Caddy is the only thing exposed to the internet; it obtains and renews the
+# HTTPS certificate by itself and passes requests inward. The app is not
+# published to the host at all — it is reachable only from Caddy over Docker's
+# private network, so there is no way to bypass the certificate by hitting a
+# port directly.
 #
 # Caddy runs as a container rather than an OS package on purpose: the package
 # name and repository differ between Linux distributions, and "install Caddy"
 # is a step that fails differently on every machine. This image is the same
 # everywhere.
 #
+# ---- Why TWO app containers -------------------------------------------------
+#
+# This app takes 20-30 seconds to boot. With a single container, every deploy
+# recreated it and the site answered 502 for that whole window — not a slow
+# page, an error page, to everybody who happened to arrive during it.
+#
+# So there are two identical containers, blue and green, and Caddy health-checks
+# both and only sends traffic to the ones answering. Deploys restart them one at
+# a time (see ./deploy.sh), so there is always one serving. Nothing is "the
+# spare": in normal running both take traffic.
+#
+# They are interchangeable only because the app keeps nothing on its own disk:
+# sessions live in Postgres (spring-session-jdbc) and photos in S3. Running two
+# containers with NEXTTENANT_PHOTO_STORAGE=local would mean half the photo
+# requests landing on the container that does not have the file. See DEPLOY.md.
+#
 # Usage:
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   ./deploy.sh                  rolling, no downtime — the normal way
+#   docker compose -f docker-compose.prod.yml up -d --build    both at once
 # =============================================================================
+
+# Everything the two app containers share. YAML anchor rather than copy-paste,
+# so blue and green cannot drift apart — two "identical" containers that are
+# quietly not identical is a bad afternoon.
+x-app: &app
+  # Both run the SAME tagged image, built once. Only blue declares `build:`,
+  # which is what produces the tag; green picks it up when it is recreated.
+  # Two `build:` sections would compile the project twice per deploy and, worse,
+  # could produce two different images from two different moments.
+  image: nexttenant:latest
+  restart: unless-stopped
+
+  # Secrets come from a file that is NOT in this repository.
+  env_file: nt.env
+
+  # What Caddy's health check also asks, asked locally so `docker ps` tells the
+  # truth and ./deploy.sh can wait for a real answer rather than sleeping.
+  # Readiness rather than /actuator/health: it reports OUT_OF_SERVICE as soon as
+  # a graceful shutdown starts, where /actuator/health says UP until the process
+  # is gone. wget is busybox's, already in the Alpine base image.
+  healthcheck:
+    test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/actuator/health/readiness"]
+    interval: 5s
+    timeout: 3s
+    # 40 * 5s = 200s before Docker gives up. Generous on purpose: a cold start
+    # that also runs a long Flyway migration is slower than a normal one, and a
+    # deploy that fails for want of patience is the wrong failure.
+    retries: 40
+    # Failures during this window do not count against `retries` and do not mark
+    # the container unhealthy — it is still booting, which is not the same as
+    # broken.
+    start_period: 20s
+
+  # Docker sends SIGTERM, waits, then SIGKILLs. The default wait is 10s, which
+  # is shorter than spring.lifecycle.timeout-per-shutdown-phase — so the kernel
+  # would kill the JVM mid-drain and graceful shutdown would never once finish.
+  stop_grace_period: 30s
+
+  logging:
+    driver: json-file
+    options:
+      # Without a cap, Docker's logs grow until they fill the disk and take the
+      # site down. This is a real way small servers die.
+      max-size: "10m"
+      max-file: "3"
 
 services:
 
-  app:
+  app-blue:
+    <<: *app
     build: .
-    restart: unless-stopped
-
-    # Secrets come from a file that is NOT in this repository.
-    env_file: nt.env
 
     # Note the 127.0.0.1 prefix — it is doing the important work here.
     #
@@ -34,18 +93,17 @@ services:
     # `curl http://localhost:8080/actuator/health` work when you are logged in
     # and diagnosing something.
     #
-    # Caddy reaches it as `app:8080` over Docker's private network either way,
-    # which is unaffected by this line.
+    # Caddy reaches both as app-blue:8080 and app-green:8080 over Docker's
+    # private network, which is unaffected by these lines.
     ports:
       - "127.0.0.1:8080:8080"
 
-    logging:
-      driver: json-file
-      options:
-        # Without a cap, Docker's logs grow until they fill the disk and take
-        # the site down. This is a real way small servers die.
-        max-size: "10m"
-        max-file: "3"
+  app-green:
+    <<: *app
+    # 8081 on the host so you can curl either one by name while diagnosing.
+    # Inside the network it is still port 8080, like its twin.
+    ports:
+      - "127.0.0.1:8081:8080"
 
   caddy:
     image: caddy:2-alpine

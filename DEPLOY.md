@@ -240,6 +240,50 @@ Flyway runs on startup. Nothing to do — but note `baseline-on-migrate: false`,
 so it refuses to run against a non-empty database with no history table. That
 is a guard, not a bug.
 
+### 3.6 Deploying again, without the site going down
+
+The app takes 20–30 seconds to boot. Replace the only running copy and that is
+20–30 seconds of **502s**, not a slow page — an error page, for everyone who
+arrives in that window.
+
+`docker-compose.prod.yml` therefore runs two identical app containers,
+`app-blue` and `app-green`, with Caddy health-checking both and sending traffic
+only to the ones answering. `./deploy.sh` builds the image once and then
+restarts them one at a time, waiting for each to report healthy before touching
+the other, so one is always serving:
+
+```bash
+git pull
+./deploy.sh
+```
+
+If the new build fails to come up, the script stops after the first container
+and says so. The other is still serving the previous version, so a bad deploy
+is "the fix is not live yet" rather than an outage.
+
+Three things make this work, and all three are easy to lose:
+
+- **The app keeps nothing on its own disk.** Sessions are in Postgres
+  (`spring-session-jdbc`) and photos in S3. With
+  `NEXTTENANT_PHOTO_STORAGE=local` the two containers have different photos and
+  roughly half of all photo requests 404. Section 2.2 is not optional once
+  there are two containers.
+- **Migrations must be backward compatible.** For about a minute the old and
+  new versions run against one database, and the new container migrates while
+  the old one is still serving. Adding a column is safe. Dropping or renaming
+  one the deployed code still reads takes the site down in the one way this
+  setup cannot help with — split it across two deploys.
+- **Graceful shutdown.** `server.shutdown: graceful` lets in-flight requests
+  finish instead of having their connections cut, and flips the readiness probe
+  to `OUT_OF_SERVICE` first so Caddy stops sending new work to a container that
+  is on its way out.
+
+Caddy itself needs no restart when its config changes — reload it in place:
+
+```bash
+docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
 ---
 
 ## 4. Maps (optional)
@@ -403,7 +447,31 @@ NEXTTENANT_S3_SECRET_KEY=...
 
 # Optional
 NEXTTENANT_MAPS_KEY=...
+
+# Search Console verification: the token from its "HTML tag" method, without
+# the surrounding markup. Blank means the tag is not rendered at all, which is
+# an unattempted verification rather than a failed one.
+NEXTTENANT_GSC_TOKEN=
+
+# Privacy-respecting analytics — Plausible or Umami, self-hosted or theirs.
+# No cookies, no cross-site identifier, no personal data leaving the country,
+# so no consent banner is needed under the DPDP Act.
+#
+# BOTH must be set or analytics stays off: a script URL with no domain loads a
+# tracker that reports nothing, which is a third-party request on every page
+# view bought for no data.
+#
+# Deliberately NOT Google Analytics. GA sets identifiers and transfers data
+# abroad, so it would need opt-in consent before the script loaded, and the
+# banner costs more conversions than the numbers are worth at this size.
+NEXTTENANT_ANALYTICS_SCRIPT=
+NEXTTENANT_ANALYTICS_DOMAIN=
 ```
+
+**`NEXTTENANT_BASE_URL` matters more than it used to.** Canonical tags, Open
+Graph URLs and the sitemap are all built from it. A staging copy left pointing
+at the production host publishes canonicals claiming to *be* production; one
+with its own host and no `noindex` competes with it. Set it per environment.
 
 ---
 

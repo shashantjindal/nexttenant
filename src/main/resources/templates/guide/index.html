@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${pageMeta.title}">Guides | Next Tenant</title></head>
+<body>
+
+<main id="content" class="page-width">
+
+    <div class="page-head">
+        <h1 class="page-head__title">Guides to renting in Mumbai</h1>
+        <p class="page-head__lede">
+            The things that usually take a week of asking around — deposits,
+            agreements, police verification, and what to check before you pay
+            anybody.
+        </p>
+    </div>
+
+    <section class="section">
+        <ul class="guide-list" th:if="${!guides.isEmpty()}">
+            <li class="guide-list__item" th:each="guide : ${guides}">
+                <a class="guide-list__link" th:href="${guide.path()}">
+                    <h2 class="guide-list__title" th:text="${guide.title()}">Deposits</h2>
+                    <p class="guide-list__summary" th:text="${guide.summary()}">What is normal.</p>
+                    <!--/* A machine-readable date beside the human one. Not for
+                           Google — the JSON-LD carries that — but so a screen
+                           reader announces "the third of October" rather than
+                           reading the abbreviation aloud. */-->
+                    <time class="guide-list__date"
+                          th:if="${guide.publishedAt() != null}"
+                          th:datetime="${guide.publishedAt()}"
+                          th:text="${#temporals.format(guide.publishedAt(), 'd MMMM yyyy')}">3 October 2026</time>
+                </a>
+            </li>
+        </ul>
+
+        <div class="empty" th:if="${guides.isEmpty()}">
+            <p class="empty__title">Nothing here yet.</p>
+            <p class="empty__body">The first guides are being written.</p>
+            <a class="btn btn--primary" th:href="@{/flats}" href="/flats">See the rooms instead</a>
+        </div>
+    </section>
+
+</main>
+
+</body>
+</html>

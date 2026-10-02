@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Write a guide — Admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title" th:text="${guide != null and guide.id() != null}
+                                            ? 'Edit guide' : 'Write a guide'">Write a guide</h1>
+        <a class="section__link" th:href="@{/admin/guides}">All guides &rarr;</a>
+    </div>
+
+    <p class="form-error" th:if="${error != null}" th:text="${error}">Something is wrong.</p>
+
+    <form method="post" th:action="@{/admin/guides}" class="stack">
+
+        <!--/* Present only when editing. Its absence is what tells the handler
+               this is a new guide, rather than a separate endpoint. */-->
+        <input type="hidden" name="id" th:if="${guide != null and guide.id() != null}"
+               th:value="${guide.id()}">
+
+        <label class="field">
+            <span class="field__label">Title</span>
+            <input name="title" required maxlength="200"
+                   th:value="${guide != null ? guide.title() : ''}">
+        </label>
+
+        <label class="field">
+            <span class="field__label">URL</span>
+            <input name="slug" maxlength="120"
+                   placeholder="left empty, this comes from the title"
+                   th:value="${guide != null ? guide.slug() : ''}">
+            <!--/* Said plainly, because it is the one field here that cannot be
+                   taken back once the page is indexed and shared. */-->
+            <span class="field__hint">
+                Lives at /guides/&lt;this&gt;. Changing it after publication breaks
+                every link anybody has to the guide, so get it right once.
+            </span>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Summary</span>
+            <textarea name="summary" required rows="2" maxlength="300"
+                      th:text="${guide != null ? guide.summary() : ''}"></textarea>
+            <span class="field__hint">
+                The meta description and the card on the index. Google shows about
+                155 characters of it, so put the point in the first sentence.
+            </span>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Author</span>
+            <input name="authorName" maxlength="120"
+                   placeholder="left empty, the site is credited"
+                   th:value="${guide != null ? guide.authorName() : ''}">
+        </label>
+
+        <label class="field">
+            <span class="field__label">Body</span>
+            <textarea name="body" required rows="24"
+                      th:text="${guide != null ? guide.body() : ''}"></textarea>
+            <span class="field__hint">
+                Markdown: ## and ### headings, **bold**, *italic*, - bullets, and
+                [links](/to-this-site). HTML is escaped, and links off the site
+                are left as plain text on purpose.
+            </span>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Status</span>
+            <select name="status">
+                <option value="DRAFT"
+                        th:selected="${guide == null or guide.status().name() == 'DRAFT'}">Draft</option>
+                <option value="PUBLISHED"
+                        th:selected="${guide != null and guide.status().name() == 'PUBLISHED'}">Published</option>
+            </select>
+        </label>
+
+        <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save</button>
+            <a class="btn btn--ghost" th:href="@{/admin/guides}">Cancel</a>
+        </div>
+    </form>
+
+    <!--/* Rendered through exactly the same path the public page uses, so what
+           is shown here is what will be published — not an approximation by a
+           second renderer that drifts. */-->
+    <section class="section" th:if="${preview != null}">
+        <h2 class="section__title">Preview</h2>
+        <div class="prose__body" th:utext="${preview}"></div>
+    </section>
+
+    <form method="post" th:if="${guide != null and guide.id() != null}"
+          th:action="@{/admin/guides/{id}/delete(id=${guide.id()})}">
+        <button class="btn btn--ghost" type="submit">Delete this guide</button>
+    </form>
+
+</main>
+
+</body>
+</html>

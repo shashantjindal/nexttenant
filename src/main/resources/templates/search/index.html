@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><title>Find a flat in Mumbai â€” NextTenant</title></head>
+<head><title th:text="${pageMeta.title}">Flats and rooms to rent in Mumbai without broker | Next Tenant</title></head>
 <body>
 
 <main id="content" class="page-width search">
@@ -97,7 +97,7 @@
                         <button type="submit" class="btn btn--primary btn--sm">Show results</button>
                     </div>
 
-                    <!--/* Closes the drawer without submitting. Phone only —
+                    <!--/* Closes the drawer without submitting. Phone only ï¿½
                            on desktop the panel is never covering anything. */-->
                     <button type="button" class="filters__close" data-filters-close
                             aria-label="Close filters">&times;</button>
@@ -141,7 +141,7 @@
 
                       The list scrolls 200 rows inside 220px, so a tick made
                       three screens up is invisible by the time you have found
-                      the next one — and a filter you cannot see is one you
+                      the next one ï¿½ and a filter you cannot see is one you
                       forget you set. Built by area-filter.js from the ticked
                       boxes, so it cannot disagree with them.
                     */-->
@@ -378,7 +378,19 @@
                 <a class="btn btn--secondary" th:href="@{/flats}">Clear every filter</a>
             </div>
 
-            <div class="card-grid" th:unless="${results.isEmpty()}">
+            <!--/* A LIST here, not the three-across grid the landing page uses.
+
+                   Those two pages are doing different jobs. The landing page is
+                   showing that the site has rooms at all, so small cards in a
+                   row are right â€” the message is "there are several". This page
+                   is where somebody decides which room to open, and a 250px-wide
+                   photo is not enough to decide on. One room per row, with the
+                   photo big enough to actually see, is what every site people
+                   already use for this does.
+
+                   Same card fragment, styled by the container. Two fragments
+                   would drift inside a fortnight. */-->
+            <div class="results__list" th:unless="${results.isEmpty()}">
                 <!--/* th:each is nested INSIDE th:replace deliberately. Thymeleaf
                      processes th:replace first, so putting both on one element
                      replaces it before the loop runs and renders nothing. */-->

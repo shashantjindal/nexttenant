@@ -115,6 +115,19 @@
         <a class="btn btn--secondary" th:href="@{/admin/reports}">Reports</a>
     </div>
 
+    <!--/* The writing, kept apart from the moderation tools above because it is
+           a different job done at a different time. An area page or a guide is
+           the only part of this site somebody can land on from a search engine
+           without already knowing it exists. */-->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-8)">
+        Write something
+    </h2>
+
+    <div class="admin-search">
+        <a class="btn btn--secondary" th:href="@{/admin/areas}">Area pages</a>
+        <a class="btn btn--secondary" th:href="@{/admin/guides}">Guides</a>
+    </div>
+
     <p class="auth__fine" style="margin-top: var(--s-6)">
         <!--/*
           Said plainly because a dashboard invites the assumption that it shows

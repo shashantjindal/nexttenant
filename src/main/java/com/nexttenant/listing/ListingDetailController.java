@@ -27,14 +27,20 @@ public class ListingDetailController {
     private final ListingRepository listings;
     private final com.nexttenant.shortlist.ShortlistService shortlists;
     private final com.nexttenant.photo.PhotoService photos;
+    private final GoneListings gone;
+    private final com.nexttenant.seo.JsonLd jsonLd;
 
     public ListingDetailController(ListingDetailService details, ListingRepository listings,
                                    com.nexttenant.shortlist.ShortlistService shortlists,
-                                   com.nexttenant.photo.PhotoService photos) {
+                                   com.nexttenant.photo.PhotoService photos,
+                                   GoneListings gone,
+                                   com.nexttenant.seo.JsonLd jsonLd) {
         this.details = details;
         this.listings = listings;
         this.shortlists = shortlists;
         this.photos = photos;
+        this.gone = gone;
+        this.jsonLd = jsonLd;
     }
 
     /**
@@ -63,11 +69,16 @@ public class ListingDetailController {
         UUID listingId = parseId(id);
 
         ListingDetailDto listing = details.findPublicListing(listingId)
-                // 404 for anything not LIVE — paused, rented, taken down or
-                // never published. Distinguishing "does not exist" from "exists
-                // but is hidden" would let anyone confirm a listing's status
-                // after it stopped being public.
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                // Not LIVE — paused, rented, taken down or never published.
+                //
+                // 404 for all of them, with one exception: a listing that has
+                // been terminally gone for long enough gets a 410 instead, so
+                // that Google drops the URL rather than re-requesting it for
+                // weeks and showing it in results in the meantime. GoneListings
+                // owns that judgement; what matters here is that the two cases
+                // are indistinguishable to anybody who is merely curious about
+                // whether a particular room is still going.
+                .orElseThrow(() -> new ResponseStatusException(gone.statusFor(listingId)));
 
         // One listing, one address.
         //
@@ -120,7 +131,80 @@ public class ListingDetailController {
                         .map(l -> l.isOwnedBy(viewer.id()))
                         .orElse(false));
 
+        model.addAttribute("pageMeta", meta(listing, canonical));
+
         return "listing/detail";
+    }
+
+    /**
+     * Title, description, share card and structured data for one room.
+     *
+     * <p>The title pattern — "Private room in 2BHK, Powai — ₹28,000/month" — is
+     * built from the three things somebody scanning a search result is actually
+     * deciding on. A title that led with the brand would spend its first twenty
+     * characters, and most of what Google shows, saying nothing.
+     *
+     * <p>The numbers come from the entity rather than the DTO because the DTO
+     * holds them formatted for display ("₹28,000"), and schema.org wants a
+     * number. Parsing the formatting back off would be a second, silent place
+     * where the price could go wrong.
+     */
+    private com.nexttenant.seo.PageMeta meta(ListingDetailDto listing, String canonical) {
+        Listing entity = listings.findById(listing.id()).orElse(null);
+
+        String title = listing.roomType() + " in " + listing.configuration()
+                + ", " + listing.area()
+                + (listing.rent() != null ? " — " + listing.rent() + "/month" : "");
+
+        // The leaver's own words when there are any — they describe this room
+        // and nothing else, which is the whole job of a meta description. The
+        // fallback is assembled, and says so by being plainly generic rather
+        // than by pretending to be specific.
+        String description = listing.description() != null && !listing.description().isBlank()
+                ? listing.description().strip()
+                : listing.roomType() + " in a " + listing.configuration() + " in "
+                        + listing.area() + ", available "
+                        + (listing.availableFrom() != null ? listing.availableFrom() : "now")
+                        + ". Taken over directly from the person moving out — no brokerage.";
+
+        return com.nexttenant.seo.PageMeta.page(title)
+                .describedAs(description)
+                .canonical(canonical)
+                // The cover photo is what a WhatsApp card shows, and a card
+                // with no photo is a grey box people scroll past. This page is
+                // shared into flat-hunting groups far more than it is found in
+                // a search result.
+                .image(listing.coverPhotoUrl())
+                .structuredData(jsonLd.listing(
+                        title,
+                        listing.description(),
+                        canonical,
+                        entity == null ? null : entity.getMonthlyRentInr(),
+                        entity == null ? null : entity.getDepositInr(),
+                        listing.area(),
+                        entity == null ? null : roomCount(entity),
+                        listing.amenities(),
+                        entity == null ? null : entity.getAvailableFrom(),
+                        listing.coverPhotoUrl(),
+                        List.of(new com.nexttenant.seo.JsonLd.Crumb("Home", "/"),
+                                new com.nexttenant.seo.JsonLd.Crumb("Flats", "/flats"),
+                                new com.nexttenant.seo.JsonLd.Crumb(listing.area(),
+                                        "/flats-in-" + com.nexttenant.seo.Slugs.of(listing.area())),
+                                new com.nexttenant.seo.JsonLd.Crumb(title, canonical))))
+                .build();
+    }
+
+    /**
+     * Bedrooms in the flat, from its configuration.
+     *
+     * <p>{@code numberOfRooms} on an Accommodation means the rooms in the
+     * property, not the one being advertised — so a private room in a 2 BHK is
+     * 2, not 1. Null for a configuration that does not express a count, such as
+     * a studio, because omitting the property is honest where guessing 1 is not.
+     */
+    private static Integer roomCount(Listing entity) {
+        Configuration configuration = entity.getConfiguration();
+        return configuration == null ? null : configuration.getBedrooms();
     }
 
     /**

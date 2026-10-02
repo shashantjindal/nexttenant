@@ -18,7 +18,7 @@
 */-->
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><title>Privacy policy — NextTenant</title></head>
+<head><title th:text="${pageMeta.title}">Privacy policy | Next Tenant</title></head>
 <body>
 
 <main id="content" class="page-width section legal">

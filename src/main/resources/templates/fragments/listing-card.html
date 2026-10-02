@@ -63,7 +63,8 @@
                  th:if="${card.hasCollage()}"
                  th:classappend="'listing-card__collage--' + ${card.collageUrls().size()}">
                 <img th:each="url : ${card.collageUrls()}" th:src="${url}"
-                     alt="" loading="lazy" decoding="async">
+                     alt="" loading="lazy" decoding="async"
+                     width="480" height="320">
             </div>
 
             <!--/* The first photo is the only one loaded eagerly when there is
@@ -71,8 +72,25 @@
                    actually shows. */-->
             <div class="listing-card__frame" th:each="url, i : ${card.photoUrls}"
                  th:classappend="${i.first and !card.hasCollage()} ? ' listing-card__frame--on' : ''">
+                <!--/* width and height are the DISPLAY ratio, 3:2, not the
+                       stored pixels of this particular photo.
+
+                       Their job is to let the browser reserve the right box
+                       before the bytes arrive, and the box is governed by
+                       `aspect-ratio: 3 / 2` with `object-fit: cover` — so a
+                       portrait photo is still shown in a 3:2 frame. Putting the
+                       photo's own dimensions here would describe a shape the
+                       page never renders, and the reservation would be wrong
+                       for exactly the images that shift most.
+
+                       They also work before the stylesheet arrives, which
+                       aspect-ratio alone does not: between first paint and CSS,
+                       an img with no dimensions is zero-height and everything
+                       below it jumps when the image lands. That jump is most of
+                       Cumulative Layout Shift on a page of cards. */-->
                 <img class="listing-card__photo" th:src="${url}" alt=""
-                     loading="lazy" decoding="async">
+                     loading="lazy" decoding="async"
+                     width="480" height="320">
             </div>
 
             <!--/* Hidden until the script runs. Arrows that move nothing are

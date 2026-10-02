@@ -1000,6 +1000,14 @@
 .detail__title { font-size: var(--t-xl); margin-bottom: var(--s-2); }
 .detail__subtitle { font-size: var(--t-sm); color: var(--c-ink-2); margin: 0; }
 
+/* The line that replaced the map: quieter than the subtitle above it, because
+   it answers a question rather than describing the room. */
+.detail__privacy {
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin: var(--s-2) 0 0;
+}
+
 .detail__section { padding-top: var(--s-8); margin-top: var(--s-8); border-top: 1px solid var(--c-line); }
 .detail__heading { font-size: var(--t-lg); margin-bottom: var(--s-2); }
 .detail__lede { font-size: var(--t-sm); color: var(--c-ink-3); margin: 0 0 var(--s-5); }
@@ -1056,13 +1064,9 @@
 }
 .chip--perk { background: var(--c-gold); color: var(--c-gold-ink); }
 
-.detail__map {
-    height: 280px;
-    border-radius: var(--r-lg);
-    border: 1px solid var(--c-line);
-    overflow: hidden;
-    background: var(--c-surface-2);
-}
+/* .detail__map is gone with the approximate-location map. Removed rather than
+   kept "just in case": dead CSS is how a stylesheet reaches 83KB, and the
+   markup it styled is in version control if the map ever returns. */
 
 .cost-card, .leaver-card, .safety-card {
     background: var(--c-surface);
@@ -1135,7 +1139,6 @@
     }
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
     .detail__title { font-size: var(--t-2xl); }
-    .detail__map { height: 340px; }
 }
 
 /* ---- Wizard ------------------------------------------------------------ */
@@ -2262,15 +2265,26 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
  * The collage holds the same 3:2 box as a single photo, so a card does not
  * change height when you step off it. Grid rather than flex: the large cell
  * spans both rows, which flex cannot express without fixed heights.
+ *
+ * NOTE THE SELECTOR. `display: grid` is on the --on compound, not on
+ * .listing-card__collage alone, and that is the whole fix for a real bug: a
+ * bare `.listing-card__collage { display: grid }` sits LATER in this file than
+ * `.listing-card__frame { display: none }` at the same specificity, so it won
+ * the cascade and the collage never hid. Stepping to the first photo then
+ * showed that photo UNDERNEATH the collage — two frames stacked, the card
+ * twice as tall, and the page shoved down the screen.
+ *
+ * Everything else below is layout and applies either way; only the display
+ * switch is gated.
  */
 .listing-card__collage {
-    display: grid;
     grid-template-columns: 2fr 1fr;
     grid-template-rows: 1fr 1fr;
     gap: 2px;
     aspect-ratio: 3 / 2;
     background: var(--c-surface-2);
 }
+.listing-card__collage.listing-card__frame--on { display: grid; }
 .listing-card__collage img {
     width: 100%;
     height: 100%;
@@ -2499,3 +2513,242 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 .photo-tile__actions { margin-top: auto; }
 .photo-tile { display: flex; flex-direction: column; }
+
+/* ===========================================================================
+   Landing pages — /flats-in-<area>, /flats-near-<station>-station, /guides/*
+
+   These are the pages people arrive on from a search engine, so they are read
+   by somebody who has never seen the site before. The layout is accordingly
+   plainer than the search page: a heading, some writing, the rooms, and the
+   links out. No filter panel, because a filter panel is a tool for somebody
+   who already knows what they want.
+   =========================================================================== */
+
+.page-head { padding-block: var(--s-8) var(--s-4); }
+
+.page-head__title {
+    font-size: var(--t-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.page-head__lede {
+    color: var(--c-ink-2);
+    font-size: var(--t-base);
+    margin: var(--s-3) 0 0;
+    max-width: 62ch;
+}
+
+/*
+ * Author-written prose.
+ *
+ * max-width in ch rather than px: the comfortable line length for reading is a
+ * number of CHARACTERS, around 60-75, and a px width only approximates that
+ * until somebody changes the font size. This is the one block on the site
+ * where somebody reads several hundred words in a row.
+ */
+.prose {
+    max-width: 68ch;
+    padding-block: var(--s-6);
+}
+
+.prose__title {
+    font-size: var(--t-lg);
+    margin-bottom: var(--s-4);
+}
+
+.prose__body { color: var(--c-ink-2); }
+
+/* Descendant selectors, because this subtree is generated from Markdown and
+   its elements cannot carry classes. The only place in this stylesheet where
+   that is true, and the reason is worth keeping in mind before adding more. */
+.prose__body > :first-child { margin-top: 0; }
+.prose__body > :last-child { margin-bottom: 0; }
+.prose__body p { margin: 0 0 var(--s-4); }
+.prose__body h2 { font-size: var(--t-md); margin: var(--s-8) 0 var(--s-3); }
+.prose__body h3 { font-size: var(--t-base); margin: var(--s-6) 0 var(--s-2); }
+.prose__body ul { margin: 0 0 var(--s-4); padding-left: var(--s-5); }
+.prose__body li { margin-bottom: var(--s-2); }
+.prose__body a { text-decoration: underline; }
+
+/* ---- The links out ----------------------------------------------------- */
+
+.link-grid {
+    display: grid;
+    gap: var(--s-6);
+    padding: var(--s-6);
+    background: var(--c-surface-2);
+    border-radius: var(--r-lg);
+}
+
+.link-grid__title {
+    font-size: var(--t-sm);
+    color: var(--c-ink-3);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: var(--s-3);
+}
+
+.link-grid__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+    font-size: var(--t-sm);
+}
+
+@media (min-width: 768px) {
+    .page-head { padding-block: var(--s-12) var(--s-6); }
+    .page-head__title { font-size: var(--t-3xl); }
+    .page-head__lede { font-size: var(--t-md); }
+    .link-grid { grid-template-columns: repeat(2, 1fr); gap: var(--s-10); padding: var(--s-8); }
+    .link-grid__list { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---- Guides ------------------------------------------------------------- */
+
+.guide-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-4); }
+
+.guide-list__link {
+    display: block;
+    padding: var(--s-5);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-lg);
+    color: inherit;
+}
+.guide-list__link:hover { border-color: var(--c-line-strong); text-decoration: none; }
+
+.guide-list__title { font-size: var(--t-md); margin-bottom: var(--s-2); }
+.guide-list__summary { font-size: var(--t-sm); margin: 0 0 var(--s-2); }
+.guide-list__date { font-size: var(--t-xs); color: var(--c-ink-3); }
+
+/* The article itself shares .prose__body with the area intros, so a change to
+   how Markdown renders lands in both places at once. Only the header above it
+   is specific to a guide. */
+.article { max-width: 68ch; padding-block: var(--s-4) var(--s-10); }
+.article__head { margin-bottom: var(--s-8); }
+.article__title { font-size: var(--t-2xl); letter-spacing: -0.02em; }
+.article__meta { font-size: var(--t-xs); color: var(--c-ink-3); margin: var(--s-3) 0 0; }
+.article__summary {
+    font-size: var(--t-md);
+    color: var(--c-ink-2);
+    margin: var(--s-4) 0 0;
+}
+
+.crumbs {
+    display: flex;
+    gap: var(--s-2);
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    padding-top: var(--s-6);
+}
+.crumbs a { color: var(--c-ink-3); }
+.crumbs a:hover { color: var(--c-brand); }
+
+/* ---- Admin forms -------------------------------------------------------- */
+
+.stack { display: grid; gap: var(--s-5); max-width: 68ch; }
+
+.form-actions { display: flex; gap: var(--s-3); align-items: center; }
+
+.form-error {
+    background: var(--c-brand-tint);
+    border: 1px solid var(--c-brand-tint-hard);
+    color: var(--c-ink);
+    border-radius: var(--r-md);
+    padding: var(--s-3) var(--s-4);
+    font-size: var(--t-sm);
+    margin: 0 0 var(--s-5);
+}
+
+/* ===========================================================================
+   Search results — one room per row.
+
+   The landing page keeps the three-across grid, because its job is to show
+   that the site has rooms at all. This page is where somebody decides which
+   room to OPEN, and that decision is made on the photo. A 250px-wide thumbnail
+   three to a row is the wrong shape for it: there is plenty of horizontal
+   space on this page and nothing competing for it.
+
+   Styled from the container rather than by passing a modifier into the card
+   fragment. The fragment is shared by four pages and has no parameter for
+   this; adding one means every caller has to pass something, and a second
+   fragment would drift inside a fortnight.
+   =========================================================================== */
+
+.results__list {
+    display: grid;
+    gap: var(--s-5);
+}
+
+/*
+ * On a phone: a full-width card with a much taller photo.
+ *
+ * 4:3 rather than the grid's 3:2 — a phone has the vertical room and the photo
+ * is the entire basis of the decision. The explicit width/height attributes on
+ * the img describe the 3:2 box, so aspect-ratio has to be set on both the
+ * frame and the image or the browser splits the difference and letterboxes.
+ */
+.results__list .listing-card__collage,
+.results__list .listing-card__photo,
+.results__list .listing-card__frame > img {
+    aspect-ratio: 4 / 3;
+}
+
+@media (min-width: 768px) {
+    /*
+     * On anything wider: photo left, everything else right.
+     *
+     * The card is already `display: flex; flex-direction: column` — this turns
+     * the same two children into a row, so no markup changes.
+     */
+    .results__list .listing-card { flex-direction: row; }
+
+    /* 42% rather than a fixed pixel width, so the photo grows with the window
+       instead of stranding the body text in a narrow column on a wide screen.
+       flex: none stops it being squeezed by a long area name. */
+    .results__list .listing-card__media {
+        flex: none;
+        width: 42%;
+        align-self: stretch;
+    }
+
+    /* Back to 3:2 and, more importantly, filling the row's height: a short
+       body would otherwise leave the photo floating against white. */
+    .results__list .listing-card__collage,
+    .results__list .listing-card__photo,
+    .results__list .listing-card__frame,
+    .results__list .listing-card__frames,
+    .results__list .listing-card__frame > img {
+        aspect-ratio: auto;
+        height: 100%;
+    }
+
+    .results__list .listing-card__media { min-height: 240px; }
+
+    /* The body gets the room the wider layout frees up: the rent can be large
+       enough to read at a glance, which is the other thing being compared. */
+    .results__list .listing-card__body {
+        padding: var(--s-6) var(--s-6) var(--s-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-2);
+    }
+
+    .results__list .listing-card__rent { font-size: var(--t-2xl); }
+    .results__list .listing-card__where { font-size: var(--t-md); }
+
+    /* The tags sit with the rest of the text rather than pinned to the bottom
+       of the row. `margin-top: auto` lined them up neatly across cards and left
+       a hand-sized hole in the middle of every one — which reads as missing
+       content, not as breathing room, because a card here carries only a rent,
+       an area and three tags. */
+    .results__list .listing-card__tags { margin-top: var(--s-1); }
+}
+
+@media (min-width: 1024px) {
+    .results__list .listing-card__media { min-height: 280px; }
+}

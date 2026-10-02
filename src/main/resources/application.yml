@@ -9,6 +9,14 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  # How long server.shutdown=graceful waits for in-flight requests before
+  # giving up on them. Comfortably longer than any request this app serves and
+  # comfortably shorter than the container's stop_grace_period in
+  # docker-compose.prod.yml — if Docker's SIGKILL lands first, "graceful" is
+  # just a slower version of dropping the connections.
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   # ---- Database connection ------------------------------------------------
   # Every value has an env-var override with a local default. The same jar then
   # runs against the dev container and production with no code change and no
@@ -154,7 +162,36 @@ nexttenant:
   site:
     # Emails need an ABSOLUTE link; a browser knows where a relative path
     # came from and an inbox does not. Override per environment.
+    #
+    # Canonical tags and Open Graph URLs are built from this too, which raises
+    # the stakes: a staging copy left pointing at the production host publishes
+    # canonicals claiming to BE production, and a staging copy with its own host
+    # and no robots rules competes with it. Set this per environment.
     base-url: ${NEXTTENANT_BASE_URL:http://localhost:8080}
+
+  seo:
+    # The value from Search Console's "HTML tag" verification method — just the
+    # token, without the surrounding markup. Blank means the tag is not
+    # rendered at all, which is an unattempted verification rather than a
+    # failed one.
+    search-console-token: ${NEXTTENANT_GSC_TOKEN:}
+
+    # Privacy-respecting analytics: Plausible or Umami, self-hosted or theirs.
+    # No cookies, no cross-site identifier, no personal data leaving the
+    # country — which under the DPDP Act is the difference between analytics
+    # you can simply run and analytics that need a consent banner in front of
+    # them.
+    #
+    # DELIBERATELY NOT Google Analytics. GA sets identifiers and transfers
+    # personal data abroad, so it would need opt-in consent before the script
+    # loaded, and a banner costs more conversions than the numbers are worth at
+    # this size. If that trade changes it should change in a conversation.
+    #
+    # Both must be set or analytics stays off: a script URL with no domain
+    # loads a tracker that reports nothing, which is a third-party request on
+    # every page view bought for no data.
+    analytics-script-url: ${NEXTTENANT_ANALYTICS_SCRIPT:}
+    analytics-domain: ${NEXTTENANT_ANALYTICS_DOMAIN:}
 
   otp:
     # HMAC key for hashing codes. The default below is committed, therefore
@@ -183,6 +220,30 @@ nexttenant:
 
 server:
   port: 8080
+
+  # gzip on the way out. Measured with Lighthouse against a real area page:
+  # 102KB of the ~120KB transferred was compressible text, most of it app.css.
+  #
+  # Caddy also compresses in production, so this is belt and braces there — but
+  # it is NOT redundant: it covers anything reaching the app directly, and it
+  # means a development run and a deployed one behave the same way. A
+  # performance fix that only exists in production is one nobody can measure.
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,text/plain,text/xml,application/javascript,application/json,application/xml
+    # Below about a kilobyte, the header and CPU cost more than the saving.
+    min-response-size: 1024
+
+  # On SIGTERM, stop accepting new requests and let the ones already running
+  # finish instead of cutting the connections. Spring Boot's default is
+  # immediate: every deploy drops whatever was in flight, which for somebody
+  # mid-upload is a failed listing they have to start again.
+  #
+  # Also what makes readiness useful — graceful shutdown flips the readiness
+  # probe to OUT_OF_SERVICE first, so the proxy can take this container out of
+  # rotation while it drains.
+  shutdown: graceful
+
   error:
     # Safe in development; turned off for production, where it leaks internals.
     include-message: always

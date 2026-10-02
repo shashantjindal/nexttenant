@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Guides — Admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Guides</h1>
+        <a class="btn btn--primary" th:href="@{/admin/guides/new}">Write a guide</a>
+    </div>
+
+    <table class="admin-table" th:if="${!guides.isEmpty()}">
+        <thead>
+        <tr>
+            <th scope="col">Title</th>
+            <th scope="col">URL</th>
+            <th scope="col">Status</th>
+            <th scope="col">Published</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="guide : ${guides}">
+            <td><a th:href="@{/admin/guides/{id}(id=${guide.id()})}" th:text="${guide.title()}">Deposits</a></td>
+            <td><code th:text="${guide.path()}">/guides/deposits</code></td>
+            <td th:text="${guide.status().label}">Draft</td>
+            <td th:text="${guide.publishedAt() != null
+                           ? #temporals.format(guide.publishedAt(), 'd MMM yyyy')
+                           : '—'}">—</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="empty" th:if="${guides.isEmpty()}">
+        <p class="empty__title">No guides yet.</p>
+        <p class="empty__body">
+            These are the pages that bring readers who are not yet looking at
+            rooms. One good one beats ten thin ones.
+        </p>
+        <a class="btn btn--primary" th:href="@{/admin/guides/new}">Write the first</a>
+    </div>
+
+</main>
+
+</body>
+</html>

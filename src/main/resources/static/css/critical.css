@@ -1,0 +1,299 @@
+/* ===========================================================================
+   Critical CSS — inlined into every page by seo/CriticalCss.
+
+   WHAT BELONGS HERE: only what styles the pixels a visitor sees before
+   scrolling. The custom properties (because everything below references them),
+   the body reset, the sticky header, the hero, and enough of the card grid
+   that the first row does not reflow when app.css lands.
+
+   WHAT DOES NOT: anything below the fold, anything behind an interaction,
+   anything on one page only. Every byte here is paid on every page load and is
+   never cached — past roughly 14KB this costs more than the round trip it
+   saves, and CriticalCss warns when it crosses that.
+
+   THIS FILE DUPLICATES app.css ON PURPOSE. It is additive, never a carve-out.
+   A carve-out means each rule lives in exactly one of two files and a mistake
+   leaves it in neither — a bug visible only below the fold, only on untested
+   pages, only in production. Stale rules here cost a flash of the wrong style;
+   missing rules there cost a broken page. Only one of those is worth risking.
+
+   When a token or a header rule changes in tokens.css or app.css, change it
+   here too. If the two disagree, app.css wins — it loads second.
+   =========================================================================== */
+
+:root {
+    --c-brand:            #7A3420;
+    --c-brand-hover:      #5E2618;
+    --c-brand-ink:        #FBF3E8;
+    --c-brand-tint:       #F0E0D6;
+    --c-brand-tint-hard:  #E3C2B4;
+
+    --c-ink:              #1B1917;
+    --c-ink-2:            #5D5852;
+    --c-ink-3:            #8A857D;
+
+    --c-page:             #FAFAF8;
+    --c-surface:          #FFFFFF;
+    --c-surface-2:        #F2F1ED;
+    --c-surface-3:        #EFEDE8;
+
+    --c-line:             #E6E4DF;
+    --c-line-strong:      #DAD7D0;
+
+    --c-gold:             #F3E8D2;
+    --c-gold-strong:      #E0B25C;
+    --c-gold-ink:         #6F4F14;
+
+    /* The font stacks name real fallbacks before the webfont arrives, so the
+       first paint uses Avenir Next or Segoe UI rather than Times. That is the
+       difference between a page that looks unfinished for 200ms and one that
+       looks broken. */
+    --font-display: 'Outfit', 'Avenir Next', system-ui, sans-serif;
+    --font-body:    'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
+    --t-xs:    12.5px;
+    --t-sm:    13.5px;
+    --t-base:  15px;
+    --t-md:    17px;
+    --t-lg:    19px;
+    --t-xl:    24px;
+    --t-2xl:   30px;
+    --t-3xl:   40px;
+    --t-4xl:   56px;
+
+    --s-1:   4px;
+    --s-2:   8px;
+    --s-3:   12px;
+    --s-4:   16px;
+    --s-5:   20px;
+    --s-6:   24px;
+    --s-8:   32px;
+    --s-10:  40px;
+    --s-12:  48px;
+    --s-16:  64px;
+    --s-20:  80px;
+
+    --r-sm:    8px;
+    --r-md:    12px;
+    --r-lg:    16px;
+    --r-xl:    20px;
+    --r-pill:  999px;
+
+    --shadow-sm: 0 1px 2px rgba(27, 25, 23, 0.04);
+    --shadow-md: 0 2px 8px rgba(27, 25, 23, 0.06);
+
+    --page-max:    1180px;
+    --gutter:      20px;
+    --header-h:    64px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--c-page);
+    color: var(--c-ink-2);
+    font-family: var(--font-body);
+    font-size: var(--t-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    color: var(--c-ink);
+    line-height: 1.15;
+    margin: 0;
+    font-weight: 600;
+}
+
+a { color: var(--c-brand); text-decoration: none; }
+
+/* `display: block` on images is here rather than only in tokens.css because
+   without it the browser leaves the inline-element baseline gap under every
+   photo — a few pixels per card that shift the whole grid when app.css
+   arrives and removes them. */
+img { max-width: 100%; display: block; }
+
+[hidden] { display: none !important; }
+
+.page-width {
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+}
+
+.skip-link { position: absolute; left: -9999px; top: var(--s-2); }
+
+/* ---- Header: on screen before anything else, on every page -------------- */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(250, 250, 248, .88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--c-line);
+}
+
+.site-header__inner {
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    gap: var(--s-6);
+}
+
+.wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--t-md);
+    color: var(--c-brand);
+    letter-spacing: -0.01em;
+}
+
+.site-nav { display: none; gap: var(--s-6); }
+
+.site-header__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.site-header__label { display: none; }
+
+/* ---- Buttons: the hero's two calls to action ---------------------------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-5);
+    border-radius: var(--r-pill);
+    border: 1px solid transparent;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--t-base);
+    text-decoration: none;
+}
+
+.btn--primary { background: var(--c-brand); color: var(--c-brand-ink); }
+
+.btn--secondary {
+    background: var(--c-surface);
+    color: var(--c-ink);
+    border-color: var(--c-line);
+}
+
+/* ---- Hero --------------------------------------------------------------- */
+
+.hero { padding-block: var(--s-12) var(--s-10); text-align: center; }
+
+.hero__title {
+    font-size: var(--t-2xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--s-4);
+}
+.hero__title span { display: block; color: var(--c-brand); }
+
+.hero__sub { color: var(--c-ink-3); font-size: var(--t-sm); margin: 0 0 var(--s-8); }
+
+.hero__actions { display: grid; gap: var(--s-3); max-width: 360px; margin-inline: auto; }
+
+.hero__action-note {
+    display: block;
+    font-size: var(--t-xs);
+    color: var(--c-ink-3);
+    margin-top: var(--s-1);
+}
+
+/* ---- The top of an area or search page ---------------------------------- */
+
+.page-head { padding-block: var(--s-8) var(--s-4); }
+
+.page-head__title {
+    font-size: var(--t-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* The grid itself, so the first row of cards lands in its final position
+   rather than stacking and then snapping into columns. Reserving the shape is
+   what keeps Cumulative Layout Shift near zero. */
+.card-grid { display: grid; gap: var(--s-4); grid-template-columns: 1fr; }
+
+/*
+ * The photo box on a card.
+ *
+ * These four rules are here for a specific reason, found by measuring. With
+ * app.css no longer render-blocking there is a window in which the cards are
+ * on screen and only this file has been applied — and without an aspect-ratio
+ * the browser uses the img's own width and height attributes, which describe
+ * the 3:2 DISPLAY box rather than the photo's real pixels. Lighthouse reported
+ * it as "incorrect aspect ratio" and "low resolution"; a visitor would have
+ * seen the photos snap to a different shape as app.css landed.
+ *
+ * So the shape of the box is part of the first paint, not part of the
+ * stylesheet that arrives afterwards.
+ */
+.listing-card__media { position: relative; background: var(--c-surface-2); }
+
+.listing-card__photo,
+.listing-card__frame > img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+}
+
+/* Only the active frame is on screen; the rest are stacked behind it. Without
+   this every photo in every card paints at once, which is both wrong and the
+   single biggest layout shift on the page. */
+.listing-card__frame { display: none; }
+.listing-card__frame--on { display: block; }
+
+.listing-card__collage {
+    /* display is on the --on compound below, NOT here: a bare rule would sit
+       later in the cascade than .listing-card__frame { display: none } and the
+       collage would never hide. See the long note in app.css. */
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    aspect-ratio: 3 / 2;
+    background: var(--c-surface-2);
+}
+.listing-card__collage.listing-card__frame--on { display: grid; }
+
+.listing-card__collage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    aspect-ratio: auto;    /* the grid row sets the height here, not the ratio */
+    min-height: 0;         /* without this the images refuse to shrink in a grid row */
+}
+.listing-card__collage img:first-child { grid-row: span 2; }
+.listing-card__collage--2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+.listing-card__collage--2 img:first-child { grid-row: auto; }
+
+.listing-card__frames { position: relative; }
+
+@media (min-width: 768px) {
+    .site-nav { display: flex; }
+    .site-header__label { display: inline; }
+    .site-header__actions { gap: var(--s-2); }
+    .hero__title { font-size: var(--t-4xl); }
+    .hero__sub { font-size: var(--t-md); }
+    .card-grid { grid-template-columns: repeat(2, 1fr); gap: var(--s-5); }
+}
+
+@media (min-width: 1024px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+}

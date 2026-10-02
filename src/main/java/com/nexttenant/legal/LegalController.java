@@ -37,6 +37,16 @@ public class LegalController {
     public String privacy(Model model) {
         model.addAttribute("legal", legal);
         model.addAttribute("lastUpdated", LAST_UPDATED);
+
+        // Indexable, and deliberately so. Somebody deciding whether to hand
+        // over a phone number may well search for this page by name before
+        // they have an account, and a privacy policy that cannot be found is
+        // one nobody reads at the only moment it matters.
+        model.addAttribute("pageMeta", com.nexttenant.seo.PageMeta.page("Privacy policy")
+                .describedAs("What Next Tenant collects, why, how long it is kept, and how "
+                        + "to have it deleted. Written to India's DPDP Act.")
+                .canonical("/privacy")
+                .build());
         return "legal/privacy";
     }
 }

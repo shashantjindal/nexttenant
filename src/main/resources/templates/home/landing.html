@@ -7,7 +7,7 @@
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>NextTenant — take over a room in a Mumbai flat</title>
+    <title th:text="${pageMeta.title}">Shared flats in Mumbai, direct from the person leaving | Next Tenant</title>
 </head>
 <body>
 
@@ -90,36 +90,66 @@
         </div>
     </section>
 
-    <!-- ================= Stats ================= -->
+    <!-- ================= Stats — OFF until there is supply ================= -->
+    <!--/*
+      COMMENTED OUT ON PURPOSE. Bring it back once the listing count is a
+      number worth printing.
+
+      It read "1 flats with a spot open now" beside "199 areas", which is two
+      problems in one strip. The grammar is fixed below. The real problem is
+      not fixable by editing copy: 1 against 199 tells a first-time visitor
+      that the shelf is empty, in the first thing they read, immediately under
+      the headline that asked them to take somebody's place. A visitor who
+      concludes there is nothing here does not come back to check later, and
+      the whole go-to-market plan rests on their single visit landing on
+      something.
+
+      Two honest ways to switch it back on:
+
+        - Wait until liveCount is a number you would say out loud, and show
+          both. The markup below already handles the singular.
+
+        - Or show only the areas you actually have supply in — the count of
+          areas with at least one live listing, which SeoController's sitemap
+          already computes — so the two numbers describe the same thing
+          instead of contradicting each other. "Rooms in 6 areas" is true,
+          small and not embarrassing; "199 areas" is true and reads as a
+          database dump.
+
+      "Brokerage saved" used to sit here too and was removed earlier, for a
+      related reason: it was a number computed about transactions we did not
+      witness, which on a site this new reads as invented.
+    */-->
+    <!--/*
     <section class="page-width" aria-label="At a glance">
         <div class="stats">
             <div class="stat">
-                <!--/* th:text swaps the content; the literal below shows when this
-                       file is opened directly, and is discarded when rendered. */-->
                 <span class="stat__value" th:text="${liveCount}">340</span>
-                <span class="stat__label">flats with a spot open now</span>
+                <span class="stat__label"
+                      th:text="${liveCount == 1} ? 'flat with a spot open now'
+                                                 : 'flats with a spot open now'">
+                    flats with a spot open now
+                </span>
             </div>
             <div class="stat">
                 <span class="stat__value" th:text="${areaCount}">22</span>
-                <span class="stat__label">areas</span>
+                <span class="stat__label"
+                      th:text="${areaCount == 1} ? 'area' : 'areas'">areas</span>
             </div>
-            <!--/*
-              "Brokerage saved" used to sit here and it was not a claim worth
-              making. It is a number we computed about transactions we did not
-              see, offered to somebody who has not yet decided whether the site
-              has any flats � and on a site this new it reads as invented. The
-              zero-brokerage badge on each listing says the same thing about a
-              specific room, which is the version a reader can check.
-            */-->
         </div>
     </section>
+    */-->
 
     <!-- ================= Just listed ================= -->
     <section class="section page-width">
         <div class="section__head">
             <h2 class="section__title">Just listed</h2>
+            <!--/* The count is deliberately not here either. It read "See all 1"
+                   — the same empty-shelf signal as the stat strip above, in the
+                   same fold, and the link works perfectly well without it. Put
+                   it back alongside the stats when the number is worth saying. */-->
             <a class="section__link" th:href="@{/flats}" href="/flats">
-                See all <span th:text="${liveCount}">340</span> &rarr;
+                See all rooms &rarr;
             </a>
         </div>
 

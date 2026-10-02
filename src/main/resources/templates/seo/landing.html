@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!--/* The visible title and the <title> tag are allowed to differ and
+           should. The heading says "Flats in Powai"; the tab and the search
+           result carry the longer form with the room count and the brand. */-->
+    <title th:text="${pageMeta.title}">Flats in Powai | Next Tenant</title>
+</head>
+<body>
+
+<main class="page-width">
+
+    <!--/* ================= Heading ================= */-->
+    <div class="page-head">
+        <!--/* Exactly one h1 per page, and it is this. The area intro below is
+               author-written Markdown that starts at h2 for the same reason —
+               a second h1 is the most common structure error on a page like
+               this, and it muddies what the page is about. */-->
+        <h1 class="page-head__title" th:text="${heading}">Flats in Powai</h1>
+        <p class="page-head__lede" th:text="${lede}">Take over a room from the person moving out.</p>
+    </div>
+
+    <!--/* ================= The prose =================
+      Above the grid, deliberately. A page that opens with a grid of cards and
+      buries its writing underneath is a listing page with an afterword; this
+      is a page about the area that happens to list rooms.
+
+      th:utext because Markdown.toHtml returns HTML — it escapes the author's
+      text first and then introduces a closed set of tags, so nothing here can
+      be markup the author wrote. See that class before changing this line.
+    */-->
+    <section class="prose" th:if="${intro != null}">
+        <h2 class="prose__title" th:text="${introHeading}">About Powai</h2>
+        <div class="prose__body" th:utext="${intro}">
+            <p>Prose about the area.</p>
+        </div>
+    </section>
+
+    <!--/* ================= The rooms ================= */-->
+    <section class="section">
+        <div class="section__head">
+            <h2 class="section__title">
+                <span th:text="${results.totalCount()}">34</span>
+                <span th:text="${results.totalCount() == 1 ? 'room' : 'rooms'}">rooms</span>
+                available now
+            </h2>
+            <a class="section__link" th:href="@{/flats}" href="/flats">Filter all rooms &rarr;</a>
+        </div>
+
+        <div class="card-grid" th:if="${!results.isEmpty()}">
+            <th:block th:each="card : ${results.cards()}">
+                <th:block th:replace="~{fragments/listing-card :: card(${card}, ${savedIds != null and savedIds.contains(card.id)})}"></th:block>
+            </th:block>
+        </div>
+
+        <!--/* An empty page still renders, and says something true.
+
+               It is marked noindex by the controller, so this copy is for the
+               person who followed a link here — not for a search engine. The
+               worst version of this page is one that pretends: "0 rooms found"
+               with a filter panel, on a page somebody reached from Google
+               looking for a flat in Powai. */-->
+        <div class="empty" th:if="${results.isEmpty()}">
+            <p class="empty__title">No rooms here right now.</p>
+            <p class="empty__body">
+                Listings come and go within days. The quickest route is to look
+                at everything currently available and filter from there.
+            </p>
+            <a class="btn btn--primary" th:href="@{/flats}" href="/flats">See all rooms</a>
+        </div>
+    </section>
+
+    <!--/* ================= Internal links =================
+      The part of a landing page that is easy to leave out and expensive to.
+      A crawler reaches most of these pages through links like these and
+      through the sitemap, and nothing else; a reader uses them as the next
+      question they were about to ask. Without them each landing page is a
+      dead end with one route in.
+    */-->
+    <section class="section" th:if="${!budgets.isEmpty() or !related.isEmpty()}">
+        <nav class="link-grid" aria-label="Related searches">
+
+            <div th:if="${!budgets.isEmpty()}">
+                <h2 class="link-grid__title">By budget</h2>
+                <ul class="link-grid__list">
+                    <li th:each="link : ${budgets}">
+                        <a th:href="${link.path()}" th:text="${link.label()}">Under ₹25,000</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div th:if="${!related.isEmpty()}">
+                <h2 class="link-grid__title" th:text="${relatedTitle}">Nearby</h2>
+                <ul class="link-grid__list">
+                    <li th:each="link : ${related}">
+                        <a th:href="${link.path()}" th:text="${link.label()}">Near Kanjurmarg station</a>
+                    </li>
+                </ul>
+            </div>
+
+        </nav>
+    </section>
+
+</main>
+
+</body>
+</html>

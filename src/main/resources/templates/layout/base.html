@@ -16,13 +16,110 @@
     <!--/* Replaced by the page's own <title>. */-->
     <title th:replace="${title}">NextTenant</title>
 
+    <!--/* Description, robots, canonical, Open Graph, Twitter and JSON-LD —
+           all of it from the page's own PageMeta, none of it written here.
+           A string in this file is a string on 26 pages. */-->
+    <th:block th:replace="~{fragments/head :: meta(${pageMeta}, ${baseUrl})}"></th:block>
+
+    <!--/* Search Console. A meta tag rather than the HTML file Google also
+           offers: the file has to survive every deploy and every container
+           rebuild, and this is one environment variable that cannot be
+           accidentally .dockerignore'd. Absent until NEXTTENANT_GSC_TOKEN is
+           set, because an empty content="" is a failed verification rather
+           than an unattempted one. */-->
+    <meta th:if="${seo.hasSearchConsoleToken()}"
+          name="google-site-verification"
+          th:content="${seo.searchConsoleToken()}">
+
+    <!--/* preconnect opens the TCP and TLS handshake to the font host before
+           the CSS that needs it has even been parsed. Two hosts because Google
+           serves the stylesheet from one and the font files from another, and
+           preconnecting only to the first still leaves a full handshake on the
+           critical path. crossorigin on the second is required and not
+           decorative: fonts are fetched in CORS mode, and a preconnect whose
+           mode does not match the eventual request opens a connection that
+           then goes unused. */-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600&amp;display=swap">
 
+    <!--/* Above-the-fold CSS, inlined: the header, the hero and the top of the
+           first card grid.
+
+           It paints the top of the page with no network at all, so a slow or
+           failed stylesheet is a plain page rather than an unstyled one.
+           Deliberately a DUPLICATE of rules that also live in app.css rather
+           than a carve-out from it: if the two disagree the page still renders
+           correctly from app.css a moment later, where a split would leave
+           rules that exist in neither. */-->
+    <style th:utext="${criticalCss}"></style>
+
+    <!--/* THE LOCAL STYLESHEETS BLOCK RENDERING, ON PURPOSE.
+
+           The obvious optimisation is to load them with media="print" and flip
+           them to "all" once they arrive, since the critical CSS above has
+           already painted the top of the page. It was tried and measured, and
+           it is worse:
+
+               blocking   FCP 3.2s  CLS 0      performance 87
+               deferred   FCP 0.7s  CLS 0.29   performance 85   (0.83 on a listing)
+
+           The reason is that the shift is not a detail. When app.css lands it
+           re-lays-out `.detail__layout` and every `.section` — whole page
+           containers — so the visitor gets something on screen quickly and then
+           watches it jump. Cumulative Layout Shift is a Core Web Vital and 0.83
+           is squarely in Google's "poor" band, so the trade loses twice.
+
+           Covering that in critical.css would mean inlining most of app.css on
+           every page, which is the same bytes with worse caching. The honest
+           fix is to make app.css smaller — it is 20KB gzipped and Lighthouse
+           reports 72KB of it unused on an area page — and that is a refactor,
+           not a tag change. */-->
     <link rel="stylesheet" th:href="@{/css/tokens.css}" href="/css/tokens.css">
     <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+
+    <!--/* THE FONT STYLESHEET DOES NOT BLOCK, and this one is worth it.
+
+           Measured on the same page: 895ms of render-blocking time for 1KB of
+           CSS. Nearly all of it is the cross-origin round trip — DNS, TLS, then
+           the request — which the preconnects above shorten and cannot remove.
+           It was the single largest blocker left, bigger than app.css.
+
+           Deferring it costs no layout shift, because the URL already carries
+           display=swap: text paints immediately in the fallback face named in
+           --font-body and swaps when the webfont arrives. That reflows glyphs,
+           not containers, which is why this is a different trade from the one
+           above.
+
+           The flip is in a FILE rather than an onload="" attribute because this
+           site's CSP forbids inline script, and an inline event handler IS
+           inline script — with the attribute, the browser blocks it silently
+           and the stylesheet never applies at all. See async-css.js. */-->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600&amp;display=swap"
+          media="print" data-async-css>
+
+    <script th:src="@{/js/async-css.js}" src="/js/async-css.js" defer></script>
+
+    <noscript>
+        <link rel="stylesheet"
+              href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600&amp;display=swap">
+    </noscript>
+
+    <!--/* Privacy-respecting analytics, off unless a host is configured.
+
+           No cookies, no device fingerprint, no cross-site identifier — which
+           under the DPDP Act is the difference between needing consent and not.
+           Deliberately NOT Google Analytics: GA sets identifiers and sends
+           personal data abroad, so it would need an opt-in banner before it
+           loaded, and a banner costs more conversions than the analytics are
+           worth at this size.
+
+           defer so it never blocks rendering, and the site works identically
+           with the script blocked, failed or never configured. */-->
+    <script th:if="${seo.hasAnalytics()}"
+            th:src="${seo.analyticsScriptUrl()}"
+            th:attr="data-domain=${seo.analyticsDomain()}"
+            defer></script>
 </head>
 <!--/* data-wishlist-page is present only on /shortlist. shortlist.js uses it
        to drop a card when its heart is cleared, because on that page an

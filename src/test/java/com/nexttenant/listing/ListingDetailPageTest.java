@@ -65,7 +65,10 @@ class ListingDetailPageTest {
                 .contains("Handover terms")
                 .contains("The things that usually take a week of messages to find out")
                 .contains("What it costs to move in")
-                .contains("Roughly here")
+                // "Roughly here" and its map are gone. What the section was
+                // really communicating is now a sentence under the title, so
+                // that is what this asserts instead.
+                .contains("The exact address is shared once")
                 // "Message" since 96c345a. Asserted on the label rather than
                 // the href because the label is the thing a reader acts on,
                 // and a button whose words change silently is the thing worth
@@ -198,8 +201,8 @@ class ListingDetailPageTest {
     }
 
     @Test
-    @DisplayName("the map receives the jittered point, not the real one")
-    void mapReceivesOnlyTheApproximatePoint() throws Exception {
+    @DisplayName("the page publishes no coordinate at all, exact or approximate")
+    void noCoordinateReachesThePage() throws Exception {
         Listing listing = anyLiveListing();
         String html = pageFor(listing.getId());
 
@@ -215,10 +218,21 @@ class ListingDetailPageTest {
         assertThat(html).doesNotContain(String.valueOf(realLat));
         assertThat(html).doesNotContain(String.valueOf(realLng));
 
-        // The published point IS there, and differs from the truth.
-        double pageLat = com.nexttenant.geo.GeoPoints.latitudeOf(listing.getApproxLocation());
-        assertThat(html).contains(String.valueOf(pageLat));
-        assertThat(pageLat).isNotEqualTo(realLat);
+        // This used to assert that the JITTERED point was present, because the
+        // map needed it in a data attribute. With the map gone, no latitude or
+        // longitude is rendered at all — a stronger property, so it is asserted
+        // rather than merely allowed.
+        //
+        // It also removes a genuinely flaky assertion. The old test required
+        // the real latitude's string NOT to appear while the jittered one DID;
+        // the jitter picks a uniform bearing, so a near-due-east offset leaves
+        // the latitude unchanged to four decimal places and the two strings
+        // share a prefix. That failed roughly one run in several hundred, for
+        // no reason anybody could reproduce.
+        assertThat(html).doesNotContain(
+                String.valueOf(com.nexttenant.geo.GeoPoints.latitudeOf(listing.getApproxLocation())));
+        assertThat(html).doesNotContain(
+                String.valueOf(com.nexttenant.geo.GeoPoints.longitudeOf(listing.getApproxLocation())));
     }
 
     @Test

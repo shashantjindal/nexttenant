@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Area pages — Admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title">Area pages</h1>
+    </div>
+
+    <p class="page-head__lede">
+        Each of these is a page somebody can land on from a search engine. A page
+        that is a heading and a grid of rooms is, to Google, a template with no
+        content — and a few hundred of those is a site made mostly of templates.
+        The writing is what stops that, and it has to be written by somebody who
+        knows the place.
+    </p>
+
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th scope="col">Area</th>
+            <th scope="col">URL</th>
+            <th scope="col">Prose</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="area : ${areas}">
+            <td><a th:href="@{/admin/areas/{slug}(slug=${area.slug()})}" th:text="${area.name()}">Powai</a></td>
+            <td><code th:text="${area.path()}">/flats-in-powai</code></td>
+            <td th:text="${area.hasIntro()} ? 'Written' : '—'">—</td>
+        </tr>
+        </tbody>
+    </table>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--/*
+  Everything in <head> that differs between pages.
+
+  Taken as a FRAGMENT PARAMETER rather than read from the model, so that the
+  layout contains no page-specific strings at all and a page's description
+  cannot be set by whichever controller last touched the model. The parameter
+  is one typed object (seo/PageMeta) instead of six strings: the six are only
+  ever correct together, and Thymeleaf would happily render five of them.
+
+  Used by layout/base.html as:
+
+      <th:block th:replace="~{fragments/head :: meta(${page}, ${baseUrl})}"></th:block>
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+
+<th:block th:fragment="meta(page, baseUrl)">
+
+    <!--/* ---- Description ---------------------------------------------------
+      Omitted entirely when a page has none, rather than rendered empty. An
+      empty description tag is not neutral: Google treats it as the page's
+      considered answer and shows nothing, where an absent one lets it pull a
+      relevant sentence out of the page itself. Nothing beats nothing-at-all.
+    */-->
+    <meta th:if="${page.description != null}"
+          name="description" th:content="${page.description}">
+
+    <!--/* ---- Indexing -------------------------------------------------------
+      noindex on signed-in pages, expired listings and filtered search results.
+
+      `follow` stays on in both branches and that is deliberate: noindex says
+      "do not list this page", nofollow says "ignore every link on it". A
+      filtered search page should not be in the index, but the listings it
+      links to very much should be found through it — nofollow here would wall
+      off the listings from discovery to solve a problem nobody had.
+    */-->
+    <meta th:if="${page.noindex}" name="robots" content="noindex, follow">
+    <meta th:unless="${page.noindex}" name="robots"
+          content="index, follow, max-image-preview:large">
+
+    <!--/* ---- Canonical ------------------------------------------------------
+      The one address this content should be indexed under. Absolute, because a
+      relative canonical is honoured by Google and by almost nothing else.
+
+      This is the tag that makes the filter UI safe: /flats?area=Powai&sort=rent
+      and a dozen other permutations all name /flats-in-powai here, so one
+      page's standing is not split across the permutations of its own filters.
+    */-->
+    <link th:if="${page.canonicalPath != null}"
+          rel="canonical" th:href="${baseUrl + page.canonicalPath}">
+
+    <!--/* ---- Open Graph -----------------------------------------------------
+      What WhatsApp, Slack, Signal, iMessage and Facebook read when somebody
+      pastes a link. On this site that is not a secondary channel — a room gets
+      shared into a flat-hunting group far more often than it gets found in a
+      search result, and the card is the entire first impression.
+
+      og:title repeats the <title> rather than referencing it because they are
+      allowed to differ and sometimes should: a title carries the brand suffix
+      for a search result, and a WhatsApp card does not need it twice.
+    */-->
+    <meta property="og:site_name" content="Next Tenant">
+    <meta property="og:type" th:content="${page.ogType}">
+    <meta property="og:title" th:content="${page.title}">
+    <meta th:if="${page.description != null}"
+          property="og:description" th:content="${page.description}">
+    <meta th:if="${page.canonicalPath != null}"
+          property="og:url" th:content="${baseUrl + page.canonicalPath}">
+    <meta property="og:locale" content="en_IN">
+
+    <!--/* An absolute URL, always. WhatsApp does not resolve a relative one
+           against the page — it just shows no picture, which looks like the
+           link is broken. */-->
+    <meta th:if="${page.imagePath != null}"
+          property="og:image" th:content="${baseUrl + page.imagePath}">
+
+    <!--/* ---- Twitter --------------------------------------------------------
+      Twitter ignores Open Graph only for the card TYPE, and falls back to og:*
+      for everything else — so this is two tags, not a duplicate set of six.
+      summary_large_image is the one with a full-width photo; plain `summary`
+      renders a thumbnail the size of a postage stamp.
+    */-->
+    <meta name="twitter:card"
+          th:content="${page.imagePath != null} ? 'summary_large_image' : 'summary'">
+
+    <!--/* ---- Structured data ------------------------------------------------
+      Pre-rendered server-side by seo/JsonLd, which escapes it. th:utext writes
+      it unescaped — th:text would turn every quote into &quot; and hand Google
+      a script block that is not JSON.
+
+      The JSON is built with a serialiser rather than string concatenation
+      precisely because this tag is unescaped: an apostrophe in an area
+      description reaching this unescaped is a broken page, and a '</script>'
+      in one is a cross-site scripting hole.
+    */-->
+    <script th:if="${page.jsonLd != null}" type="application/ld+json"
+            th:utext="${page.jsonLd}"></script>
+
+</th:block>
+
+</head>
+</html>

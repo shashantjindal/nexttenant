@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="|${area.name()} — Admin|">Area — Admin</title></head>
+<body>
+
+<main id="content" class="page-width section">
+
+    <div class="section__head">
+        <h1 class="section__title" th:text="${area.name()}">Powai</h1>
+        <a class="section__link" th:href="${area.path()}" target="_blank" rel="noopener">
+            See the page &rarr;
+        </a>
+    </div>
+
+    <p class="form-error" th:if="${error != null}" th:text="${error}">Too short.</p>
+
+    <form method="post" th:action="@{/admin/areas/{slug}(slug=${area.slug()})}" class="stack">
+
+        <label class="field">
+            <span class="field__label">Search-result description</span>
+            <textarea name="metaDescription" rows="2" maxlength="200"
+                      th:text="${area.metaDescription()}"></textarea>
+            <!--/* Separate from the prose, and not optional-by-accident: the
+                   first 155 characters of good writing make a poor standalone
+                   description, because good writing opens with a sentence that
+                   sets up the next one and a search result has no next one. */-->
+            <span class="field__hint">
+                One sentence, under 155 characters. Left empty, the page falls back
+                to a generic description built from the area name.
+            </span>
+        </label>
+
+        <label class="field">
+            <span class="field__label">About this area</span>
+            <textarea name="intro" rows="18"
+                      th:text="${area.intro()}"></textarea>
+            <span class="field__hint">
+                Markdown, same as the guides. Aim for
+                <span th:text="${suggestedMinimum}">600</span>
+                characters or more — what the commute is actually like, what rent
+                buys here against next door, which end is quiet. Things a table
+                cannot say. Leave it empty rather than filling it with anything
+                a generator could have written.
+            </span>
+        </label>
+
+        <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save</button>
+            <a class="btn btn--ghost" th:href="@{/admin/areas}">Back</a>
+        </div>
+    </form>
+
+    <section class="section" th:if="${preview != null}">
+        <h2 class="section__title">Preview</h2>
+        <div class="prose__body" th:utext="${preview}"></div>
+    </section>
+
+</main>
+
+</body>
+</html>

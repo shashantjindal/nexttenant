@@ -246,13 +246,42 @@ class SeoTest {
     }
 
     @Test
-    @DisplayName("the size is known, so the protocol limit is not hit silently")
-    void sizeIsReported() {
-        // 50,000 URLs is the limit, past which a sitemap must be split.
-        // Nothing splits it yet; this is what makes the day it matters
-        // visible rather than a silent truncation.
-        assertThat(sitemap.size()).isGreaterThanOrEqualTo(3);
-        assertThat(sitemap.nearingLimit()).isFalse();
+    @DisplayName("below the split threshold it is one document, not an index")
+    void staysOneDocumentWhileSmall() {
+        // The shape changes at URLS_PER_SITEMAP. A small site should get a
+        // single file somebody can open and read; the index exists for the day
+        // it does not fit, and not before.
+        assertThat(sitemap.size())
+                .isGreaterThanOrEqualTo(3)
+                .isLessThan(SitemapService.URLS_PER_SITEMAP);
+
+        assertThat(sitemap.root())
+                .contains("<urlset")
+                .doesNotContain("<sitemapindex");
+    }
+
+    @Test
+    @DisplayName("each section is reachable on its own, index or not")
+    void sectionsAreServedIndividually() throws Exception {
+        // These stay valid below the threshold too, so that a URL Google has
+        // already fetched does not start 404ing on the day the site shrinks
+        // back under it.
+        for (SitemapService.Section section : SitemapService.Section.values()) {
+            mockMvc.perform(get("/sitemap-" + section.slug() + ".xml"))
+                    .andExpect(status().isOk());
+        }
+
+        // Anything else is a 404 rather than an empty document, so an invented
+        // section name cannot become another indexable URL.
+        mockMvc.perform(get("/sitemap-nonsense.xml")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("the listings section carries the live listing and not the draft")
+    void listingsSectionIsFiltered() {
+        String xml = sitemap.section(SitemapService.Section.LISTINGS);
+        assertThat(xml).contains(live.getId().toString());
+        assertThat(xml).doesNotContain(draft.getId().toString());
     }
 
     private String body(String path) throws Exception {

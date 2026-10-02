@@ -34,12 +34,14 @@ public class SearchController {
     private final ListingSearchService search;
     private final AreaRepository areas;
     private final ShortlistService shortlists;
+    private final SearchPageMeta pageMeta;
 
     public SearchController(ListingSearchService search, AreaRepository areas,
-                            ShortlistService shortlists) {
+                            ShortlistService shortlists, SearchPageMeta pageMeta) {
         this.search = search;
         this.areas = areas;
         this.shortlists = shortlists;
+        this.pageMeta = pageMeta;
     }
 
     @GetMapping("/flats")
@@ -75,6 +77,12 @@ public class SearchController {
 
         model.addAttribute("rentRangeLabel", rentRangeLabel(criteria));
         model.addAttribute("filterCount", criteria.activeFilterCount());
+
+        // Canonical, and whether this variant belongs in the index at all.
+        // See SearchPageMeta: a filtered view that corresponds to a landing
+        // page is canonicalised to it rather than noindexed, because those
+        // two do opposite things to the link value the variant has collected.
+        model.addAttribute("pageMeta", pageMeta.forResults(form, criteria, results));
 
         return "search/index";
     }

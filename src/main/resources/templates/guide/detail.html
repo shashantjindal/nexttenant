@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${pageMeta.title}">Guide | Next Tenant</title></head>
+<body>
+
+<main id="content" class="page-width">
+
+    <!--/* A visible breadcrumb as well as the BreadcrumbList in the structured
+           data. The two say the same thing to different readers, and a page
+           that only has the machine-readable one leaves a human who arrived
+           from Google with no route anywhere. */-->
+    <nav class="crumbs" aria-label="Breadcrumb">
+        <a th:href="@{/}" href="/">Home</a>
+        <span aria-hidden="true">/</span>
+        <a th:href="@{/guides}" href="/guides">Guides</a>
+    </nav>
+
+    <article class="article">
+        <header class="article__head">
+            <h1 class="article__title" th:text="${guide.title()}">Deposits in Mumbai</h1>
+            <p class="article__meta">
+                <span th:text="${guide.author()}">Next Tenant</span>
+                <th:block th:if="${guide.publishedAt() != null}">
+                    <span aria-hidden="true">·</span>
+                    <time th:datetime="${guide.publishedAt()}"
+                          th:text="${#temporals.format(guide.publishedAt(), 'd MMMM yyyy')}">3 October 2026</time>
+                </th:block>
+            </p>
+            <p class="article__summary" th:text="${guide.summary()}">The short version.</p>
+        </header>
+
+        <!--/* th:utext: Markdown.toHtml escapes the author's text first and then
+               introduces a closed set of tags. Read that class before changing
+               this line — it is the only reason this is safe. */-->
+        <div class="prose__body" th:utext="${guide.html()}">
+            <p>The guide.</p>
+        </div>
+    </article>
+
+    <section class="section">
+        <div class="link-grid">
+            <div>
+                <h2 class="link-grid__title">Next</h2>
+                <ul class="link-grid__list">
+                    <li><a th:href="@{/guides}" href="/guides">All guides</a></li>
+                    <li><a th:href="@{/flats}" href="/flats">Rooms available now</a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+</body>
+</html>

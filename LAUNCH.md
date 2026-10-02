@@ -1098,7 +1098,7 @@ The first build takes **5–10 minutes** — it is downloading Java and compilin
 Watch it come up:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f app
+docker compose -f docker-compose.prod.yml logs -f app-blue app-green
 ```
 
 **You should see** `Started NextTenantApplication`. Press **Ctrl+C** to stop
@@ -1211,8 +1211,10 @@ of S3.
 
 **6. Restart the app and reload again:**
 ```bash
-docker compose -f docker-compose.prod.yml restart app
+docker compose -f docker-compose.prod.yml restart app-blue app-green
 ```
+(Both on purpose here — this test wants the photos to survive every container
+being replaced, which is exactly what a deploy does.)
 **The photos must still be there.** If they vanished, storage is still writing
 to the server's disk and you will lose every photo on your next update.
 
@@ -1293,18 +1295,30 @@ not advertise the map as precise.
 ```bash
 cd ~/nexttenant
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
+./deploy.sh
 ```
 
-About 20 seconds of downtime. Database migrations run automatically.
+**No downtime.** There are two identical app containers, `app-blue` and
+`app-green`, and the script restarts them one at a time — building the image
+once, waiting for each to report healthy before touching the other — so one is
+always serving. Caddy health-checks both and routes around whichever is
+restarting. A broken build stops the script after the first container, leaving
+the other on the previous version.
+
+Database migrations run automatically. Both versions are briefly live at once,
+so add columns rather than dropping or renaming ones the running code still
+reads; see DEPLOY.md §3.6.
+
+`docker compose -f docker-compose.prod.yml up -d --build` still works and is
+still about 20 seconds of 502s, because it recreates both at once.
 
 ### Useful commands
 
 | | |
 |---|---|
 | See what is running | `docker compose -f docker-compose.prod.yml ps` |
-| Watch the logs | `docker compose -f docker-compose.prod.yml logs -f app` |
-| Restart | `docker compose -f docker-compose.prod.yml restart app` |
+| Watch the logs | `docker compose -f docker-compose.prod.yml logs -f app-blue app-green` |
+| Restart | `docker compose -f docker-compose.prod.yml restart app-blue app-green` |
 | Free disk space | `docker system prune -a` |
 
 ### Watch your spending weekly
@@ -1380,7 +1394,7 @@ IP, that ports 80 and 443 are open in `nt-app`, then
 **Sign-in emails never arrive**
 Check spam first. Then: is SES still in sandbox (§4.5)? Does the Identities
 page say **Verified**? Does `NEXTTENANT_MAIL_FROM` use the domain you
-verified? Then `docker compose -f docker-compose.prod.yml logs app | grep -i mail`.
+verified? Then `docker compose -f docker-compose.prod.yml logs app-blue app-green | grep -i mail`.
 
 **App logs say `535 Authentication Credentials Invalid`**
 The SMTP username and password are rejected. In order of likelihood:
@@ -1390,7 +1404,7 @@ The SMTP username and password are rejected. In order of likelihood:
 2. **The container still holds the old values.** Environment variables are
    fixed when a container is created, so editing `nt.env` and running `up -d`
    may change nothing. Check with
-   `docker compose -f docker-compose.prod.yml exec app printenv | grep SMTP_USERNAME`,
+   `docker compose -f docker-compose.prod.yml exec app-blue printenv | grep SMTP_USERNAME`,
    and apply with `up -d --force-recreate app`.
 3. **Credentials from another region.** They are region-specific and will not
    work against `email-smtp.ap-south-1.amazonaws.com`.

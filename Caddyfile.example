@@ -14,10 +14,54 @@
 # `docker compose logs caddy`.
 
 yourdomain.in {
-    # `app` is the service name in docker-compose.prod.yml. Docker resolves it
-    # on the private network between the containers — it is not a hostname that
-    # exists anywhere else, and that is the point.
-    reverse_proxy app:8080
+    # Two upstreams, because the app takes 20-30s to boot and a deploy that
+    # restarts the only copy is 20-30s of 502s. `app-blue` and `app-green` are
+    # service names from docker-compose.prod.yml; Docker resolves them on the
+    # private network between the containers — they are not hostnames that
+    # exist anywhere else, and that is the point.
+    reverse_proxy app-blue:8080 app-green:8080 {
+
+        # Fewest active requests, rather than round-robin. During a deploy one
+        # container has just started with an empty connection pool and a cold
+        # JIT; this sends it work at the rate it can actually absorb.
+        lb_policy least_conn
+
+        # ---- Active health checks -------------------------------------------
+        # Caddy polls each upstream and routes only to the ones that answer.
+        # This is what makes a rolling deploy invisible: the container being
+        # replaced stops answering, Caddy notices within ~2s and sends
+        # everything to its twin.
+        #
+        # /actuator/health/readiness rather than /actuator/health. Readiness
+        # turns OUT_OF_SERVICE the instant a graceful shutdown begins, so Caddy
+        # stops sending new requests while the old container drains the ones it
+        # already has. /actuator/health reports UP until the process is gone,
+        # which is exactly too late to be useful.
+        health_uri /actuator/health/readiness
+        health_interval 2s
+        health_timeout 2s
+        health_status 200
+
+        # ---- Passive health checks ------------------------------------------
+        # The active probe can be up to health_interval out of date. These catch
+        # an upstream that died between two polls: a connection error or a 5xx
+        # takes it out of rotation for 10s without waiting for the next probe.
+        fail_duration 10s
+        max_fails 2
+        unhealthy_status 5xx
+
+        # ---- The gap -------------------------------------------------------
+        # Belt and braces for the one or two requests that get handed to a
+        # container in the instant between it dying and Caddy noticing. Rather
+        # than returning 502, Caddy retries — on the other upstream, which is
+        # healthy — for up to 10 seconds. In a rolling deploy the retry lands
+        # immediately, because the twin is up the whole time.
+        #
+        # Without this, a perfectly working blue/green setup still shows a
+        # handful of users an error page on every deploy.
+        lb_try_duration 10s
+        lb_try_interval 250ms
+    }
 }
 
 # Uncomment to serve www as well. Caddy will get a certificate for both.
