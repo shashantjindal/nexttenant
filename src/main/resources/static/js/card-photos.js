@@ -111,6 +111,29 @@
      * anybody has looked at one of them, and most visitors never touch the
      * arrows at all. Focusin covers the keyboard, where hover never happens.
      */
+    /*
+     * Every card, on load.
+     *
+     * This used to prepare lazily — on hover, on focus, on touch — to avoid
+     * building twenty sets of dots for cards nobody looks at. That was a
+     * saving worth almost nothing and it cost the feature twice: first the
+     * arrows never appeared on a phone, because a touchscreen fires no hover,
+     * and then they were missed on desktop too, because a control that only
+     * exists once you have already pointed at it is a control you have to
+     * know about to discover.
+     *
+     * Twenty cards is twenty small DOM writes. The lazy version was solving a
+     * problem that was not there.
+     */
+    Array.prototype.forEach.call(
+            document.querySelectorAll('.listing-card__frames'), prepare);
+
+    /*
+     * "Load more" appends cards after this has run, so new ones are prepared
+     * when they are first touched or pointed at. Delegated from the document
+     * for the same reason the click handler is: binding per card would leave
+     * every appended card dead.
+     */
     ['pointerenter', 'focusin', 'touchstart'].forEach(function (type) {
         document.addEventListener(type, function (event) {
             var card = event.target.closest
@@ -120,24 +143,4 @@
             }
         }, true);
     });
-
-    /*
-     * On touch, prepare everything up front.
-     *
-     * Lazy preparation is right for a mouse: hover says which card somebody is
-     * looking at, and twenty sets of dots built on load is work for cards
-     * nobody touches.
-     *
-     * A phone has no hover, so that was the bug — the arrows stayed hidden
-     * until something fired pointerenter, and on a touchscreen nothing ever
-     * did. The controls existed and were unreachable, which is exactly the
-     * "no next button" it looked like.
-     *
-     * matchMedia rather than sniffing the user agent: the question is whether
-     * this device can hover, which is the thing being asked.
-     */
-    if (window.matchMedia && window.matchMedia('(hover: none)').matches) {
-        Array.prototype.forEach.call(
-                document.querySelectorAll('.listing-card__frames'), prepare);
-    }
 }());

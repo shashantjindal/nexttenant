@@ -2291,15 +2291,30 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    opacity: 0;
+
+    /*
+     * Always visible, not revealed on hover.
+     *
+     * They were hover-only, which is what Airbnb does — and Airbnb's users
+     * already know the pattern is there to find. Here the person who BUILT
+     * the site looked at a card twice and reported the next button missing,
+     * which settles it: a control nobody can find is a control that is not
+     * there.
+     *
+     * Hover still strengthens them, so they recede until wanted without ever
+     * being invisible. The shadow is what keeps them legible against a photo
+     * that happens to be white.
+     */
+    opacity: .75;
     transition: opacity .15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
 }
 .listing-card__nav--prev { left: var(--s-2); }
 .listing-card__nav--next { right: var(--s-2); }
 
-/* Revealed on hover, and on keyboard focus — otherwise a keyboard user tabs
-   to a control they cannot see. */
+/* Full strength when wanted, rather than appearing from nothing. */
 .listing-card:hover .listing-card__nav,
+.listing-card__nav:hover,
 .listing-card__nav:focus-visible { opacity: 1; }
 
 .listing-card__dots {
