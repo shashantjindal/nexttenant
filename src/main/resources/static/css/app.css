@@ -208,7 +208,10 @@
 
 .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Column count tracks the number of .stat children in the template. An
+       empty leftover track shoves the figures off to one side, so keep the
+       two in step whenever a stat is added or dropped. */
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--s-2);
     padding: var(--s-6) 0;
     border-block: 1px solid var(--c-line);
@@ -492,7 +495,9 @@
 
 @media (min-width: 1024px) {
     .card-grid { grid-template-columns: repeat(3, 1fr); }
-    .trust__list { grid-template-columns: repeat(4, 1fr); }
+    /* Three items, three columns. A fourth track squeezes the copy into the
+       left three quarters and wraps it early. */
+    .trust__list { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ---- Auth screens ------------------------------------------------------ */
@@ -2215,6 +2220,9 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 
 .site-footer__links { margin: var(--s-3) 0 0; font-size: var(--t-sm); }
+
+/* Breathing room around the divider so the two links do not read as one. */
+.site-footer__sep { color: var(--c-ink-3); margin-inline: var(--s-2); }
 
 /*
  * An icon inside a button.

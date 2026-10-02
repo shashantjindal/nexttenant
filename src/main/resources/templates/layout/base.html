@@ -164,6 +164,12 @@
                a policy you have to already know the URL of is not published. */-->
         <p class="site-footer__links">
             <a th:href="@{/privacy}">Privacy policy</a>
+            <span class="site-footer__sep" aria-hidden="true">&middot;</span>
+            <!--/* A plain mailto, not a contact form. Somebody writing in is
+                   usually stuck or suspicious of a listing, and a form that
+                   swallows their message gives them nothing to point at
+                   afterwards; their own sent mail does. */-->
+            <a href="mailto:hello@nexttenant.in">hello@nexttenant.in</a>
         </p>
     </div>
 </footer>
