@@ -305,12 +305,7 @@
 
                 <th:block th:unless="${isOwner}">
                     <a class="btn btn--primary btn--block"
-                       th:href="@{/flats/{id}/request(id=${listing.id})}">Request contact</a>
-
-                    <p class="cost-card__note">
-                        Your contact is shared only if
-                        <span th:text="${listing.leaverFirstName}">Priya</span> accepts.
-                    </p>
+                       th:href="@{/flats/{id}/request(id=${listing.id})}">Message</a>
                 </th:block>
             </div>
 
