@@ -25,6 +25,15 @@ The architecture below costs about **$30/month**, so the credits cover roughly
 | Route 53 — DNS | $0.50 |
 | **Total** | **~$31** |
 
+**Two app containers do not cost twice as much.** EC2 bills per instance-hour,
+not per container, so the blue/green pair that makes deploys zero-downtime is
+free in dollars. What it does cost is **memory**: both JVMs share the 2GB on a
+`t3.small`, so `docker-compose.prod.yml` caps each at 768MB. Without that cap
+each would read the host's memory and size a 1.5GB heap — 3GB of heap on a 2GB
+box, and an OOM kill with no stack trace the first time both are busy. If you
+resize the instance, change `mem_limit` with it; the note in that file has the
+numbers.
+
 **A cheaper variant exists.** Run PostgreSQL on the same EC2 box instead of
 RDS and it drops to about **$16/month — roughly twelve months of credits.**
 What you give up is automated backups, point-in-time recovery and one-click

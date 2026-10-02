@@ -70,6 +70,35 @@ x-app: &app
   # would kill the JVM mid-drain and graceful shutdown would never once finish.
   stop_grace_period: 30s
 
+  # ---- Memory, and why this line is not optional --------------------------
+  #
+  # The Dockerfile runs the JVM with -XX:MaxRAMPercentage=75. A percentage OF
+  # WHAT is decided by the container: with a limit set, the JVM reads the
+  # limit; with no limit, it reads the HOST's total memory.
+  #
+  # So on a 2GB t3.small, two unlimited containers each size a max heap of
+  # ~1.5GB — 3GB of heap on a 2GB machine. Nothing complains until both are
+  # under load at once, and then the kernel OOM-killer takes one, with no Java
+  # stack trace and no entry in the application log. That is the single
+  # nastiest way this stack can fail, and going from one app container to two
+  # is what introduced it.
+  #
+  # 768m each leaves roughly 400MB for the OS, Docker and Caddy on a 2GB box,
+  # and gives each JVM a ~576MB max heap. Smaller than the ~1.5GB a single
+  # container used to get, and still ample: the heaviest thing this app does is
+  # resize a 12MB upload.
+  #
+  # IF YOU RESIZE THE INSTANCE, CHANGE THIS. It is a fixed number against a
+  # machine size, and the two have to be looked at together — which is why it
+  # is a literal here rather than something clever that would be wrong quietly.
+  # On a 4GB t3.medium, 1600m each is the equivalent.
+  mem_limit: 768m
+
+  # Permission to use swap beyond the limit, rather than being killed at it.
+  # The runbook has you add 2GB of swap for exactly this: a brief spike pages
+  # out and the request is slow, instead of the container dying mid-request.
+  memswap_limit: 1536m
+
   logging:
     driver: json-file
     options:
