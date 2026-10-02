@@ -304,8 +304,24 @@
                 </th:block>
 
                 <th:block th:unless="${isOwner}">
+                    <!--/*
+                      A speech bubble, not an envelope.
+
+                      The envelope in the site header means "your requests" —
+                      the inbox. This button starts a conversation with one
+                      person, which is a different thing, and reusing the same
+                      glyph for both would teach the icon to mean nothing.
+
+                      aria-hidden because the button already says "Message".
+                      Announced, it would read "Message Message".
+                    */-->
                     <a class="btn btn--primary btn--block"
-                       th:href="@{/flats/{id}/request(id=${listing.id})}">Message</a>
+                       th:href="@{/flats/{id}/request(id=${listing.id})}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M20 12a7.5 7.5 0 0 1-7.5 7.5 8 8 0 0 1-3.2-.66L4.5 20l1.2-4.3A7.3 7.3 0 0 1 5 12a7.5 7.5 0 0 1 15 0z"/>
+                        </svg>
+                        <span>Message</span>
+                    </a>
                 </th:block>
             </div>
 

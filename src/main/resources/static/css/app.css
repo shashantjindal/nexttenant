@@ -2199,3 +2199,25 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 
 .site-footer__links { margin: var(--s-3) 0 0; font-size: var(--t-sm); }
+
+/*
+ * An icon inside a button.
+ *
+ * .btn is already inline-flex with a gap, so the icon only needs sizing and
+ * the stroke treatment the rest of the site's icons use — outline, no fill,
+ * inheriting the button's colour so it works on primary, secondary and ghost
+ * without a variant each.
+ *
+ * em rather than px: the icon then tracks the button's font size, so it stays
+ * in proportion on a smaller button instead of needing a second rule.
+ */
+.btn svg {
+    width: 1.15em;
+    height: 1.15em;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
