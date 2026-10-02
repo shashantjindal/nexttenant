@@ -119,6 +119,10 @@ git pull
 ./deploy.sh
 ```
 
+> `-bash: ./deploy.sh: Permission denied` means the executable bit did not
+> survive the checkout. `bash deploy.sh` runs it regardless and is always a
+> safe substitute.
+
 3–8 minutes, and **the site stays up throughout**. The script builds the image
 once, then restarts `app-green`, waits for it to report healthy, and only then
 restarts `app-blue` — so one container is always serving. If the new build is

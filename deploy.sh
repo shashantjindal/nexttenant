@@ -123,10 +123,28 @@ wait_until_healthy() {
 # That makes the upgrade itself zero-downtime rather than a cutover.
 #
 # This whole block can be deleted once every environment has deployed past it.
+#
+# The project name is asked of Docker rather than guessed from the directory.
+# This compose file pins no `name:`, so Compose derives it from the folder — and
+# a folder renamed at any point in the past means a guess here silently matches
+# nothing, the orphan survives, and the deploy dies on the port bind with no
+# clue why. Reading the label off a container Compose itself started is the
+# answer Compose would give.
 retire_single_container_stack() {
-    local old
+    local sibling project old
+
+    sibling="$($COMPOSE ps -aq 2>/dev/null | head -1)"
+    if [ -n "$sibling" ]; then
+        project="$(docker inspect -f \
+                '{{index .Config.Labels "com.docker.compose.project"}}' "$sibling" 2>/dev/null)"
+    fi
+    # Nothing from this project is running yet — a first deploy, where there is
+    # no old container to retire either. The directory name is what Compose
+    # would use, so it is the right fallback.
+    project="${project:-$(basename "$PWD")}"
+
     old="$(docker ps -aq \
-            --filter "label=com.docker.compose.project=$(basename "$PWD")" \
+            --filter "label=com.docker.compose.project=$project" \
             --filter "label=com.docker.compose.service=app" 2>/dev/null || true)"
 
     [ -n "$old" ] || return 0
