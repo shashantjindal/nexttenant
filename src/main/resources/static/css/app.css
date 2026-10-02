@@ -1141,7 +1141,24 @@
     margin-bottom: var(--s-5);
 }
 .wizard__step { font-size: var(--t-xs); color: var(--c-ink-3); }
-.wizard__exit { font-size: var(--t-xs); }
+/*
+ * Reads as an action, because it is one.
+ *
+ * This was --t-xs and body weight, matching the "Step 1 of 2" caption it sits
+ * beside — correct when it said "Save and exit", which is an escape hatch and
+ * should be quiet. It now says "Publish listing", and the style never followed
+ * the words: the most consequential link on the screen was rendered as a
+ * caption, distinguishable from the text next to it only by colour.
+ *
+ * Semibold and a size up, and no further. It is still SECONDARY to the
+ * Continue button at the foot of the form, which is the path most people
+ * should take; giving this button chrome would set the two competing.
+ */
+.wizard__exit {
+    font-size: var(--t-sm);
+    font-weight: 600;
+}
+.wizard__exit:hover { text-decoration: underline; }
 
 .wizard__title { font-size: var(--t-xl); margin-bottom: var(--s-2); }
 .wizard__lede { font-size: var(--t-sm); color: var(--c-ink-3); margin: 0 0 var(--s-8); }
