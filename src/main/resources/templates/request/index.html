@@ -38,6 +38,11 @@
                                th:text="' · ' + ${r.listingArea}"> · Bandra West</a>
                         </div>
                     </div>
+                    <!--/* A room that has gone says so, louder than the request status:
+                           somebody waiting on a reply deserves to know the room
+                           went rather than be left wondering. */-->
+                    <span class="request-row__status request-row__status--gone"
+                          th:if="${r.listingGone()}" th:text="${r.listingGoneLabel()}">Taken</span>
                     <span class="request-row__status" th:text="${r.status.label}">Waiting for a reply</span>
                 </div>
 
@@ -120,6 +125,8 @@
                             Sent 2 days ago to Priya
                         </div>
                     </div>
+                    <span class="request-row__status request-row__status--gone"
+                          th:if="${s.listingGone()}" th:text="${s.listingGoneLabel()}">Taken</span>
                     <span class="request-row__status" th:text="${s.status.label}">Waiting for a reply</span>
                 </div>
 

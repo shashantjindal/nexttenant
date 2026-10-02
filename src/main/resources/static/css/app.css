@@ -1166,11 +1166,27 @@
  * Continue button at the foot of the form, which is the path most people
  * should take; giving this button chrome would set the two competing.
  */
+/*
+ * A button, not a link.
+ *
+ * Semibold text was an improvement on caption-sized, and still read as part
+ * of the row it sits in. The one control that finishes the job should look
+ * like something you press.
+ */
 .wizard__exit {
+    display: inline-block;
+    padding: var(--s-2) var(--s-4);
+    border: 1px solid var(--c-brand);
+    border-radius: var(--r-pill);
     font-size: var(--t-sm);
     font-weight: 600;
+    text-decoration: none;
 }
-.wizard__exit:hover { text-decoration: underline; }
+.wizard__exit:hover {
+    background: var(--c-brand);
+    color: var(--c-brand-ink);
+    text-decoration: none;
+}
 
 .wizard__title { font-size: var(--t-xl); margin-bottom: var(--s-2); }
 .wizard__lede { font-size: var(--t-sm); color: var(--c-ink-3); margin: 0 0 var(--s-8); }
@@ -2330,3 +2346,133 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 /* A hairline down the children, so the group reads as one block rather than a
    list that happens to be indented. */
 .area-group__child { border-left: 1px solid var(--c-line); margin-left: var(--s-2); }
+
+/* A request whose room has gone. Gold rather than red: the room being taken is
+   usually the system working, not a failure. */
+.request-row__status--gone {
+    background: var(--c-gold);
+    color: var(--c-gold-ink);
+    font-weight: 600;
+}
+
+/* ---- Picked areas, as chips -------------------------------------------- */
+
+.area-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin: var(--s-3) 0;
+}
+
+.area-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 4px 10px;
+    border: 1px solid var(--c-brand);
+    border-radius: var(--r-pill);
+    background: var(--c-brand-tint);
+    color: var(--c-brand);
+    font: inherit;
+    font-size: var(--t-xs);
+    font-weight: 600;
+    cursor: pointer;
+}
+.area-chip:hover { background: var(--c-brand); color: var(--c-brand-ink); }
+.area-chip__x { font-size: 14px; line-height: 1; }
+
+/* ---- Filters on a phone: a drawer, not a wall -------------------------- */
+
+/*
+ * The panel came first in the source, so a phone showed a screen and a half
+ * of checkboxes before the first room. Somebody arriving from a WhatsApp link
+ * to LOOK AT FLATS had to scroll past ninety areas to see one.
+ *
+ * Desktop is untouched: there the panel sits beside the results with room to
+ * spare, and always-visible is the right answer.
+ */
+.filters__open,
+.filters__close { display: none; }
+
+@media (max-width: 767px) {
+    .filters__open {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--s-2);
+        padding: var(--s-3) var(--s-5);
+        margin-bottom: var(--s-4);
+        border: 1px solid var(--c-line-strong);
+        border-radius: var(--r-pill);
+        background: var(--c-surface);
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: var(--t-sm);
+        cursor: pointer;
+    }
+
+    /*
+     * Fixed, full height, off to the left until opened. Transform rather than
+     * display:none so it slides, and so a screen reader is not surprised by
+     * content appearing from nowhere.
+     */
+    .filters {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        overflow-y: auto;
+        transform: translateX(-100%);
+        transition: transform .2s ease;
+        visibility: hidden;
+    }
+    .filters--open { transform: none; visibility: visible; }
+
+    .filters__close {
+        display: inline-block;
+        border: none;
+        background: none;
+        font-size: 26px;
+        line-height: 1;
+        color: var(--c-ink-2);
+        cursor: pointer;
+        padding: 0 var(--s-2);
+    }
+
+    /* The panel is the whole screen, so its own "Show results" is the way
+       out — it submits AND the page reloads with the drawer shut. */
+    .filters__head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--c-surface);
+        padding-bottom: var(--s-3);
+    }
+
+    /* Nothing behind it should scroll while it is open. */
+    body.filters-open { overflow: hidden; }
+}
+
+/* The leaver's own words, under the photos. Serif and a touch larger: it is
+   the one passage of prose on a page otherwise made of labels and numbers. */
+.detail__description {
+    font-size: var(--t-md);
+    line-height: 1.65;
+    color: var(--c-ink-2);
+    margin: var(--s-5) 0 0;
+    max-width: 62ch;
+}
+
+/* Photo tiles line up regardless of what each one carries.
+   Only the cover has a "Cover" badge and only the others have "Make cover",
+   so without a column layout and a pushed-down action row the captions sat at
+   three different heights across one grid. */
+.photo-tile figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    height: 100%;
+}
+.photo-tile__actions { margin-top: auto; }
+.photo-tile { display: flex; flex-direction: column; }

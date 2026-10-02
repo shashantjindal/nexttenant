@@ -152,7 +152,7 @@
                            box asks for a number, where a zero asks only to be
                            confirmed. */-->
                     <input type="text" name="brokerage" inputmode="numeric"
-                           data-digits pattern="[0-9,]*" required
+                           data-digits pattern="[0-9,]*" required data-ghost-zero
                            th:value="${draft.brokerageInr} ?: 0">
                 </div>
                 <small class="wizard__hint">
@@ -166,7 +166,7 @@
                 <div class="field__money">
                     <span class="field__prefix">&#8377;</span>
                     <input type="text" name="buyout" inputmode="numeric"
-                           data-digits pattern="[0-9,]*" required
+                           data-digits pattern="[0-9,]*" required data-ghost-zero
                            th:value="${draft.buyoutInr} ?: 0">
                 </div>
                 <small class="wizard__hint">

@@ -60,7 +60,7 @@ public class SecurityConfig {
 
                         // Public, and it has to be. Somebody deciding whether
                         // to hand over a phone number needs to read this
-                        // BEFORE they have an account — a privacy policy
+                        // BEFORE they have an account â€” a privacy policy
                         // behind a login is one nobody reads at the only
                         // moment it matters.
                         .requestMatchers("/privacy").permitAll()

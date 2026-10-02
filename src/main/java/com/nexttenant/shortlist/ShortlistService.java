@@ -127,9 +127,27 @@ public class ShortlistService {
                 .single() > 0;
     }
 
+    /**
+     * How many saved rooms a person can still open.
+     *
+     * <p>The join is the fix. This counted every {@code shortlists} row, while
+     * the page beneath the badge shows only LIVE ones — so a listing being
+     * taken down left the header saying "2" above a page saying "Nothing
+     * shortlisted yet". The badge was answering a question nobody asked: how
+     * many rows exist, rather than how many rooms are there.
+     *
+     * <p>The rows are deliberately kept when a listing goes down — a paused
+     * listing that comes back should return to the wishlist that saved it —
+     * which is exactly why the count has to filter and cannot just delete.
+     */
     @Transactional(readOnly = true)
     public long countFor(UUID userId) {
-        return jdbc.sql("SELECT count(*) FROM shortlists WHERE user_id = ?")
+        return jdbc.sql("""
+                        SELECT count(*)
+                          FROM shortlists s
+                          JOIN listings l ON l.id = s.listing_id
+                         WHERE s.user_id = ? AND l.status = 'LIVE'
+                        """)
                 .param(userId)
                 .query(Long.class)
                 .single();

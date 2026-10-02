@@ -77,9 +77,6 @@
             <span>Take their place.</span>
         </h1>
 
-        <p class="hero__sub">
-            Shared flats &middot; One spot at a time &middot; No owners, no brokers, no PGs
-        </p>
 
         <div class="hero__actions">
             <div>
@@ -106,10 +103,14 @@
                 <span class="stat__value" th:text="${areaCount}">22</span>
                 <span class="stat__label">areas</span>
             </div>
-            <div class="stat">
-                <span class="stat__value" th:text="${brokerageSaved}">&#8377;48 lakh</span>
-                <span class="stat__label">brokerage saved</span>
-            </div>
+            <!--/*
+              "Brokerage saved" used to sit here and it was not a claim worth
+              making. It is a number we computed about transactions we did not
+              see, offered to somebody who has not yet decided whether the site
+              has any flats — and on a site this new it reads as invented. The
+              zero-brokerage badge on each listing says the same thing about a
+              specific room, which is the version a reader can check.
+            */-->
         </div>
     </section>
 
@@ -198,17 +199,9 @@
                     </p>
                 </div>
                 <div>
-                    <div class="trust__item-title">Agreement on record</div>
-                    <p class="trust__item-body">
-                        Every listing declares how the agreement transfers, and who
-                        holds the deposit today.
-                    </p>
-                </div>
-                <div>
                     <div class="trust__item-title">Brokers get reported out</div>
                     <p class="trust__item-body">
-                        One click to report a listing. Two confirmed reports and the
-                        account is gone.
+                        Report a listing if think this is a broker. We monitor every report
                     </p>
                 </div>
             </div>

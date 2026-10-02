@@ -52,9 +52,11 @@ public class HomeController {
         // wrong. Counting it costs one trivial query on one page.
         model.addAttribute("areaCount", areas.countActive());
 
-        // Computed from real connections, not a figure somebody chose. See
-        // ListingCatalog.brokerageSavedInr for what it counts and why.
-        model.addAttribute("brokerageSaved", Rupees.compact(catalog.brokerageSavedInr()));
+        // "Brokerage saved" is no longer on the landing page. It was a number
+        // computed about transactions we did not witness, shown to somebody
+        // still deciding whether the site has any flats at all - which on a
+        // site this new reads as invented. brokerageSavedInr() stays for the
+        // admin side, where the audience already knows what it counts.
 
         // Which of these the viewer has already hearted. One query for the row,
         // not one per card.

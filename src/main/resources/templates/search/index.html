@@ -53,8 +53,26 @@
 
     <div class="search__layout">
 
+        <!--/*
+          On a phone, a bar you tap rather than a wall you scroll past.
+
+          The panel came FIRST in the source, so a phone showed a screen and a
+          half of filters before the first room. Somebody arriving from a
+          WhatsApp link to look at flats had to scroll past ninety area
+          checkboxes to see one.
+
+          Hidden on mobile until this is tapped; unchanged on desktop, where
+          there is room for it beside the results and having it always visible
+          is the right answer.
+        */-->
+        <button type="button" class="filters__open" data-filters-open>
+            <span>Filters</span>
+            <span class="filters__count" th:if="${filterCount > 0}"
+                  th:text="${filterCount}">3</span>
+        </button>
+
         <!-- ============ Filter panel ============ -->
-        <aside class="filters">
+        <aside class="filters" id="filters-panel">
             <form method="get" th:action="@{/flats}" id="filter-form">
 
                 <!--/*
@@ -78,6 +96,11 @@
                         <a class="filters__clear" th:href="@{/flats}" th:if="${filterCount > 0}">Clear all</a>
                         <button type="submit" class="btn btn--primary btn--sm">Show results</button>
                     </div>
+
+                    <!--/* Closes the drawer without submitting. Phone only —
+                           on desktop the panel is never covering anything. */-->
+                    <button type="button" class="filters__close" data-filters-close
+                            aria-label="Close filters">&times;</button>
                 </div>
 
                 <input type="hidden" name="sort" th:value="${criteria.sort}">
@@ -112,6 +135,17 @@
                                placeholder="Search by area or station">
                         <p class="filters__hint" id="area-hint" aria-live="polite"></p>
                     </div>
+
+                    <!--/*
+                      What you have picked, as chips, right under the box.
+
+                      The list scrolls 200 rows inside 220px, so a tick made
+                      three screens up is invisible by the time you have found
+                      the next one — and a filter you cannot see is one you
+                      forget you set. Built by area-filter.js from the ticked
+                      boxes, so it cannot disagree with them.
+                    */-->
+                    <div class="area-chips" id="area-chips" hidden></div>
 
                     <!--/*
                       GROUPED, not a flat alphabetical list.
@@ -194,6 +228,25 @@
                     </p>
                 </fieldset>
 
+                <!--/* Second, right after Area, because it is the other filter
+                       that rules a room OUT rather than narrowing a list. A
+                       woman searching with "Women only" set is not refining
+                       results, she is removing ones she cannot take, and that
+                       belongs beside where she said where to look. */-->
+                <fieldset class="filters__group">
+                    <legend>Open to</legend>
+                    <label class="check">
+                        <input type="radio" name="gender" value=""
+                               th:checked="${form.gender == null or form.gender.isEmpty()}">
+                        <span>Any</span>
+                    </label>
+                    <label class="check" th:each="g : ${genders}" th:if="${g.name() != 'ANY'}">
+                        <input type="radio" name="gender" th:value="${g}"
+                               th:checked="${form.gender == g.name()}">
+                        <span th:text="${g.label}">Women only</span>
+                    </label>
+                </fieldset>
+
                 <!-- Rent -->
                 <fieldset class="filters__group">
                     <legend>Rent per month</legend>
@@ -268,19 +321,6 @@
                 </fieldset>
 
                 <!-- Open to -->
-                <fieldset class="filters__group">
-                    <legend>Open to</legend>
-                    <label class="check">
-                        <input type="radio" name="gender" value=""
-                               th:checked="${form.gender == null or form.gender.isEmpty()}">
-                        <span>Any</span>
-                    </label>
-                    <label class="check" th:each="g : ${genders}" th:if="${g.name() != 'ANY'}">
-                        <input type="radio" name="gender" th:value="${g}"
-                               th:checked="${form.gender == g.name()}">
-                        <span th:text="${g.label}">Women only</span>
-                    </label>
-                </fieldset>
 
                 <!--/*
                   The "Must have" amenity filter used to sit here, and it had

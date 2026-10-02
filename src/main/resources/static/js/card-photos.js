@@ -111,7 +111,7 @@
      * anybody has looked at one of them, and most visitors never touch the
      * arrows at all. Focusin covers the keyboard, where hover never happens.
      */
-    ['pointerenter', 'focusin'].forEach(function (type) {
+    ['pointerenter', 'focusin', 'touchstart'].forEach(function (type) {
         document.addEventListener(type, function (event) {
             var card = event.target.closest
                     && event.target.closest('.listing-card__frames');
@@ -120,4 +120,24 @@
             }
         }, true);
     });
+
+    /*
+     * On touch, prepare everything up front.
+     *
+     * Lazy preparation is right for a mouse: hover says which card somebody is
+     * looking at, and twenty sets of dots built on load is work for cards
+     * nobody touches.
+     *
+     * A phone has no hover, so that was the bug — the arrows stayed hidden
+     * until something fired pointerenter, and on a touchscreen nothing ever
+     * did. The controls existed and were unreachable, which is exactly the
+     * "no next button" it looked like.
+     *
+     * matchMedia rather than sniffing the user agent: the question is whether
+     * this device can hover, which is the thing being asked.
+     */
+    if (window.matchMedia && window.matchMedia('(hover: none)').matches) {
+        Array.prototype.forEach.call(
+                document.querySelectorAll('.listing-card__frames'), prepare);
+    }
 }());

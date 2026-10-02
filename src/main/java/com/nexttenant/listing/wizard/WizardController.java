@@ -135,6 +135,7 @@ public class WizardController {
         model.addAttribute("furnishings", Furnishing.values());
         model.addAttribute("flatTypes", com.nexttenant.listing.FlatType.values());
         model.addAttribute("genders", FlatmateGender.values());
+        model.addAttribute("makeups", com.nexttenant.listing.FlatmateMakeup.values());
     }
 
     /**
@@ -202,13 +203,14 @@ public class WizardController {
                              @RequestParam(required = false) Furnishing furnishing,
                              @RequestParam(required = false) com.nexttenant.listing.FlatType flatType,
                              @RequestParam(required = false) FlatmateGender flatmateGender,
+                             @RequestParam(required = false) com.nexttenant.listing.FlatmateMakeup flatmateMakeup,
                              @RequestParam(required = false) String availableFrom,
                              @RequestParam(required = false) Short existingFlatmates,
                              RedirectAttributes redirect) {
         Listing draft = drafts.requireOwnedDraft(id, user.id());
         try {
             drafts.saveBasics(id, user.id(), areaName, configuration, roomType,
-                    furnishing, flatType, flatmateGender,
+                    furnishing, flatType, flatmateGender, flatmateMakeup,
                     parseDate(availableFrom, draft.getAvailableFrom(),
                             LocalDate.now(clock.withZone(IST))),
                     existingFlatmates);

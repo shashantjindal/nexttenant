@@ -121,6 +121,7 @@ public class ListingDetailService {
                 Rupees.format(l.totalMoveInCostInr()),
                 costLines(l),
 
+                l.getDescription(),
                 l.getAreaName(),
                 l.getNearestStation(),
                 l.getMinutesToStation() == null ? null : l.getMinutesToStation() + " min walk",

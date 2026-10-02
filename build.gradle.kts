@@ -171,3 +171,23 @@ tasks.register("printTestClasspath") {
     val cp = sourceSets["test"].runtimeClasspath
     doLast { println(cp.asPath) }
 }
+
+/*
+ * Compile as UTF-8, everywhere.
+ *
+ * Without this javac uses the platform default — windows-1252 on this laptop,
+ * UTF-8 inside the Docker image. A stray CP-1252 byte (an em dash pasted or
+ * written by a shell script) then compiles perfectly on Windows and fails the
+ * production build with "unmappable character for encoding UTF-8".
+ *
+ * That is the worst shape a build break can have: green locally, red only in
+ * the place you cannot iterate quickly, and discovered at deploy time. Saying
+ * the encoding out loud makes the two agree.
+ */
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Test>().configureEach {
+    systemProperty("file.encoding", "UTF-8")
+}

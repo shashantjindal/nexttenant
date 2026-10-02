@@ -197,6 +197,7 @@ public class ListingDraftService {
                            com.nexttenant.listing.Furnishing furnishing,
                            com.nexttenant.listing.FlatType flatType,
                            com.nexttenant.listing.FlatmateGender flatmateGender,
+                           com.nexttenant.listing.FlatmateMakeup flatmateMakeup,
                            java.time.LocalDate availableFrom,
                            Short existingFlatmates) {
         Listing draft = requireOwnedDraft(listingId, userId);
@@ -204,7 +205,7 @@ public class ListingDraftService {
         var area = areas.findByName(areaName);
 
         draft.setBasics(areaName, configuration, roomType, furnishing, flatType,
-                flatmateGender, availableFrom, existingFlatmates);
+                flatmateGender, flatmateMakeup, availableFrom, existingFlatmates);
 
         // Derived, not asked. Every area knows its own station, and it is the
         // most useful single fact about a Mumbai address — so the question

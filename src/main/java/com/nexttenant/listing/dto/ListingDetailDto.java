@@ -36,6 +36,16 @@ public record ListingDetailDto(
         List<CostLine> costLines,
 
         // ---- Where (approximate only) ----
+        /**
+         * The leaver's own words, or null.
+         *
+         * <p>Shown straight under the photos, where somebody is still deciding
+         * whether to read on. Every other field on this page is a dropdown;
+         * this is the only part that can say "the flatmates are easy going and
+         * we cook together on Sundays".
+         */
+        String description,
+
         String area,
         String station,
         String walkTime,

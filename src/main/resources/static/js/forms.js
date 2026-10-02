@@ -114,18 +114,81 @@
      */
     document.addEventListener('focusin', function (event) {
         var el = event.target;
-        if (el && el.hasAttribute && el.hasAttribute('data-ghost') && el.placeholder) {
+        if (!el || !el.hasAttribute) {
+            return;
+        }
+
+        if (el.hasAttribute('data-ghost') && el.placeholder) {
             el.setAttribute('data-ghost-text', el.placeholder);
             el.placeholder = '';
+        }
+
+        /*
+         * A prefilled zero clears itself when you tap into it.
+         *
+         * Brokerage and buy-out arrive as "0" so the common answer needs no
+         * typing â€” but a real 0 behaves differently from a placeholder: it
+         * does not vanish when you start typing, so anyone entering 5000 gets
+         * "05000" or has to select-all first. Clearing on focus makes the
+         * field behave the way it LOOKS like it behaves.
+         *
+         * Restored on blur if nothing was typed, so the answer is still zero
+         * for everybody who only passed through.
+         */
+        if (el.hasAttribute('data-ghost-zero') && el.value.trim() === '0') {
+            el.value = '';
+            el.setAttribute('data-was-zero', '');
         }
     });
 
     document.addEventListener('focusout', function (event) {
         var el = event.target;
-        if (el && el.hasAttribute && el.hasAttribute('data-ghost-text')) {
+        if (!el || !el.hasAttribute) {
+            return;
+        }
+        if (el.hasAttribute('data-ghost-text')) {
             el.placeholder = el.getAttribute('data-ghost-text');
         }
+        // Left empty after the zero was cleared: put it back, so merely
+        // passing through the field does not turn a stated zero into a blank.
+        if (el.hasAttribute('data-was-zero')) {
+            if (el.value.trim() === '') {
+                el.value = '0';
+            }
+            el.removeAttribute('data-was-zero');
+        }
     });
+
+    /*
+     * A follow-up question that appears only when it applies.
+     *
+     * "Who already lives there" is meaningless once the room is men-only or
+     * women-only — those answers say it. Rendered in the markup and hidden
+     * with the hidden attribute, so without JavaScript it simply shows all
+     * the time: one extra optional question, which is far better than a
+     * question nobody can reach.
+     */
+    var anyoneOnly = document.querySelector("[data-when-anyone]");
+    if (anyoneOnly) {
+        document.addEventListener("change", function (event) {
+            var el = event.target;
+            if (!el || el.name !== "flatmateGender") {
+                return;
+            }
+            var applies = el.value === "ANY";
+            anyoneOnly.hidden = !applies;
+
+            // Clearing on the way out matters: a stale "all men" would
+            // otherwise be posted alongside "women only". The server clears it
+            // too, because a hidden field is not a rule.
+            if (!applies) {
+                Array.prototype.forEach.call(
+                        anyoneOnly.querySelectorAll("input"), function (box) {
+                            box.checked = false;
+                        });
+            }
+        });
+    }
 
     var otp = document.querySelector('input[autocomplete="one-time-code"]');
     if (otp && otp.form) {

@@ -119,6 +119,17 @@ public class Listing {
     private FlatType flatType;
 
     /**
+     * Who already lives in the flat.
+     *
+     * <p>Asked only when the room is open to anyone — "men only" already says
+     * who is there. Null the rest of the time, and null is the honest value
+     * rather than a default somebody has to read past.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "flatmate_makeup", length = 20)
+    private FlatmateMakeup flatmateMakeup;
+
+    /**
      * The leaver's own words.
      *
      * <p>Every other field on a listing is a dropdown, and no dropdown says
@@ -432,16 +443,26 @@ public class Listing {
      */
     public void setBasics(String areaName, Configuration configuration, RoomType roomType,
                           Furnishing furnishing, FlatType flatType,
-                          FlatmateGender flatmateGender, LocalDate availableFrom,
-                          Short existingFlatmates) {
+                          FlatmateGender flatmateGender, FlatmateMakeup flatmateMakeup,
+                          LocalDate availableFrom, Short existingFlatmates) {
         this.areaName = areaName;
         this.configuration = configuration;
         this.roomType = roomType;
         this.furnishing = furnishing;
         this.flatType = flatType;
         this.flatmateGender = flatmateGender;
+
+        // Cleared whenever the room is not open to anyone, so a listing
+        // switched from "anyone" to "women only" cannot carry a stale "all
+        // men" left over from an earlier edit.
+        this.flatmateMakeup = flatmateGender == FlatmateGender.ANY ? flatmateMakeup : null;
+
         this.availableFrom = availableFrom;
         this.existingFlatmates = existingFlatmates;
+    }
+
+    public FlatmateMakeup getFlatmateMakeup() {
+        return flatmateMakeup;
     }
 
     /**

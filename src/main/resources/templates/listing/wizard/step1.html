@@ -62,8 +62,13 @@
                     <th:block th:each="group : ${areaGroups}">
                         <th:block th:if="${group.hasChildren()}">
                             <optgroup th:label="${group.parent.name}">
+                                <!--/* Just the name. "All of Chembur" was written for a list
+                                       where it sat among its own sublocalities; here a
+                                       listing is IN Chembur, and echoing "All of
+                                       Chembur" back as the chosen area reads as if the
+                                       flat were somehow all of it. */-->
                                 <option th:value="${group.parent.name}"
-                                        th:text="'All of ' + ${group.parent.name}"
+                                        th:text="${group.parent.name}"
                                         th:selected="${group.parent.name == draft.areaName}">All</option>
                                 <option th:each="child : ${group.children}"
                                         th:value="${child.name}" th:text="${child.name}"
@@ -80,10 +85,6 @@
                        knows its own, and it is the most useful single fact
                        about a Mumbai address. The question went; the answer
                        did not. */-->
-                <small class="wizard__hint">
-                    We work out the nearest station from this, and place your
-                    listing in the area. No pin needed.
-                </small>
             </label>
         </fieldset>
 
@@ -154,6 +155,35 @@
                 </div>
             </div>
 
+            <!--/*
+              A follow-up, not a field of its own.
+
+              "Anyone" says who may TAKE the room and nothing about who is
+              already there — and a room open to anyone in a flat of three men
+              is a different proposition from the same room in a mixed flat.
+              It is the first thing people ask once the rent looks right, so
+              leaving it unsaid does not avoid the question, it moves it into a
+              WhatsApp exchange after contact is released.
+
+              Only for "anyone": the other two answers already say it. Shown
+              and hidden by forms.js, and rendered open when the draft already
+              holds ANY so it is not hidden from somebody coming back to edit.
+            */-->
+            <div class="field" data-when-anyone
+                 th:attr="hidden=${draft.flatmateGender?.name() == 'ANY'} ? null : true">
+                <span class="field__label">
+                    Who already lives there
+                    <span class="field__optional">optional</span>
+                </span>
+                <div class="choice-row">
+                    <label class="choice" th:each="m : ${makeups}">
+                        <input type="radio" name="flatmateMakeup" th:value="${m}"
+                               th:checked="${m == draft.flatmateMakeup}">
+                        <span th:text="${m.label}">Mixed</span>
+                    </label>
+                </div>
+            </div>
+
             <label class="field">
                 <span class="field__label">Available from</span>
                 <input type="date" name="availableFrom" required
@@ -167,7 +197,7 @@
                     <span class="field__optional">optional</span>
                 </span>
                 <input type="text" name="existingFlatmates" inputmode="numeric"
-                       data-digits pattern="[0-9]*" maxlength="2"
+                       data-digits pattern="[0-9]*" maxlength="2" data-ghost
                        th:value="${draft.existingFlatmates}" placeholder="2">
             </label>
         </fieldset>

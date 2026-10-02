@@ -268,3 +268,79 @@
     // restored on a back-navigation.
     filterLocally(normalise(box.value));
 }());
+
+/*
+ * Chips for what is currently picked.
+ *
+ * The area list scrolls two hundred rows inside 220px, so a tick made three
+ * screens up is invisible by the time you have found the next one — and a
+ * filter you cannot see is one you forget you set, then blame the site for
+ * showing you four results.
+ *
+ * Built from the ticked boxes every time anything changes, so it cannot
+ * disagree with them. A chip's X unticks the box it came from, which means
+ * there is one source of truth and the chips are a view of it.
+ *
+ * A locality whose children are all ticked shows as ONE chip, not ten: that
+ * is what the person chose, and ten chips for one click reads as a mistake.
+ */
+(function () {
+    'use strict';
+
+    var list = document.getElementById('area-list');
+    var chips = document.getElementById('area-chips');
+    if (!list || !chips) {
+        return;
+    }
+
+    function render() {
+        chips.innerHTML = '';
+        var shown = 0;
+
+        Array.prototype.forEach.call(
+                list.querySelectorAll('.area-group'), function (group) {
+            var parentBox = group.querySelector('.area-group__parent input');
+            var childBoxes = Array.prototype.slice.call(
+                    group.querySelectorAll('.area-group__child input'));
+
+            // Whole locality: one chip, and skip its children entirely.
+            if (parentBox && parentBox.checked) {
+                shown += add(parentBox, parentBox.value);
+                return;
+            }
+            childBoxes.forEach(function (box) {
+                if (box.checked) {
+                    shown += add(box, box.value);
+                }
+            });
+        });
+
+        chips.hidden = shown === 0;
+    }
+
+    function add(box, label) {
+        var chip = document.createElement('button');
+        chip.type = 'button';           // never submits the form
+        chip.className = 'area-chip';
+        chip.textContent = label;
+        chip.setAttribute('aria-label', 'Remove ' + label);
+
+        var x = document.createElement('span');
+        x.className = 'area-chip__x';
+        x.textContent = '×';
+        chip.appendChild(x);
+
+        chip.addEventListener('click', function () {
+            box.checked = false;
+            // Dispatched rather than set silently, so the group sync and the
+            // chip rebuild both run exactly as they would on a real click.
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        chips.appendChild(chip);
+        return 1;
+    }
+
+    list.addEventListener('change', render);
+    render();
+}());

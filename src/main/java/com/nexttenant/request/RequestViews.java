@@ -40,6 +40,17 @@ public class RequestViews {
             UUID listingId,
             String listingArea,
             String listingRent,
+
+            /**
+             * The room's status, so a request about a room that is gone can
+             * say so.
+             *
+             * <p>A connected request outlives the listing it was about -
+             * rightly, since the two people still have each other's numbers -
+             * and the card looked identical whether the room was still going
+             * or had been taken a fortnight ago.
+             */
+            com.nexttenant.listing.ListingStatus listingStatus,
             String requesterName,
             String requesterInitial,
             String requesterAge,
@@ -55,6 +66,25 @@ public class RequestViews {
         public boolean isPending() {
             return status == RequestStatus.PENDING;
         }
+
+        /**
+         * True when the room itself is no longer available.
+         *
+         * <p>RENTED is the one worth saying out loud: it is the outcome this
+         * product exists to produce, and somebody still waiting on a reply
+         * deserves to know the room went rather than be left wondering.
+         */
+        public boolean listingGone() {
+            return listingStatus != null
+                    && listingStatus != com.nexttenant.listing.ListingStatus.LIVE;
+        }
+
+        public String listingGoneLabel() {
+            if (listingStatus == com.nexttenant.listing.ListingStatus.RENTED) {
+                return "Taken";
+            }
+            return "No longer listed";
+        }
     }
 
     /** A request the current user SENT. */
@@ -63,6 +93,17 @@ public class RequestViews {
             UUID listingId,
             String listingArea,
             String listingRent,
+
+            /**
+             * The room's status, so a request about a room that is gone can
+             * say so.
+             *
+             * <p>A connected request outlives the listing it was about -
+             * rightly, since the two people still have each other's numbers -
+             * and the card looked identical whether the room was still going
+             * or had been taken a fortnight ago.
+             */
+            com.nexttenant.listing.ListingStatus listingStatus,
             String leaverName,
             String leaverInitial,
             String ago,
@@ -75,6 +116,25 @@ public class RequestViews {
 
         public boolean isPending() {
             return status == RequestStatus.PENDING;
+        }
+
+        /**
+         * True when the room itself is no longer available.
+         *
+         * <p>RENTED is the one worth saying out loud: it is the outcome this
+         * product exists to produce, and somebody still waiting on a reply
+         * deserves to know the room went rather than be left wondering.
+         */
+        public boolean listingGone() {
+            return listingStatus != null
+                    && listingStatus != com.nexttenant.listing.ListingStatus.LIVE;
+        }
+
+        public String listingGoneLabel() {
+            if (listingStatus == com.nexttenant.listing.ListingStatus.RENTED) {
+                return "Taken";
+            }
+            return "No longer listed";
         }
     }
 
@@ -113,6 +173,7 @@ public class RequestViews {
                     request.getListingId(),
                     listing == null ? null : listing.getAreaName(),
                     listing == null ? null : Rupees.format(listing.getMonthlyRentInr()),
+                    listing == null ? null : listing.getStatus(),
                     requester == null ? null : requester.getFirstName(),
                     initial(requester),
                     ageLabel(requester),
@@ -143,6 +204,7 @@ public class RequestViews {
                     request.getListingId(),
                     listing == null ? null : listing.getAreaName(),
                     listing == null ? null : Rupees.format(listing.getMonthlyRentInr()),
+                    listing == null ? null : listing.getStatus(),
                     leaver == null ? null : leaver.getFirstName(),
                     initial(leaver),
                     RelativeTime.ago(request.getCreatedAt(), clock.instant()),
