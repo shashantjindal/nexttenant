@@ -153,6 +153,53 @@ retire_single_container_stack() {
     docker rm -f $old > /dev/null
 }
 
+#
+# Fetches the real site through Caddy, over TLS, exactly as a visitor would —
+# and resolves the domain to this machine rather than trusting DNS, so the check
+# cannot accidentally pass against something else.
+#
+# The domain is read from the Caddyfile rather than hardcoded, because that file
+# is where it is already written down and a second copy is a second thing to get
+# wrong.
+#
+# Worth being clear about what this does and does not catch: it proves the proxy
+# can reach an app container and get a page back. It does not prove the page is
+# correct. That is still a far better signal than every check in this script
+# combined, because the failure it catches — healthy containers, dead site — is
+# the one that already happened once and reported itself as a success.
+verify_site_responds() {
+    local when="$1" domain code
+
+    domain="$(awk '/^[A-Za-z0-9][A-Za-z0-9.-]*[[:space:]]*\{/ {print $1; exit}' Caddyfile)"
+    if [ -z "$domain" ]; then
+        printf '    (no site address found in Caddyfile; skipping the end-to-end check)\n'
+        return 0
+    fi
+
+    # -k because this is dialling 127.0.0.1 with the real hostname: the
+    # certificate is valid for the domain, and whether it matches the loopback
+    # address is not what is being tested here.
+    code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 \
+            --resolve "$domain:443:127.0.0.1" "https://$domain/" 2>/dev/null || echo 000)"
+
+    case "$code" in
+        2*|3*)
+            printf '    %s responds %s %s\n' "$domain" "$code" "$when"
+            ;;
+        *)
+            fail "$domain returned $code $when, although the containers report healthy.
+That combination means the proxy cannot reach them — the containers are fine and
+the site is not. Do NOT run this again until it is understood.
+
+  $COMPOSE logs caddy --tail 40
+  docker exec \$($COMPOSE ps -q caddy) wget -qO- --timeout=3 http://app-blue:8080/actuator/health/readiness
+
+If Caddy cannot reach the containers by name, recreating it reattaches it:
+  $COMPOSE up -d --force-recreate caddy"
+            ;;
+    esac
+}
+
 for service in "${CONTAINERS[@]}"; do
     # app-green is first in CONTAINERS and binds 8081, so it is already healthy
     # and serving by the time the old container is dropped.
@@ -176,33 +223,29 @@ for service in "${CONTAINERS[@]}"; do
     wait_until_healthy "$service"
     say "$service is healthy"
 
-    # ---- Tell Caddy where the container went --------------------------------
+    # ---- Nudge Caddy, then PROVE the site still works ------------------------
     #
-    # THIS IS NOT OPTIONAL, and leaving it out took the site down.
+    # The reload is cheap insurance, not a diagnosis. A recreated container gets
+    # a new IP on the Docker network, and re-reading the config makes Caddy
+    # resolve the upstream names again. It swaps configuration in place without
+    # dropping a connection, so it costs nothing and cannot make things worse.
     #
-    # A recreated container gets a NEW IP on the Docker network. Caddy resolved
-    # app-blue and app-green when its config was loaded and goes on dialling the
-    # addresses it resolved then — so after this loop had replaced both, every
-    # upstream Caddy knew about pointed at a container that no longer existed,
-    # and every request was a 502. Both containers were healthy the whole time,
-    # which is what made it baffling: `docker ps` said the deploy had worked.
+    # Be honest about what is NOT known: during the blue/green migration the
+    # site returned 502 with both containers healthy and the config valid, and a
+    # reload did NOT fix it — recreating Caddy did. So stale addresses are a
+    # plausible contributor and are demonstrably not the whole story. Until the
+    # cause is pinned down, this script does not rely on reasoning about it.
     #
-    # A reload re-resolves the names and swaps the configuration in place
-    # WITHOUT dropping a connection, so this costs nothing and keeps the
-    # zero-downtime property intact.
-    #
-    # Done after EACH container rather than once at the end, and that ordering
-    # is the whole point: when green is recreated, blue is still running at the
-    # address Caddy already holds, so traffic keeps flowing to blue while green
-    # is re-resolved — and vice versa. One reload at the end would leave a
-    # window where Caddy's only remaining good address had just been replaced.
-    #
-    # A failure here is fatal rather than a warning: carrying on would recreate
-    # the second container too, and then Caddy has no reachable upstream at all.
-    say "Reloading Caddy so it picks up $service's new address"
+    # Which is what the check below is for. Everything else here measures the
+    # containers; this measures the thing a visitor actually gets. A deploy that
+    # leaves every container healthy and every request failing is the exact
+    # shape of the outage above, and `docker ps` reports it as success.
+    say "Reloading Caddy so it re-resolves $service"
     $COMPOSE exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
-        || fail "Caddy would not reload, so it is still pointing at the old $service.
-The other container is still serving. Check: $COMPOSE logs caddy --tail 40"
+        || fail "Caddy would not reload. The other container is still serving.
+Check: $COMPOSE logs caddy --tail 40"
+
+    verify_site_responds "after restarting $service"
 done
 
 say "Deployed. Both containers are on the new image."
