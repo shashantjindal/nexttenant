@@ -136,6 +136,21 @@ nexttenant:
     #      this file is committed.
     google-api-key: ${GOOGLE_MAPS_API_KEY:}
 
+  # ---- Legal --------------------------------------------------------------
+  # Named here rather than written into the privacy policy template, because
+  # these two must be true of whoever is actually running the site. A fork or a
+  # handover changes them, and a policy naming the wrong person is worse than
+  # one naming nobody: it tells a reader their complaint went somewhere it did
+  # not.
+  #
+  # The DPDP Act requires a NAMED grievance officer, not just an inbox. With
+  # these unset the policy page says plainly that it is incomplete rather than
+  # rendering a gap where a name belongs.
+  legal:
+    entity-name: ${NEXTTENANT_ENTITY_NAME:NextTenant}
+    contact-email: ${NEXTTENANT_PRIVACY_EMAIL:}
+    grievance-officer: ${NEXTTENANT_GRIEVANCE_OFFICER:}
+
   site:
     # Emails need an ABSOLUTE link; a browser knows where a relative path
     # came from and an inbox does not. Override per environment.

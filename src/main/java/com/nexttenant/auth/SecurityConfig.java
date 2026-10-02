@@ -57,6 +57,13 @@ public class SecurityConfig {
                         .requestMatchers("/photos/**").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**",
                                          "/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
+
+                        // Public, and it has to be. Somebody deciding whether
+                        // to hand over a phone number needs to read this
+                        // BEFORE they have an account — a privacy policy
+                        // behind a login is one nobody reads at the only
+                        // moment it matters.
+                        .requestMatchers("/privacy").permitAll()
                         .requestMatchers("/error").permitAll()
 
                         // The load balancer's health check. Only /health is

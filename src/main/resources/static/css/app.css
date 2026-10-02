@@ -2155,3 +2155,47 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
    one tag that can rule a room out entirely — everything else beside it is a
    description, this is a condition. Only rendered when there IS one. */
 .tag--who { background: var(--c-brand-tint); color: var(--c-brand); }
+
+/* ---- Legal pages ------------------------------------------------------- */
+
+/*
+ * Narrower than the rest of the site, on purpose. A line of text is readable
+ * up to roughly 75 characters and this page is nothing but lines of text, so
+ * the full page width would make it genuinely harder to read the one document
+ * people skim when they are already unsure about handing over a phone number.
+ */
+.legal { max-width: 68ch; }
+
+.legal__updated { font-size: var(--t-sm); color: var(--c-ink-3); margin: 0 0 var(--s-5); }
+.legal__lede { font-size: var(--t-md); color: var(--c-ink-2); margin: 0 0 var(--s-6); }
+
+.legal h2 {
+    font-family: var(--font-display);
+    font-size: var(--t-lg);
+    margin: var(--s-8) 0 var(--s-3);
+}
+.legal h3 {
+    font-family: var(--font-display);
+    font-size: var(--t-base);
+    margin: var(--s-5) 0 var(--s-2);
+    color: var(--c-ink-2);
+}
+.legal p { margin: 0 0 var(--s-4); line-height: 1.65; }
+.legal ul { margin: 0 0 var(--s-4); padding-left: var(--s-5); }
+.legal li { margin-bottom: var(--s-2); line-height: 1.6; }
+
+.legal code {
+    background: var(--c-surface-2);
+    padding: 1px 5px;
+    border-radius: var(--r-sm);
+    font-size: var(--t-sm);
+}
+
+.legal__contact {
+    padding: var(--s-4);
+    background: var(--c-surface-2);
+    border-radius: var(--r-md);
+    line-height: 1.7;
+}
+
+.site-footer__links { margin: var(--s-3) 0 0; font-size: var(--t-sm); }

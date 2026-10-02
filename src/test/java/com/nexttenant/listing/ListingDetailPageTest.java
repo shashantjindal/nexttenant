@@ -66,7 +66,11 @@ class ListingDetailPageTest {
                 .contains("The things that usually take a week of messages to find out")
                 .contains("What it costs to move in")
                 .contains("Roughly here")
-                .contains("Request contact")
+                // "Message" since 96c345a. Asserted on the label rather than
+                // the href because the label is the thing a reader acts on,
+                // and a button whose words change silently is the thing worth
+                // noticing.
+                .contains("Message")
                 .contains("Before you share numbers")
                 .contains("Member since");
     }
