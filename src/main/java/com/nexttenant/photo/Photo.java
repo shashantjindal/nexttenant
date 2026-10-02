@@ -36,7 +36,7 @@ public class Photo {
      * Position 0 IS the cover.
      *
      * <p>Deliberately not an is_cover BOOLEAN, which would permit two covers or
-     * none — states the application would have to defend against forever.
+     * none -- states the application would have to defend against forever.
      * Order and cover are one fact, stored once.
      */
     @Column(name = "position", nullable = false)
@@ -50,6 +50,21 @@ public class Photo {
 
     @Column(name = "byte_size")
     private Integer byteSize;
+
+    /**
+     * A short caption, or null.
+     *
+     * <p>Eight photos of rooms in a flat are eight photos of rooms. Which
+     * bedroom is the one being handed over? Is that bathroom shared? Those
+     * are the questions that otherwise turn into a week of messages.
+     *
+     * <p>Public - it is rendered on the listing page - so it goes on this
+     * entity rather than anywhere private. Nothing stops somebody writing an
+     * address into it, which is true of the description field as well; the
+     * length cap keeps it to a label rather than a paragraph.
+     */
+    @Column(name = "label", length = 60)
+    private String label;
 
     /**
      * Set once the image has been re-encoded and its EXIF discarded.
@@ -137,6 +152,22 @@ public class Photo {
 
     public Instant getProcessedAt() {
         return processedAt;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    /**
+     * Sets the caption, treating blank as absent.
+     *
+     * <p>An empty text field posts an empty string, and storing that would
+     * make the template render an empty caption line under the photo - a
+     * gap that looks like something failed to load.
+     */
+    public void setLabel(String label) {
+        String trimmed = label == null ? null : label.trim();
+        this.label = (trimmed == null || trimmed.isEmpty()) ? null : trimmed;
     }
 
     public Instant getCreatedAt() {

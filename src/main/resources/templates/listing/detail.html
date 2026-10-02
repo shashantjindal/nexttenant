@@ -34,8 +34,15 @@
                     <div class="gallery__frame" th:each="photo, i : ${photos}"
                          th:classappend="${i.first} ? ' gallery__frame--on' : ''"
                          th:attr="data-index=${i.index}">
-                        <img th:src="${photo.full}" alt=""
+                        <!--/* The caption doubles as the alt text: a label the
+                               leaver wrote describes the picture better than
+                               anything we could generate, and an empty alt is
+                               the right answer when there is none — the image
+                               is decorative to a screen reader either way. */-->
+                        <img th:src="${photo.full}" th:alt="${photo.label} ?: ''"
                              th:attr="loading=${i.first} ? 'eager' : 'lazy'" decoding="async">
+                        <p class="gallery__caption" th:if="${photo.label}"
+                           th:text="${photo.label}">Your room</p>
                     </div>
 
                     <!--/* Hidden until the script runs: without JavaScript

@@ -2042,7 +2042,11 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 
 /* ---- Area search ------------------------------------------------------- */
 
-[data-area-picker] { position: relative; }
+/* The input's own positioned box. The results list anchors to THIS, not to
+   the .field around it - .field is display:grid, and an absolutely positioned
+   child of a grid container with no `top` lands at the top of the container,
+   covering the input. */
+.area-picker { position: relative; display: block; }
 
 .area-picker__input {
     width: 100%;
@@ -2057,6 +2061,10 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .area-picker__results {
     position: absolute;
     z-index: 20;
+    /* Below the input, said explicitly. Left to its static position it was
+       placed at the top of the grid container it used to live in, i.e. over
+       the box being typed into. */
+    top: 100%;
     left: 0;
     right: 0;
     margin: var(--s-1) 0 0;
@@ -2094,4 +2102,39 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     font-size: var(--t-sm);
     color: var(--c-brand);
     font-weight: 500;
+}
+
+/* "All of Chembur" against the sublocalities under it. A different kind of
+   answer, not another sibling — it covers every one of them. */
+.area-picker__result--all {
+    font-weight: 600;
+    border-bottom: 1px solid var(--c-line);
+    border-radius: 0;
+}
+.area-picker__whole {
+    font-size: var(--t-xs);
+    color: var(--c-brand);
+    background: var(--c-brand-tint);
+    padding: 1px 6px;
+    border-radius: var(--r-sm);
+}
+
+/* A caption under each photo in the wizard grid. */
+.photo-tile__label { display: flex; gap: var(--s-2); align-items: center; margin: var(--s-2) 0; }
+.photo-tile__label input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: var(--t-sm);
+}
+.photo-tile__label input:focus { border-color: var(--c-brand); outline: none; }
+
+/* On the public listing, under the image in the gallery strip. */
+.gallery__caption {
+    font-size: var(--t-sm);
+    color: var(--c-ink-2);
+    margin: var(--s-2) 0 0;
 }

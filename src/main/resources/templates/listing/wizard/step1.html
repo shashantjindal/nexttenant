@@ -40,9 +40,23 @@
             */-->
             <label class="field" data-area-picker>
                 <span class="field__label">Area</span>
-                <input type="search" class="area-picker__input" autocomplete="off"
-                       placeholder="Start typing — Powai, Bandra, Andheri…"
-                       aria-label="Search for an area">
+
+                <!--/*
+                  The input gets its own positioned box, and the results list
+                  is appended INSIDE it.
+
+                  Appended to the .field instead, the list covered the input
+                  entirely. .field is display:grid, and an absolutely
+                  positioned child of a grid container with no `top` is placed
+                  at the container's padding box — the top — not after the
+                  element it was appended behind. So the dropdown rendered
+                  over the very box being typed into.
+                */-->
+                <span class="area-picker" data-area-picker-anchor>
+                    <input type="search" class="area-picker__input" autocomplete="off"
+                           placeholder="Start typing — Powai, Bandra, Andheri…"
+                           aria-label="Search for an area">
+                </span>
                 <select name="areaName" required class="area-picker__select">
                     <option value="">Choose an area</option>
                     <th:block th:each="group : ${areaGroups}">

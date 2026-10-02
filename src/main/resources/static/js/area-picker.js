@@ -42,18 +42,28 @@
         var group = opt.parentNode.tagName === 'OPTGROUP' ? opt.parentNode.label : '';
         options.push({
             value: opt.value,
-            // The visible text carries " · Bandra station" for top-level
+            // The visible text carries " � Bandra station" for top-level
             // areas, which is worth searching: people know the station.
             text: opt.textContent.trim(),
             group: group,
-            haystack: (opt.textContent + ' ' + group).toLowerCase()
+            // "All of Chembur" IS Chembur - the option whose value matches
+            // its own group label. It covers every sublocality under it, so
+            // it is a different KIND of answer, not another sibling.
+            isWholeArea: Boolean(group) && opt.value === group,
+            haystack: (opt.textContent + " " + group).toLowerCase()
         });
     });
 
-    var list = document.createElement('ul');
-    list.className = 'area-picker__results';
+    // Anchored to the input's own box, not to the .field around it. The
+    // field is display:grid, and an absolutely positioned child of a grid
+    // container with no `top` is placed at the container's padding box - the
+    // top - so a list appended there covered the input being typed into.
+    var anchor = wrap.querySelector("[data-area-picker-anchor]") || wrap;
+
+    var list = document.createElement("ul");
+    list.className = "area-picker__results";
     list.hidden = true;
-    wrap.appendChild(list);
+    anchor.appendChild(list);
 
     var chosen = document.createElement('p');
     chosen.className = 'area-picker__chosen';
@@ -93,7 +103,23 @@
             button.type = 'button';           // never submits the form
             button.className = 'area-picker__result';
             button.textContent = opt.text;
-            if (opt.group) {
+
+            if (opt.isWholeArea) {
+                /*
+                 * "All of Chembur" is a different kind of answer from the
+                 * sublocalities under it — it covers every one of them. As a
+                 * plain row among its own children it read as a sibling, and
+                 * worse, it carried "Chembur" on the right like the rest,
+                 * which is the word already in its own label.
+                 *
+                 * So it is marked, and the redundant badge is dropped.
+                 */
+                button.classList.add('area-picker__result--all');
+                var all = document.createElement('span');
+                all.className = 'area-picker__whole';
+                all.textContent = 'whole area';
+                button.appendChild(all);
+            } else if (opt.group) {
                 var small = document.createElement('span');
                 small.className = 'area-picker__group';
                 small.textContent = opt.group;

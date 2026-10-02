@@ -142,6 +142,23 @@ public class PhotoController {
      * without scripting. Drag can be layered on top later without changing
      * this endpoint.
      */
+    /**
+     * Captions one photo.
+     *
+     * <p>Saved per photo rather than all of them at once, because the photo
+     * screen already has three forms on it and a fourth that wrapped the whole
+     * grid would mean a stray Enter in any caption box submitting every other
+     * one too.
+     */
+    @PostMapping("/list/{listingId}/photos/{photoId}/label")
+    public String label(@PathVariable UUID listingId, @PathVariable UUID photoId,
+                        @AuthenticationPrincipal AuthenticatedUser user,
+                        @RequestParam(required = false) String label) {
+        drafts.requireOwnedDraft(listingId, user.id());
+        photos.label(listingId, photoId, label);
+        return "redirect:/list/" + listingId + PHOTO_STEP;
+    }
+
     @PostMapping("/list/{listingId}/photos/{photoId}/cover")
     public String makeCover(@PathVariable UUID listingId, @PathVariable UUID photoId,
                             @AuthenticationPrincipal AuthenticatedUser user) {

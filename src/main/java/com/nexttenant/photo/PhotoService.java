@@ -159,6 +159,22 @@ public class PhotoService {
     }
 
     /**
+     * Sets or clears a photo's caption.
+     *
+     * <p>The listing id is checked against the photo's own, not just used to
+     * look it up. Without that, naming any photo id you happened to know
+     * alongside a listing you own would let you caption somebody else's
+     * photo — the ownership check in the controller is on the LISTING, and it
+     * cannot see which listing a given photo belongs to.
+     */
+    @Transactional
+    public void label(UUID listingId, UUID photoId, String label) {
+        photos.findById(photoId)
+                .filter(p -> p.getListingId().equals(listingId))
+                .ifPresent(p -> p.setLabel(label));
+    }
+
+    /**
      * Removes a photo and closes the gap it leaves.
      *
      * <p>Compacting matters: position 0 is the cover, so deleting the first

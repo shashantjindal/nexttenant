@@ -45,7 +45,7 @@ public class ListingDetailController {
      * thumbnail wastes most of the bytes on a phone — which is where this page
      * is mostly read.
      */
-    public record GalleryPhoto(String full, String thumb) {
+    public record GalleryPhoto(String full, String thumb, String label) {
     }
 
     /**
@@ -94,7 +94,8 @@ public class ListingDetailController {
         // servableFor() returns only photos whose processing finished, so an
         // image whose EXIF has not been discarded cannot appear here.
         model.addAttribute("photos", photos.servableFor(listingId).stream()
-                .map(p -> new GalleryPhoto("/photos/" + p.getId(), "/photos/" + p.getId() + "/thumb"))
+                .map(p -> new GalleryPhoto("/photos/" + p.getId(),
+                        "/photos/" + p.getId() + "/thumb", p.getLabel()))
                 .toList());
 
         List<ListingCardDto> similar = similarTo(listing);

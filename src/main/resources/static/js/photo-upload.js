@@ -108,3 +108,42 @@
         }
     });
 }());
+
+/*
+ * Captions save themselves when you click away.
+ *
+ * Each caption is its own little form with its own Save button, and a row of
+ * Save buttons is a row of things to remember to press. People type a label,
+ * move to the next photo, and lose the first one — which is worse than not
+ * offering captions at all, because they did the work.
+ *
+ * The button stays and is not hidden: unlike the upload control it is
+ * genuinely useful with the script running, as the thing you press when you
+ * are not sure whether tabbing away counted.
+ */
+(function () {
+    'use strict';
+
+    document.addEventListener('focusout', function (event) {
+        var input = event.target;
+        if (!input || input.name !== 'label' || !input.form) {
+            return;
+        }
+        if (!input.form.classList.contains('photo-tile__label')) {
+            return;
+        }
+
+        // Only when it actually changed. Otherwise tabbing through a grid of
+        // eight photos posts eight times and reloads the page eight times.
+        var original = input.defaultValue || '';
+        if (input.value.trim() === original.trim()) {
+            return;
+        }
+
+        if (input.form.requestSubmit) {
+            input.form.requestSubmit();
+        } else {
+            input.form.submit();
+        }
+    });
+}());

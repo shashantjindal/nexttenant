@@ -65,6 +65,32 @@
                 <img th:src="@{/photos/{id}/thumb(id=${photo.id})}" alt="Listing photo" loading="lazy">
                 <figcaption>
                     <span class="photo-tile__cover" th:if="${photo.cover}">Cover</span>
+
+                    <!--/*
+                      A caption per photo.
+
+                      Eight photos of rooms in a flat are eight photos of
+                      rooms: a searcher cannot tell which bedroom is the one
+                      on offer, or whether that bathroom is shared. Those are
+                      exactly the questions that otherwise become a week of
+                      messages.
+
+                      Its own form, not one wrapping the grid: a stray Enter
+                      in any box would otherwise submit every other caption
+                      with it. Saves on blur as well, via photo-upload.js, so
+                      the button is for people who want to press something.
+                    */-->
+                    <form method="post" class="photo-tile__label"
+                          th:action="@{/list/{lid}/photos/{pid}/label(lid=${draft.id}, pid=${photo.id})}">
+                        <label>
+                            <span class="sr-only">Label for this photo</span>
+                            <input type="text" name="label" maxlength="60"
+                                   th:value="${photo.label}"
+                                   placeholder="Add a label — Your room, Kitchen…">
+                        </label>
+                        <button type="submit" class="btn btn--ghost">Save</button>
+                    </form>
+
                     <div class="photo-tile__actions">
                         <form method="post" th:if="${!photo.cover}"
                               th:action="@{/list/{lid}/photos/{pid}/cover(lid=${draft.id}, pid=${photo.id})}">
