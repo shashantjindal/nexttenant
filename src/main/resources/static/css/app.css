@@ -2665,18 +2665,23 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 
 /* ===========================================================================
-   Search results — one room per row.
+   Search results — one room per row, with the photo big enough to decide on.
 
-   The landing page keeps the three-across grid, because its job is to show
-   that the site has rooms at all. This page is where somebody decides which
-   room to OPEN, and that decision is made on the photo. A 250px-wide thumbnail
-   three to a row is the wrong shape for it: there is plenty of horizontal
-   space on this page and nothing competing for it.
+   The landing page keeps its three-across grid: its job is to show the site
+   has rooms at all. This page is where somebody picks which room to OPEN, and
+   that is decided on the photo. A 250px thumbnail three to a row is the wrong
+   shape when the page has width to spare and nothing competing for it.
+
+   THE BOX IS FIXED BY RATIO, NOT BY THE IMAGE. The first attempt gave the
+   media `height: 100%` and let it stretch to the row. With a short body and a
+   wide window there was nothing to stretch AGAINST, so the image's intrinsic
+   size took over: an 870px-tall smear of collage beside an empty column. The
+   media now owns an explicit aspect-ratio and a max-width, so the card's
+   height is a function of the layout and not of whatever got uploaded.
 
    Styled from the container rather than by passing a modifier into the card
-   fragment. The fragment is shared by four pages and has no parameter for
-   this; adding one means every caller has to pass something, and a second
-   fragment would drift inside a fortnight.
+   fragment: it is shared by four pages and has no parameter for this, and a
+   second fragment would drift inside a fortnight.
    =========================================================================== */
 
 .results__list {
@@ -2685,54 +2690,70 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 }
 
 /*
- * On a phone: a full-width card with a much taller photo.
+ * 4:3 on both layouts, which is the shape a room photo is usually taken in and
+ * noticeably taller than the 3:2 the grid cards use.
  *
- * 4:3 rather than the grid's 3:2 — a phone has the vertical room and the photo
- * is the entire basis of the decision. The explicit width/height attributes on
- * the img describe the 3:2 box, so aspect-ratio has to be set on both the
- * frame and the image or the browser splits the difference and letterboxes.
+ * On the container, so everything inside simply fills it — the frames, the
+ * single photos and the collage all stop having opinions about their own
+ * height, and the explicit width/height attributes on the <img> (which
+ * describe the grid's 3:2 box) cannot fight it.
  */
+.results__list .listing-card__media {
+    aspect-ratio: 4 / 3;
+}
+
+.results__list .listing-card__frames,
+.results__list .listing-card__frame,
 .results__list .listing-card__collage,
 .results__list .listing-card__photo,
 .results__list .listing-card__frame > img {
-    aspect-ratio: 4 / 3;
+    height: 100%;
+    /* The children must NOT also carry a ratio, or the browser satisfies theirs
+       and letterboxes inside the box the container already fixed. */
+    aspect-ratio: auto;
+}
+
+.results__list .listing-card__photo,
+.results__list .listing-card__frame > img {
+    width: 100%;
+    object-fit: cover;
 }
 
 @media (min-width: 768px) {
     /*
-     * On anything wider: photo left, everything else right.
-     *
-     * The card is already `display: flex; flex-direction: column` — this turns
-     * the same two children into a row, so no markup changes.
+     * Photo left, everything else right. The card is already
+     * `display: flex; flex-direction: column`, so this turns the same two
+     * children into a row with no markup change.
      */
     .results__list .listing-card { flex-direction: row; }
 
-    /* 42% rather than a fixed pixel width, so the photo grows with the window
-       instead of stranding the body text in a narrow column on a wide screen.
-       flex: none stops it being squeezed by a long area name. */
     .results__list .listing-card__media {
+        /* Half the row. Worth stating what that buys, because the first
+           version used 42% and the photo came out 337px wide — against roughly
+           255px for a card in the three-across grid, which is not a change
+           anybody would notice.
+
+           At 50% of the ~800px results column the photo is around 400px wide:
+           1.6x the grid card on each edge, two and a half times the area. That
+           is the difference between a thumbnail and something you can judge a
+           room from.
+
+           A percentage so it grows with the window, a max-width so it stops.
+           Without the cap, a wide monitor showing one result gave the photo
+           700px of width and the card half a metre of height. */
         flex: none;
-        width: 42%;
-        align-self: stretch;
+        width: 50%;
+        max-width: 460px;
+        /* Stretch is what would hand the height back to the image. The ratio
+           above sets it instead; if the body happens to be taller, the photo
+           sits at its own height rather than distorting to match. */
+        align-self: flex-start;
     }
-
-    /* Back to 3:2 and, more importantly, filling the row's height: a short
-       body would otherwise leave the photo floating against white. */
-    .results__list .listing-card__collage,
-    .results__list .listing-card__photo,
-    .results__list .listing-card__frame,
-    .results__list .listing-card__frames,
-    .results__list .listing-card__frame > img {
-        aspect-ratio: auto;
-        height: 100%;
-    }
-
-    .results__list .listing-card__media { min-height: 240px; }
 
     /* The body gets the room the wider layout frees up: the rent can be large
-       enough to read at a glance, which is the other thing being compared. */
+       enough to compare at a glance, which is the other thing being scanned. */
     .results__list .listing-card__body {
-        padding: var(--s-6) var(--s-6) var(--s-5);
+        padding: var(--s-6);
         display: flex;
         flex-direction: column;
         gap: var(--s-2);
@@ -2741,14 +2762,9 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
     .results__list .listing-card__rent { font-size: var(--t-2xl); }
     .results__list .listing-card__where { font-size: var(--t-md); }
 
-    /* The tags sit with the rest of the text rather than pinned to the bottom
-       of the row. `margin-top: auto` lined them up neatly across cards and left
-       a hand-sized hole in the middle of every one — which reads as missing
-       content, not as breathing room, because a card here carries only a rent,
-       an area and three tags. */
+    /* The tags sit with the text rather than pinned to the bottom of the row.
+       `margin-top: auto` lined them up neatly across cards and left a
+       hand-sized hole in the middle of each one, which reads as missing
+       content rather than as breathing room. */
     .results__list .listing-card__tags { margin-top: var(--s-1); }
-}
-
-@media (min-width: 1024px) {
-    .results__list .listing-card__media { min-height: 280px; }
 }
