@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--/*
+  Page two of three: the basics.
+
+  The same fields as /list/{id}/1, because they ARE the same fields — this page
+  includes the fragment that screen includes. What differs is the form action
+  and the chrome, which is all that should differ.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>About the room — NextTenant admin</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{admin/_listing-shell :: head(${page}, ${totalPages},
+                       'About the room',
+                       'Eight quick answers. Everything optional comes later, from their
+                        own dashboard.')}"></div>
+
+    <form method="post" th:action="@{/admin/listings/{id}/2(id=${draft.id})}" class="wizard__form">
+        <th:block th:replace="~{listing/wizard/_fields :: basics}"></th:block>
+        <div th:replace="~{admin/_listing-shell :: nav(${draft}, ${page})}"></div>
+    </form>
+
+    <!--/* Inside <main>: the layout fragment renders only the title and this
+           element, so a script anywhere else is dropped. */-->
+    <script th:src="@{/js/area-picker.js}" src="/js/area-picker.js" defer></script>
+</main>
+
+</body>
+</html>

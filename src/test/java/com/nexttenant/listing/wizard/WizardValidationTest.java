@@ -175,7 +175,7 @@ class WizardValidationTest {
 
     /** Screen one, with everything filled in but the area, which varies. */
     private void screenOne(String area) {
-        drafts.saveBasics(draft.getId(), owner.getId(), area,
+        drafts.saveBasics(draft.getId(), Actor.owner(owner.getId()), area,
                 Configuration.BHK_2, RoomType.PRIVATE_ROOM, Furnishing.SEMI_FURNISHED,
                 FlatType.GATED_SOCIETY, FlatmateGender.ANY,
                 com.nexttenant.listing.FlatmateMakeup.MIXED,

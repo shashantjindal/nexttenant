@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<!--/*
+  THE LISTING FIELDS, DEFINED ONCE.
+
+  Two screens now collect them: the leaver's own wizard at /list/..., and the
+  admin flow at /admin/listings/..., where an operator types a listing for
+  somebody who sent the details over WhatsApp. The request was "the same
+  fields", and the literal way to honour that is to copy the markup — which
+  works on the day it is written and is wrong by the next field.
+
+  This codebase has already paid that bill twice with a shared row mapper:
+  adding a column for one query broke the other, both times, because the two
+  halves of "the same thing" lived in two places. Markup drifts the same way
+  and more quietly, because nothing fails — the two screens simply stop asking
+  the same questions, and only the one nobody tests is wrong.
+
+  So the fields live here and the pages supply the <form> around them. What
+  differs between the two doors is the action attribute and the chrome, which
+  is exactly what should differ.
+
+  NOTHING IN HERE OPENS A FORM except the photo fragment, whose little forms
+  are its own business — see the note on it. A fragment that opened a form the
+  including page then closed would mean neither file is readable on its own.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/* ===================================================================
+       The basics: everything a room cannot be listed without.
+
+       Every answer is a radio rendered as a button. The old screens used
+       native <select>s, which on a phone open a scroll wheel — two taps with
+       the options hidden until you commit to looking. Buttons show every
+       choice at once and take one tap, and with three or four options there
+       is no reason to hide them.
+
+       Radios, not <div>s with click handlers: keyboard navigation, screen
+       reader grouping and "one of these" semantics all come free, and the
+       form still works with no JavaScript at all.
+       =================================================================== */-->
+<th:block th:fragment="basics">
+
+    <!-- ================= Where ================= -->
+    <fieldset class="wizard__group">
+        <legend>Where it is</legend>
+
+        <!--/*
+          A search box over a 200-option list, not the list itself. Finding
+          "Powai" by scrolling every locality in Mumbai on a phone was the
+          first thing this screen asked anybody to do.
+
+          The <select> underneath stays, and that is deliberate: it is what
+          posts the value, what a keyboard user can drive, and what works when
+          the script does not load. area-picker.js hides it and drives it from
+          the box above.
+        */-->
+        <label class="field" data-area-picker>
+            <span class="field__label">Area</span>
+
+            <!--/*
+              The input gets its own positioned box, and the results list is
+              appended INSIDE it.
+
+              Appended to the .field instead, the list covered the input
+              entirely. .field is display:grid, and an absolutely positioned
+              child of a grid container with no `top` is placed at the
+              container's padding box — the top — not after the element it was
+              appended behind. So the dropdown rendered over the very box being
+              typed into.
+            */-->
+            <span class="area-picker" data-area-picker-anchor>
+                <input type="search" class="area-picker__input" autocomplete="off"
+                       placeholder="Start typing — Powai, Bandra, Andheri…"
+                       aria-label="Search for an area">
+            </span>
+            <select name="areaName" required class="area-picker__select">
+                <option value="">Choose an area</option>
+                <th:block th:each="group : ${areaGroups}">
+                    <th:block th:if="${group.hasChildren()}">
+                        <optgroup th:label="${group.parent.name}">
+                            <!--/* Just the name. "All of Chembur" was written for a
+                                   list where it sat among its own sublocalities;
+                                   here a listing is IN Chembur, and echoing "All of
+                                   Chembur" back as the chosen area reads as if the
+                                   flat were somehow all of it. */-->
+                            <option th:value="${group.parent.name}"
+                                    th:text="${group.parent.name}"
+                                    th:selected="${group.parent.name == draft.areaName}">All</option>
+                            <option th:each="child : ${group.children}"
+                                    th:value="${child.name}" th:text="${child.name}"
+                                    th:selected="${child.name == draft.areaName}">Child</option>
+                        </optgroup>
+                    </th:block>
+                    <option th:unless="${group.hasChildren()}"
+                            th:value="${group.parent.name}"
+                            th:text="${group.parent.name} + ' · ' + ${group.parent.nearestStation} + ' station'"
+                            th:selected="${group.parent.name == draft.areaName}">Area</option>
+                </th:block>
+            </select>
+            <!--/* The station is no longer asked for — every area already knows
+                   its own, and it is the most useful single fact about a Mumbai
+                   address. The question went; the answer did not. */-->
+        </label>
+    </fieldset>
+
+    <!-- ================= The flat ================= -->
+    <fieldset class="wizard__group">
+        <legend>The flat</legend>
+
+        <div class="field">
+            <span class="field__label">Size</span>
+            <div class="choice-row">
+                <label class="choice" th:each="c : ${configurations}">
+                    <input type="radio" name="configuration" th:value="${c}" required
+                           th:checked="${c == draft.configuration}">
+                    <span th:text="${c.label}">2 BHK</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="field">
+            <span class="field__label">What is being handed over</span>
+            <div class="choice-row">
+                <label class="choice" th:each="r : ${roomTypes}">
+                    <input type="radio" name="roomType" th:value="${r}" required
+                           th:checked="${r == draft.roomType}">
+                    <span th:text="${r.label}">Private room</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="field">
+            <span class="field__label">Furnishing</span>
+            <div class="choice-row">
+                <label class="choice" th:each="f : ${furnishings}">
+                    <input type="radio" name="furnishing" th:value="${f}" required
+                           th:checked="${f == draft.furnishing}">
+                    <span th:text="${f.label}">Semi-furnished</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="field">
+            <span class="field__label">Building</span>
+            <div class="choice-row">
+                <label class="choice" th:each="t : ${flatTypes}">
+                    <input type="radio" name="flatType" th:value="${t}" required
+                           th:checked="${t == draft.flatType}">
+                    <span th:text="${t.label}">Gated society</span>
+                </label>
+            </div>
+            <!--/* Asked because people ask before agreeing to visit: it decides
+                   whether a watchman logs guests and what hours they may come. */-->
+        </div>
+    </fieldset>
+
+    <!-- ================= Who and when ================= -->
+    <fieldset class="wizard__group">
+        <legend>Who and when</legend>
+
+        <div class="field">
+            <span class="field__label">Who can take this room</span>
+            <div class="choice-row">
+                <label class="choice" th:each="g : ${genders}">
+                    <input type="radio" name="flatmateGender" th:value="${g}" required
+                           th:checked="${g == draft.flatmateGender}">
+                    <span th:text="${g.label}">Anyone</span>
+                </label>
+            </div>
+        </div>
+
+        <!--/*
+          A follow-up, not a field of its own.
+
+          "Anyone" says who may TAKE the room and nothing about who is already
+          there — and a room open to anyone in a flat of three men is a
+          different proposition from the same room in a mixed flat. It is the
+          first thing people ask once the rent looks right, so leaving it
+          unsaid does not avoid the question, it moves it into a WhatsApp
+          exchange after contact is released.
+
+          Only for "anyone": the other two answers already say it. Shown and
+          hidden by forms.js, and rendered open when the draft already holds
+          ANY so it is not hidden from somebody coming back to edit.
+        */-->
+        <div class="field" data-when-anyone
+             th:attr="hidden=${draft.flatmateGender?.name() == 'ANY'} ? null : true">
+            <span class="field__label">
+                Who already lives there
+                <span class="field__optional">optional</span>
+            </span>
+            <div class="choice-row">
+                <label class="choice" th:each="m : ${makeups}">
+                    <input type="radio" name="flatmateMakeup" th:value="${m}"
+                           th:checked="${m == draft.flatmateMakeup}">
+                    <span th:text="${m.label}">Mixed</span>
+                </label>
+            </div>
+        </div>
+
+        <label class="field">
+            <span class="field__label">Available from</span>
+            <input type="date" name="availableFrom" required
+                   th:min="${earliestMoveIn}"
+                   th:value="${draft.availableFrom}">
+        </label>
+
+        <label class="field">
+            <span class="field__label">
+                Flatmates staying on afterwards
+                <span class="field__optional">optional</span>
+            </span>
+            <input type="text" name="existingFlatmates" inputmode="numeric"
+                   data-digits pattern="[0-9]*" maxlength="2" data-ghost
+                   th:value="${draft.existingFlatmates}" placeholder="2">
+        </label>
+    </fieldset>
+
+</th:block>
+
+
+<!--/* ===================================================================
+       Photos.
+
+       This fragment DOES contain forms, and that is not a contradiction of
+       the note at the top. The upload, the caption, the cover and the delete
+       are four separate submissions that have nothing to do with the money
+       form the page wraps around everything else — and nesting forms is
+       invalid HTML that browsers resolve by silently discarding one of them.
+
+       They post to /list/{id}/photos regardless of which door the operator
+       came through. PhotoController authorises by ownership-or-admin and then
+       decides where to send them back to, so one set of endpoints serves both
+       screens and there is no second upload path to keep in step.
+       =================================================================== */-->
+<th:block th:fragment="photos">
+
+    <p class="auth__error" th:if="${photoError}" th:text="${photoError}" role="alert">error</p>
+    <p class="auth__notice" th:if="${photoNotice}" th:text="${photoNotice}">added</p>
+
+    <fieldset class="wizard__group">
+        <legend>Photos</legend>
+
+        <form method="post" th:action="@{/list/{id}/photos(id=${draft.id})}"
+              enctype="multipart/form-data" class="photo-upload" data-autosubmit>
+            <label class="field">
+                <span class="field__label">Add photos</span>
+                <!--/* accept= filters the picker for convenience only. The server
+                       decodes every upload regardless: a file extension and a MIME
+                       type are both supplied by the client and neither is evidence
+                       of anything. */-->
+                <input type="file" name="file" accept="image/*" multiple required>
+            </label>
+
+            <!--/* Hidden by photo-upload.js once that script is running to do its
+                   job. Without the script this is the only way to upload, so it
+                   cannot be removed from the markup. */-->
+            <button type="submit" class="btn btn--secondary" data-autosubmit-fallback>
+                Upload
+            </button>
+
+            <p class="photo-upload__busy" hidden>Uploading&hellip;</p>
+        </form>
+
+        <div class="photo-count">
+            <span th:text="${#lists.size(photos)} + ' of ' + ${maxPhotos} + ' photos'">0 of 20</span>
+            <span class="photo-count__need"
+                  th:if="${#lists.size(photos) < minPhotos}"
+                  th:text="'Add ' + (${minPhotos} - ${#lists.size(photos)}) + ' more to publish'">Add 3 more</span>
+            <span class="photo-count__ok" th:if="${#lists.size(photos) >= minPhotos}">Enough to publish</span>
+        </div>
+
+        <div class="photo-grid" th:if="${!photos.isEmpty()}">
+            <figure class="photo-tile" th:each="photo : ${photos}">
+                <img th:src="@{/photos/{id}/thumb(id=${photo.id})}" alt="Listing photo" loading="lazy">
+                <figcaption>
+                    <span class="photo-tile__cover" th:if="${photo.cover}">Cover</span>
+
+                    <!--/*
+                      A caption per photo.
+
+                      Eight photos of rooms in a flat are eight photos of rooms: a
+                      searcher cannot tell which bedroom is the one on offer, or
+                      whether that bathroom is shared. Those are exactly the
+                      questions that otherwise become a week of messages.
+
+                      Its own form, not one wrapping the grid: a stray Enter in any
+                      box would otherwise submit every other caption with it. Saves
+                      on blur as well, via photo-upload.js, so the button is for
+                      people who want to press something.
+                    */-->
+                    <form method="post" class="photo-tile__label"
+                          th:action="@{/list/{lid}/photos/{pid}/label(lid=${draft.id}, pid=${photo.id})}">
+                        <label>
+                            <span class="sr-only">Label for this photo</span>
+                            <input type="text" name="label" maxlength="60"
+                                   th:value="${photo.label}"
+                                   placeholder="Add a label — Your room, Kitchen…">
+                        </label>
+                        <button type="submit" class="btn btn--ghost">Save</button>
+                    </form>
+
+                    <div class="photo-tile__actions">
+                        <form method="post" th:if="${!photo.cover}"
+                              th:action="@{/list/{lid}/photos/{pid}/cover(lid=${draft.id}, pid=${photo.id})}">
+                            <button type="submit" class="btn btn--ghost">Make cover</button>
+                        </form>
+                        <form method="post"
+                              th:action="@{/list/{lid}/photos/{pid}/delete(lid=${draft.id}, pid=${photo.id})}">
+                            <button type="submit" class="btn btn--ghost">Remove</button>
+                        </form>
+                    </div>
+                </figcaption>
+            </figure>
+        </div>
+
+        <p class="wizard__hint">
+            Photos are re-encoded on upload, which removes the location data a
+            phone stores inside every picture. Without that, the exact address of
+            the flat would be readable from the image file &mdash; and the
+            approximate circle on the listing would mean nothing.
+        </p>
+    </fieldset>
+
+</th:block>
+
+
+<!--/* ===================================================================
+       The money, and the two optional extras worth having.
+       =================================================================== */-->
+<th:block th:fragment="money">
+
+    <fieldset class="wizard__group">
+        <legend>The money</legend>
+
+        <label class="field">
+            <span class="field__label">Monthly rent for this room</span>
+            <div class="field__money">
+                <span class="field__prefix">&#8377;</span>
+                <!--/* data-ghost rather than a plain placeholder: the example
+                       number reads as a real value already entered, so the script
+                       clears it the moment the field is focused and puts it back if
+                       the field is left empty. */-->
+                <input type="text" name="monthlyRent" inputmode="numeric"
+                       data-digits data-ghost pattern="[0-9,]*"
+                       th:value="${draft.monthlyRentInr}" placeholder="32000" required>
+            </div>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Security deposit</span>
+            <div class="field__money">
+                <span class="field__prefix">&#8377;</span>
+                <input type="text" name="deposit" inputmode="numeric"
+                       data-digits data-ghost pattern="[0-9,]*"
+                       th:value="${draft.depositInr}" placeholder="64000" required>
+            </div>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Brokerage being asked for</span>
+            <div class="field__money">
+                <span class="field__prefix">&#8377;</span>
+                <!--/* Prefilled 0, not blank. The claim this product makes is that
+                       takeovers are broker-free; an empty required box asks for a
+                       number, where a zero asks only to be confirmed. */-->
+                <input type="text" name="brokerage" inputmode="numeric"
+                       data-digits pattern="[0-9,]*" required data-ghost-zero
+                       th:value="${draft.brokerageInr} ?: 0">
+            </div>
+            <small class="wizard__hint">
+                Zero carries the badge and gets far more requests. This is a
+                takeover, not a brokerage.
+            </small>
+        </label>
+
+        <label class="field">
+            <span class="field__label">Buy-out for what is left behind</span>
+            <div class="field__money">
+                <span class="field__prefix">&#8377;</span>
+                <input type="text" name="buyout" inputmode="numeric"
+                       data-digits pattern="[0-9,]*" required data-ghost-zero
+                       th:value="${draft.buyoutInr} ?: 0">
+            </div>
+            <small class="wizard__hint">
+                Furniture, appliances, curtains &mdash; whatever is being sold
+                on. Zero if there is nothing.
+            </small>
+        </label>
+    </fieldset>
+
+    <fieldset class="wizard__group">
+        <legend>Worth adding</legend>
+
+        <label class="field">
+            <span class="field__label">
+                Google Maps link
+                <span class="field__optional">optional</span>
+            </span>
+            <input type="url" name="mapsLink" maxlength="2048"
+                   th:value="${priv != null} ? ${priv.mapsLink} : ''"
+                   placeholder="https://maps.app.goo.gl/…">
+            <!--/* Private, and said so plainly. A Maps link IS an address;
+                   published it would make the approximate circle decorative, which
+                   is why it sits with the phone number rather than on the
+                   listing. */-->
+            <small class="wizard__hint">
+                Never shown publicly. Sent along with the number only when a
+                request is accepted, so somebody can find the building.
+            </small>
+        </label>
+
+        <label class="field">
+            <span class="field__label">
+                Anything else worth saying
+                <span class="field__optional">optional</span>
+            </span>
+            <textarea name="description" rows="4" maxlength="1500"
+                      th:text="${draft.description}"
+                      placeholder="Easy-going flatmates, everything already set up, five minutes from the metro."></textarea>
+            <small class="wizard__hint">
+                The only part in somebody's own words. It is usually what makes
+                a person pick this room over an identical one.
+            </small>
+        </label>
+    </fieldset>
+
+</th:block>
+
+</body>
+</html>

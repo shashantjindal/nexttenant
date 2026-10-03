@@ -2,15 +2,14 @@
 <!--/*
   Screen one of two: the eight things a room cannot be listed without.
 
-  Everything here is a radio rendered as a button. The old screens used native
-  <select>s, which on a phone open a scroll wheel — a two-tap interaction with
-  the options hidden until you commit to looking. Buttons show every choice at
-  once and take one tap, and when there are only three or four options there is
-  no reason to hide them.
+  The fields themselves moved to _fields.html when a second screen started
+  asking for them — an operator filling in a listing for somebody at
+  /admin/listings/{id}/2. What is left here is what is genuinely particular to
+  this door: the title, the lede, and where the form posts.
 
-  Radios, not <div>s with click handlers: keyboard navigation, screen reader
-  grouping and "one of these" semantics all come free, and the form still works
-  with no JavaScript at all.
+  That is the right seam. Two copies of the markup would agree today and
+  disagree the first time a field is added to one of them, and nothing would
+  fail — the two screens would simply stop asking the same questions.
 */-->
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -23,185 +22,7 @@
                        'Eight quick answers. The rest is optional and comes later.')}"></div>
 
     <form method="post" th:action="@{/list/{id}/1(id=${draft.id})}" class="wizard__form">
-
-        <!-- ================= Where ================= -->
-        <fieldset class="wizard__group">
-            <legend>Where it is</legend>
-
-            <!--/*
-              A search box over a 200-option list, not the list itself. Finding
-              "Powai" by scrolling every locality in Mumbai on a phone was the
-              first thing this screen asked anybody to do.
-
-              The <select> underneath stays, and that is deliberate: it is what
-              posts the value, what a keyboard user can drive, and what works
-              when the script does not load. area-picker.js hides it and drives
-              it from the box above.
-            */-->
-            <label class="field" data-area-picker>
-                <span class="field__label">Area</span>
-
-                <!--/*
-                  The input gets its own positioned box, and the results list
-                  is appended INSIDE it.
-
-                  Appended to the .field instead, the list covered the input
-                  entirely. .field is display:grid, and an absolutely
-                  positioned child of a grid container with no `top` is placed
-                  at the container's padding box — the top — not after the
-                  element it was appended behind. So the dropdown rendered
-                  over the very box being typed into.
-                */-->
-                <span class="area-picker" data-area-picker-anchor>
-                    <input type="search" class="area-picker__input" autocomplete="off"
-                           placeholder="Start typing — Powai, Bandra, Andheri…"
-                           aria-label="Search for an area">
-                </span>
-                <select name="areaName" required class="area-picker__select">
-                    <option value="">Choose an area</option>
-                    <th:block th:each="group : ${areaGroups}">
-                        <th:block th:if="${group.hasChildren()}">
-                            <optgroup th:label="${group.parent.name}">
-                                <!--/* Just the name. "All of Chembur" was written for a list
-                                       where it sat among its own sublocalities; here a
-                                       listing is IN Chembur, and echoing "All of
-                                       Chembur" back as the chosen area reads as if the
-                                       flat were somehow all of it. */-->
-                                <option th:value="${group.parent.name}"
-                                        th:text="${group.parent.name}"
-                                        th:selected="${group.parent.name == draft.areaName}">All</option>
-                                <option th:each="child : ${group.children}"
-                                        th:value="${child.name}" th:text="${child.name}"
-                                        th:selected="${child.name == draft.areaName}">Child</option>
-                            </optgroup>
-                        </th:block>
-                        <option th:unless="${group.hasChildren()}"
-                                th:value="${group.parent.name}"
-                                th:text="${group.parent.name} + ' · ' + ${group.parent.nearestStation} + ' station'"
-                                th:selected="${group.parent.name == draft.areaName}">Area</option>
-                    </th:block>
-                </select>
-                <!--/* The station is no longer asked for — every area already
-                       knows its own, and it is the most useful single fact
-                       about a Mumbai address. The question went; the answer
-                       did not. */-->
-            </label>
-        </fieldset>
-
-        <!-- ================= The flat ================= -->
-        <fieldset class="wizard__group">
-            <legend>The flat</legend>
-
-            <div class="field">
-                <span class="field__label">Size</span>
-                <div class="choice-row">
-                    <label class="choice" th:each="c : ${configurations}">
-                        <input type="radio" name="configuration" th:value="${c}" required
-                               th:checked="${c == draft.configuration}">
-                        <span th:text="${c.label}">2 BHK</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="field">
-                <span class="field__label">What you are handing over</span>
-                <div class="choice-row">
-                    <label class="choice" th:each="r : ${roomTypes}">
-                        <input type="radio" name="roomType" th:value="${r}" required
-                               th:checked="${r == draft.roomType}">
-                        <span th:text="${r.label}">Private room</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="field">
-                <span class="field__label">Furnishing</span>
-                <div class="choice-row">
-                    <label class="choice" th:each="f : ${furnishings}">
-                        <input type="radio" name="furnishing" th:value="${f}" required
-                               th:checked="${f == draft.furnishing}">
-                        <span th:text="${f.label}">Semi-furnished</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="field">
-                <span class="field__label">Building</span>
-                <div class="choice-row">
-                    <label class="choice" th:each="t : ${flatTypes}">
-                        <input type="radio" name="flatType" th:value="${t}" required
-                               th:checked="${t == draft.flatType}">
-                        <span th:text="${t.label}">Gated society</span>
-                    </label>
-                </div>
-                <!--/* Asked because people ask before agreeing to visit: it
-                       decides whether a watchman logs guests and what hours
-                       they may come. */-->
-            </div>
-        </fieldset>
-
-        <!-- ================= Who and when ================= -->
-        <fieldset class="wizard__group">
-            <legend>Who and when</legend>
-
-            <div class="field">
-                <span class="field__label">Who can take this room</span>
-                <div class="choice-row">
-                    <label class="choice" th:each="g : ${genders}">
-                        <input type="radio" name="flatmateGender" th:value="${g}" required
-                               th:checked="${g == draft.flatmateGender}">
-                        <span th:text="${g.label}">Anyone</span>
-                    </label>
-                </div>
-            </div>
-
-            <!--/*
-              A follow-up, not a field of its own.
-
-              "Anyone" says who may TAKE the room and nothing about who is
-              already there � and a room open to anyone in a flat of three men
-              is a different proposition from the same room in a mixed flat.
-              It is the first thing people ask once the rent looks right, so
-              leaving it unsaid does not avoid the question, it moves it into a
-              WhatsApp exchange after contact is released.
-
-              Only for "anyone": the other two answers already say it. Shown
-              and hidden by forms.js, and rendered open when the draft already
-              holds ANY so it is not hidden from somebody coming back to edit.
-            */-->
-            <div class="field" data-when-anyone
-                 th:attr="hidden=${draft.flatmateGender?.name() == 'ANY'} ? null : true">
-                <span class="field__label">
-                    Who already lives there
-                    <span class="field__optional">optional</span>
-                </span>
-                <div class="choice-row">
-                    <label class="choice" th:each="m : ${makeups}">
-                        <input type="radio" name="flatmateMakeup" th:value="${m}"
-                               th:checked="${m == draft.flatmateMakeup}">
-                        <span th:text="${m.label}">Mixed</span>
-                    </label>
-                </div>
-            </div>
-
-            <label class="field">
-                <span class="field__label">Available from</span>
-                <input type="date" name="availableFrom" required
-                       th:min="${earliestMoveIn}"
-                       th:value="${draft.availableFrom}">
-            </label>
-
-            <label class="field">
-                <span class="field__label">
-                    Flatmates staying on after you leave
-                    <span class="field__optional">optional</span>
-                </span>
-                <input type="text" name="existingFlatmates" inputmode="numeric"
-                       data-digits pattern="[0-9]*" maxlength="2" data-ghost
-                       th:value="${draft.existingFlatmates}" placeholder="2">
-            </label>
-        </fieldset>
-
+        <th:block th:replace="~{listing/wizard/_fields :: basics}"></th:block>
         <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
     </form>
 

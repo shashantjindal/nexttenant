@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--/*
+  Page three of three: photos, money, and publish.
+
+  Submitting this page publishes, the same way finishing screen two publishes
+  on the public flow. The outstanding list below is what stands between the
+  operator and that — rendered as links, because "this listing still needs a
+  few things" without saying which is the error message that makes somebody
+  guess.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>Photos and money — NextTenant admin</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{admin/_listing-shell :: head(${page}, ${totalPages},
+                       'Photos and money',
+                       'Three photos minimum. Rooms with photos get several times more
+                        requests.')}"></div>
+
+    <!--/*
+      What is still outstanding, each line a link to the page that fixes it.
+
+      Missing carries WIZARD step numbers — 1 and 2, where those fields live on
+      the public flow. This flow has an extra page at the front, so a step is a
+      page here with step + 1. The arithmetic is in one place and it is this
+      line; AdminListingController hands the photo check a 2 for the same
+      reason, so it lands on this page with everything else.
+    */-->
+    <div class="wizard__group" th:if="${missing != null and !missing.isEmpty()}">
+        <p class="field__label">Before this can go live</p>
+        <ul class="wizard__missing">
+            <li th:each="m : ${missing}">
+                <a th:href="@{/admin/listings/{id}/{page}(id=${draft.id}, page=${m.step + 1})}"
+                   th:text="${m.label}">the monthly rent</a>
+            </li>
+        </ul>
+    </div>
+
+    <th:block th:replace="~{listing/wizard/_fields :: photos}"></th:block>
+
+    <form method="post" th:action="@{/admin/listings/{id}/3(id=${draft.id})}" class="wizard__form">
+        <th:block th:replace="~{listing/wizard/_fields :: money}"></th:block>
+        <div th:replace="~{admin/_listing-shell :: nav(${draft}, ${page})}"></div>
+    </form>
+</main>
+
+</body>
+</html>

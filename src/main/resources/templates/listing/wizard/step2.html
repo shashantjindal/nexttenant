@@ -9,10 +9,11 @@
   did not have to hand. Everything saved; nothing published. The dashboard
   filled up with listings stopped at "step 6 of 6".
 
-  The upload form is its own <form>, outside the money form. Two separate
-  submissions: photos go the moment they are chosen, the money posts when the
-  person is done. Nesting forms is invalid HTML and browsers resolve it by
-  discarding one of them.
+  The photo forms sit OUTSIDE the money form. Two separate submissions: photos
+  go the moment they are chosen, the money posts when the person is done.
+  Nesting forms is invalid HTML and browsers resolve it by discarding one.
+
+  The fields are in _fields.html, shared with the admin flow. See step1.html.
 */-->
 <html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
       lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -24,195 +25,10 @@
                        'Photos and money',
                        'Three photos minimum. Rooms with photos get several times more requests.')}"></div>
 
-    <p class="auth__error" th:if="${photoError}" th:text="${photoError}" role="alert">error</p>
-    <p class="auth__notice" th:if="${photoNotice}" th:text="${photoNotice}">added</p>
+    <th:block th:replace="~{listing/wizard/_fields :: photos}"></th:block>
 
-    <!-- ================= Photos ================= -->
-    <fieldset class="wizard__group">
-        <legend>Photos</legend>
-
-        <form method="post" th:action="@{/list/{id}/photos(id=${draft.id})}"
-              enctype="multipart/form-data" class="photo-upload" data-autosubmit>
-            <label class="field">
-                <span class="field__label">Add photos</span>
-                <!--/* accept= filters the picker for convenience only. The
-                       server decodes every upload regardless: a file extension
-                       and a MIME type are both supplied by the client and
-                       neither is evidence of anything. */-->
-                <input type="file" name="file" accept="image/*" multiple required>
-            </label>
-
-            <!--/* Hidden by photo-upload.js once that script is running to do
-                   its job. Without the script this is the only way to upload,
-                   so it cannot be removed from the markup. */-->
-            <button type="submit" class="btn btn--secondary" data-autosubmit-fallback>
-                Upload
-            </button>
-
-            <p class="photo-upload__busy" hidden>Uploading&hellip;</p>
-        </form>
-
-        <div class="photo-count">
-            <span th:text="${#lists.size(photos)} + ' of ' + ${maxPhotos} + ' photos'">0 of 20</span>
-            <span class="photo-count__need"
-                  th:if="${#lists.size(photos) < minPhotos}"
-                  th:text="'Add ' + (${minPhotos} - ${#lists.size(photos)}) + ' more to publish'">Add 3 more</span>
-            <span class="photo-count__ok" th:if="${#lists.size(photos) >= minPhotos}">Enough to publish</span>
-        </div>
-
-        <div class="photo-grid" th:if="${!photos.isEmpty()}">
-            <figure class="photo-tile" th:each="photo : ${photos}">
-                <img th:src="@{/photos/{id}/thumb(id=${photo.id})}" alt="Listing photo" loading="lazy">
-                <figcaption>
-                    <span class="photo-tile__cover" th:if="${photo.cover}">Cover</span>
-
-                    <!--/*
-                      A caption per photo.
-
-                      Eight photos of rooms in a flat are eight photos of
-                      rooms: a searcher cannot tell which bedroom is the one
-                      on offer, or whether that bathroom is shared. Those are
-                      exactly the questions that otherwise become a week of
-                      messages.
-
-                      Its own form, not one wrapping the grid: a stray Enter
-                      in any box would otherwise submit every other caption
-                      with it. Saves on blur as well, via photo-upload.js, so
-                      the button is for people who want to press something.
-                    */-->
-                    <form method="post" class="photo-tile__label"
-                          th:action="@{/list/{lid}/photos/{pid}/label(lid=${draft.id}, pid=${photo.id})}">
-                        <label>
-                            <span class="sr-only">Label for this photo</span>
-                            <input type="text" name="label" maxlength="60"
-                                   th:value="${photo.label}"
-                                   placeholder="Add a label — Your room, Kitchen…">
-                        </label>
-                        <button type="submit" class="btn btn--ghost">Save</button>
-                    </form>
-
-                    <div class="photo-tile__actions">
-                        <form method="post" th:if="${!photo.cover}"
-                              th:action="@{/list/{lid}/photos/{pid}/cover(lid=${draft.id}, pid=${photo.id})}">
-                            <button type="submit" class="btn btn--ghost">Make cover</button>
-                        </form>
-                        <form method="post"
-                              th:action="@{/list/{lid}/photos/{pid}/delete(lid=${draft.id}, pid=${photo.id})}">
-                            <button type="submit" class="btn btn--ghost">Remove</button>
-                        </form>
-                    </div>
-                </figcaption>
-            </figure>
-        </div>
-
-        <p class="wizard__hint">
-            Photos are re-encoded on upload, which removes the location data your
-            phone stores inside every picture. Without that, the exact address of
-            your flat would be readable from the image file &mdash; and the
-            approximate circle on your listing would mean nothing.
-        </p>
-    </fieldset>
-
-    <!-- ================= Money ================= -->
     <form method="post" th:action="@{/list/{id}/2(id=${draft.id})}" class="wizard__form">
-
-        <fieldset class="wizard__group">
-            <legend>The money</legend>
-
-            <label class="field">
-                <span class="field__label">Monthly rent for this room</span>
-                <div class="field__money">
-                    <span class="field__prefix">&#8377;</span>
-                    <!--/* data-placeholder rather than placeholder: the example
-                           number reads as a real value already entered, so the
-                           script clears it the moment the field is focused and
-                           puts it back if the field is left empty. */-->
-                    <input type="text" name="monthlyRent" inputmode="numeric"
-                           data-digits data-ghost pattern="[0-9,]*"
-                           th:value="${draft.monthlyRentInr}" placeholder="32000" required>
-                </div>
-            </label>
-
-            <label class="field">
-                <span class="field__label">Security deposit</span>
-                <div class="field__money">
-                    <span class="field__prefix">&#8377;</span>
-                    <input type="text" name="deposit" inputmode="numeric"
-                           data-digits data-ghost pattern="[0-9,]*"
-                           th:value="${draft.depositInr}" placeholder="64000" required>
-                </div>
-            </label>
-
-            <label class="field">
-                <span class="field__label">Brokerage you are asking for</span>
-                <div class="field__money">
-                    <span class="field__prefix">&#8377;</span>
-                    <!--/* Prefilled 0, not blank. The claim this product makes
-                           is that takeovers are broker-free; an empty required
-                           box asks for a number, where a zero asks only to be
-                           confirmed. */-->
-                    <input type="text" name="brokerage" inputmode="numeric"
-                           data-digits pattern="[0-9,]*" required data-ghost-zero
-                           th:value="${draft.brokerageInr} ?: 0">
-                </div>
-                <small class="wizard__hint">
-                    Zero carries the badge and gets far more requests. This is a
-                    takeover, not a brokerage.
-                </small>
-            </label>
-
-            <label class="field">
-                <span class="field__label">Buy-out for what you leave behind</span>
-                <div class="field__money">
-                    <span class="field__prefix">&#8377;</span>
-                    <input type="text" name="buyout" inputmode="numeric"
-                           data-digits pattern="[0-9,]*" required data-ghost-zero
-                           th:value="${draft.buyoutInr} ?: 0">
-                </div>
-                <small class="wizard__hint">
-                    Furniture, appliances, curtains &mdash; whatever you are
-                    selling on. Zero if there is nothing.
-                </small>
-            </label>
-        </fieldset>
-
-        <!-- ================= Optional ================= -->
-        <fieldset class="wizard__group">
-            <legend>Worth adding</legend>
-
-            <label class="field">
-                <span class="field__label">
-                    Google Maps link
-                    <span class="field__optional">optional</span>
-                </span>
-                <input type="url" name="mapsLink" maxlength="2048"
-                       th:value="${priv != null} ? ${priv.mapsLink} : ''"
-                       placeholder="https://maps.app.goo.gl/…">
-                <!--/* Private, and said so plainly. A Maps link IS an address;
-                       published it would make the approximate circle
-                       decorative, which is why it sits with the phone number
-                       rather than on the listing. */-->
-                <small class="wizard__hint">
-                    Never shown publicly. Sent along with your number only when
-                    you accept someone's request, so they can find the building.
-                </small>
-            </label>
-
-            <label class="field">
-                <span class="field__label">
-                    Anything else worth saying
-                    <span class="field__optional">optional</span>
-                </span>
-                <textarea name="description" rows="4" maxlength="1500"
-                          th:text="${draft.description}"
-                          placeholder="Easy-going flatmates, everything already set up, five minutes from the metro."></textarea>
-                <small class="wizard__hint">
-                    The only part in your own words. It is usually what makes
-                    someone pick this room over an identical one.
-                </small>
-            </label>
-        </fieldset>
-
+        <th:block th:replace="~{listing/wizard/_fields :: money}"></th:block>
         <div th:replace="~{listing/wizard/_shell :: nav(${draft}, ${step})}"></div>
     </form>
 </main>

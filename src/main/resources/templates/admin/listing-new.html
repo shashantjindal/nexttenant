@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--/*
+  Page one of three: whose listing is this?
+
+  The only page in this flow that has no equivalent on the public wizard, and
+  the reason the flow exists. A leaver filling in their own listing has already
+  answered this by being signed in; an operator has not, and nothing after this
+  point means anything until it is settled.
+
+  It asks for the same things the public sign-in and profile screens ask for,
+  through the same validators, so the admin door cannot create an account the
+  front door would have refused.
+*/-->
+<html th:replace="~{layout/base :: layout(~{::title}, ~{::main})}"
+      lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><title>List a flat for someone — NextTenant</title></head>
+<body>
+
+<main id="content" class="page-width wizard">
+    <div th:replace="~{admin/_listing-shell :: head(1, 3,
+                       'Who is this flat for?',
+                       'The listing belongs to them, not to you. They sign in with this
+                        address and find it waiting.')}"></div>
+
+    <form method="post" th:action="@{/admin/listings/new}" class="wizard__form">
+
+        <fieldset class="wizard__group">
+            <legend>Their account</legend>
+
+            <label class="field">
+                <span class="field__label">Email address</span>
+                <input type="email" name="email" maxlength="254" required autofocus
+                       th:value="${email}" autocomplete="off"
+                       placeholder="priya@example.com">
+                <!--/*
+                  Said plainly, because it is the one thing about this page an
+                  operator could get wrong in a way they would not notice.
+
+                  No code is sent from here and no session is created. Signing
+                  in IS the OTP — AuthController mails a code to this address
+                  and nothing else grants access — so creating the account
+                  asserts an address rather than gaining entry to one. Type it
+                  wrong and the listing lands on an account its owner can never
+                  reach, which is why it is worth reading back to them.
+                */-->
+
+                <small class="wizard__hint">
+                    This is their identity on the site. No code is sent now &mdash;
+                    they will get one the first time they sign in, so check the
+                    spelling with them.
+                </small>
+            </label>
+
+            <label class="field">
+                <span class="field__label">First name</span>
+                <input type="text" name="firstName" maxlength="40" required
+                       th:value="${firstName}" autocomplete="off" placeholder="Priya">
+                <small class="wizard__hint">
+                    The only part of their profile other people see.
+                </small>
+            </label>
+
+            <label class="field">
+                <span class="field__label">Mobile number</span>
+                <div class="field__phone">
+                    <span class="field__prefix">+91</span>
+                    <input type="tel" name="phone" inputmode="numeric" maxlength="15"
+                           required th:value="${phone}" autocomplete="off"
+                           placeholder="98765 43210">
+                </div>
+                <!--/* Recorded unverified, exactly as the public profile screen
+                       records it. A verified badge meaning "an operator typed it"
+                       would be a badge that lies. */-->
+                <small class="wizard__hint">
+                    Released only to somebody whose request they accept. Never on
+                    the listing, never to a stranger.
+                </small>
+            </label>
+
+            <label class="field">
+                <span class="field__label">
+                    Gender
+                    <span class="field__optional">optional</span>
+                </span>
+                <select name="gender">
+                    <option value="">Prefer not to say</option>
+                    <option th:each="g : ${userGenders}"
+                            th:value="${g}"
+                            th:text="${g.name().charAt(0) + g.name().substring(1).toLowerCase()}">Male</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field__label">
+                    Age
+                    <span class="field__optional">optional</span>
+                </span>
+                <select name="ageBracket">
+                    <option value="">Prefer not to say</option>
+                    <option th:each="a : ${ageBrackets}"
+                            th:value="${a}"
+                            th:text="${#strings.replace(#strings.replace(a.name(), 'AGE_', ''), '_', '–')}">23–27</option>
+                </select>
+            </label>
+        </fieldset>
+
+        <p class="wizard__hint">
+            <!--/* The rule, stated where it applies. An account that already
+                   exists was filled in by the person themselves, who typed their
+                   own name and proved they could receive mail at this address;
+                   that is a better source than a WhatsApp message read second
+                   hand. Blanks are filled in, nothing is overwritten. */-->
+            If this address already has an account, their existing name and
+            number are kept and only blanks are filled in &mdash; their own
+            answers win over anything typed here.
+        </p>
+
+        <div class="wizard__nav">
+            <a class="btn btn--ghost" th:href="@{/admin}">Cancel</a>
+            <button type="submit" class="btn btn--primary">Continue</button>
+        </div>
+    </form>
+</main>
+
+</body>
+</html>

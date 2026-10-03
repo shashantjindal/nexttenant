@@ -1,6 +1,8 @@
 package com.nexttenant.photo;
 
 import com.nexttenant.auth.AuthenticatedUser;
+import com.nexttenant.listing.Listing;
+import com.nexttenant.listing.wizard.Actor;
 import com.nexttenant.listing.wizard.ListingDraftService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -36,6 +38,12 @@ public class PhotoController {
      * successful upload, which reads as the upload having failed.
      */
     private static final String PHOTO_STEP = "/2";
+
+    /**
+     * The same screen reached through the admin door, where it is the third
+     * page rather than the second — the first one asks whose listing this is.
+     */
+    private static final String ADMIN_PHOTO_STEP = "/3";
 
     private final PhotoService photos;
     private final PhotoRepository repository;
@@ -98,7 +106,7 @@ public class PhotoController {
                          RedirectAttributes redirect) {
         // Ownership first. Without this, anyone signed in could add photos to
         // anyone's listing simply by knowing its id.
-        drafts.requireOwnedDraft(listingId, user.id());
+        Listing listing = authorize(listingId, user);
 
         int stored = 0;
         for (MultipartFile file : files) {
@@ -122,15 +130,15 @@ public class PhotoController {
             redirect.addFlashAttribute("photoNotice",
                     stored == 1 ? "Photo added" : stored + " photos added");
         }
-        return "redirect:/list/" + listingId + PHOTO_STEP;
+        return back(listing, user);
     }
 
     @PostMapping("/list/{listingId}/photos/{photoId}/delete")
     public String delete(@PathVariable UUID listingId, @PathVariable UUID photoId,
                          @AuthenticationPrincipal AuthenticatedUser user) {
-        drafts.requireOwnedDraft(listingId, user.id());
+        Listing listing = authorize(listingId, user);
         photos.delete(listingId, photoId);
-        return "redirect:/list/" + listingId + PHOTO_STEP;
+        return back(listing, user);
     }
 
     /**
@@ -154,27 +162,59 @@ public class PhotoController {
     public String label(@PathVariable UUID listingId, @PathVariable UUID photoId,
                         @AuthenticationPrincipal AuthenticatedUser user,
                         @RequestParam(required = false) String label) {
-        drafts.requireOwnedDraft(listingId, user.id());
+        Listing listing = authorize(listingId, user);
         photos.label(listingId, photoId, label);
-        return "redirect:/list/" + listingId + PHOTO_STEP;
+        return back(listing, user);
     }
 
     @PostMapping("/list/{listingId}/photos/{photoId}/cover")
     public String makeCover(@PathVariable UUID listingId, @PathVariable UUID photoId,
                             @AuthenticationPrincipal AuthenticatedUser user) {
-        drafts.requireOwnedDraft(listingId, user.id());
+        Listing listing = authorize(listingId, user);
         // reorder() puts the listed ids first and appends the rest, so naming
         // one id is enough to promote it.
         photos.reorder(listingId, List.of(photoId));
-        return "redirect:/list/" + listingId + PHOTO_STEP;
+        return back(listing, user);
     }
 
     @PostMapping("/list/{listingId}/photos/order")
     public String reorder(@PathVariable UUID listingId,
                           @AuthenticationPrincipal AuthenticatedUser user,
                           @RequestParam("id") List<UUID> orderedIds) {
-        drafts.requireOwnedDraft(listingId, user.id());
+        Listing listing = authorize(listingId, user);
         photos.reorder(listingId, orderedIds);
-        return "redirect:/list/" + listingId + PHOTO_STEP;
+        return back(listing, user);
+    }
+/**
+     * May this person touch this listing's photos, and through which door?
+     *
+     * <p>Returns the listing rather than void, because the answer to the
+     * second question is on it. Five handlers asked the same question and then
+     * all five hard-coded the same redirect; that redirect is now wrong for an
+     * operator filling in somebody else's listing, and a handler that checks
+     * permission without learning who it just let in cannot tell.
+     */
+    private Listing authorize(UUID listingId, AuthenticatedUser user) {
+        return drafts.requireEditable(listingId,
+                user.admin() ? Actor.admin(user.id()) : Actor.owner(user.id()));
+    }
+
+    /**
+     * Back to the screen the upload came from.
+     *
+     * <p>Derived rather than posted. A {@code returnTo} field on the form
+     * would be a redirect target supplied by whoever submits the form, which
+     * is an open redirect waiting to be found; this is two known paths chosen
+     * from a fact already in the database.
+     *
+     * <p>Somebody editing a listing they do not own can only have arrived
+     * through the admin door — {@code /list/...} answers 404 to everybody but
+     * the owner — so "not the owner" is a complete answer to "which door".
+     */
+    private static String back(Listing listing, AuthenticatedUser user) {
+        if (listing.isOwnedBy(user.id())) {
+            return "redirect:/list/" + listing.getId() + PHOTO_STEP;
+        }
+        return "redirect:/admin/listings/" + listing.getId() + ADMIN_PHOTO_STEP;
     }
 }

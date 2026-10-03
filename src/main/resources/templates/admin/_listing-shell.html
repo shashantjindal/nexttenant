@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--/*
+  Chrome for the admin listing flow: progress, title, and whose listing it is.
+
+  Deliberately NOT the wizard's _shell. The fields are shared because they are
+  genuinely the same question; the chrome is not, and pretending otherwise
+  would mean one fragment full of th:if branches deciding which of two flows it
+  is rendering. That is the shape that gets edited for one caller and breaks
+  the other.
+
+  Everything that differs is here and it is nearly all of it: three pages
+  rather than two, a name in the header because the operator is not the owner,
+  and "Save and exit" replaced by a way back to the admin listings table.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="head(page, totalPages, title, lede)" class="wizard__head">
+
+    <div class="wizard__progress" aria-hidden="true">
+        <span class="wizard__bar"
+              th:style="'width:' + ${page * 100 / totalPages} + '%'"></span>
+    </div>
+
+    <div class="wizard__meta">
+        <span class="wizard__step"
+              th:text="'Page ' + ${page} + ' of ' + ${totalPages}">Page 1 of 3</span>
+
+        <!--/*
+          The way out, and it goes to the admin table rather than the public
+          dashboard. An operator who stops halfway has left a draft behind that
+          belongs to somebody else, and /admin/listings?status=DRAFT is the one
+          page that will show it to them again.
+
+          Nothing is lost by leaving: every page saves on submit, which is the
+          whole reason for saving per page rather than accumulating answers.
+        */-->
+        <a class="wizard__exit" th:href="@{/admin/listings(status='DRAFT')}">Leave for now</a>
+    </div>
+
+    <h1 class="wizard__title" th:text="${title}">Who is this for?</h1>
+    <p class="wizard__lede" th:text="${lede}" th:if="${lede}">lede</p>
+
+    <!--/*
+      WHOSE LISTING THIS IS, on every page after the first.
+
+      An operator working through several of these in one sitting is one tab
+      away from typing somebody's rent onto somebody else's room. There is no
+      undo for that — the listing goes live with the wrong flat against the
+      wrong number — and a name in the header is the cheapest guard against it
+      there is.
+    */-->
+    <p class="wizard__lede" th:if="${ownerName}">
+        Listing for <strong th:text="${ownerName}">Priya</strong>.
+        It belongs to their account: requests, and their number when they
+        accept one.
+    </p>
+</div>
+
+
+<div th:fragment="nav(draft, page)" class="wizard__nav">
+    <a class="btn btn--ghost" th:if="${page > 2}"
+       th:href="@{/admin/listings/{id}/{prev}(id=${draft.id}, prev=${page - 1})}">Back</a>
+    <span th:unless="${page > 2}"></span>
+
+    <!--/* The last page publishes. A separate confirm button afterwards would
+           be a second decision asked of somebody who has already answered
+           every question. */-->
+    <button type="submit" class="btn btn--primary"
+            th:text="${page == 3} ? 'Publish listing' : 'Continue'">Continue</button>
+</div>
+
+</body>
+</html>

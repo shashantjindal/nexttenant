@@ -123,6 +123,37 @@ public class ListingDraftService {
             ListingStatus.PAUSED, ListingStatus.EXPIRED);
 
     /**
+     * Loads a listing for whoever is driving the flow.
+     *
+     * <p>The single place the two doors differ, and the reason they are not
+     * two authorization paths. An owner may edit their own listing; an
+     * operator filling one in on somebody's behalf may edit any listing that
+     * is still editable at all.
+     *
+     * <p><b>EDITABLE does the real work in the admin branch.</b> It excludes
+     * TAKEN_DOWN, so this cannot be used to quietly revive a listing
+     * moderation removed — that would turn a removal into a speed bump, and it
+     * is the one thing an admin-shaped hole in an ownership check would be
+     * good for. It excludes RENTED for the owner's sake: the numbers two
+     * people agreed to are not rewritable afterwards.
+     *
+     * <p>Note what is NOT here: a general "admins may edit anything" rule
+     * applied to the owner's own wizard. {@code /list/...} still answers 404
+     * to everybody but the owner. An admin who wants to fill in somebody's
+     * listing goes through the admin door, which is a deliberate act with its
+     * own URL rather than a silent extra power on the ordinary one.
+     */
+    @Transactional(readOnly = true)
+    public Listing requireEditable(UUID listingId, Actor actor) {
+        if (!actor.admin()) {
+            return requireOwnedDraft(listingId, actor.userId());
+        }
+        return listings.findById(listingId)
+                .filter(l -> EDITABLE.contains(l.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    /**
      * Refuses an edit that would leave a LIVE listing incomplete.
      *
      * <p>{@code listings_live_complete_ck} already forbids this at the database
@@ -190,7 +221,7 @@ public class ListingDraftService {
      * lost.
      */
     @Transactional
-    public void saveBasics(UUID listingId, UUID userId,
+    public void saveBasics(UUID listingId, Actor actor,
                            String areaName,
                            com.nexttenant.listing.Configuration configuration,
                            com.nexttenant.listing.RoomType roomType,
@@ -200,7 +231,7 @@ public class ListingDraftService {
                            com.nexttenant.listing.FlatmateMakeup flatmateMakeup,
                            java.time.LocalDate availableFrom,
                            Short existingFlatmates) {
-        Listing draft = requireOwnedDraft(listingId, userId);
+        Listing draft = requireEditable(listingId, actor);
 
         var area = areas.findByName(areaName);
 
@@ -227,11 +258,11 @@ public class ListingDraftService {
      * the approximate circle decorative.
      */
     @Transactional
-    public void saveMoneyAndExtras(UUID listingId, UUID userId,
+    public void saveMoneyAndExtras(UUID listingId, Actor actor,
                                    Integer rent, Integer deposit,
                                    int brokerage, int buyout,
                                    String mapsLink, String description) {
-        Listing draft = requireOwnedDraft(listingId, userId);
+        Listing draft = requireEditable(listingId, actor);
 
         // Maintenance is not asked for on the short flow, so whatever it
         // already holds is preserved rather than being blanked by a screen
@@ -284,7 +315,7 @@ public class ListingDraftService {
      * field nobody filled in either time.
      */
     @Transactional
-    public void saveMoreDetail(UUID listingId, UUID userId,
+    public void saveMoreDetail(UUID listingId, Actor actor,
                                com.nexttenant.listing.HandoverType handoverType,
                                List<String> amenities, List<String> perks,
                                Integer maintenance, boolean maintenanceIncluded,
@@ -299,7 +330,7 @@ public class ListingDraftService {
                                Boolean nonVegAllowed, Boolean petsAllowed,
                                Boolean smokingAllowed, Boolean guestsAllowed,
                                String houseRulesNote) {
-        Listing draft = requireOwnedDraft(listingId, userId);
+        Listing draft = requireEditable(listingId, actor);
 
         draft.setFlatDetails(draft.getConfiguration(), draft.getRoomType(),
                 handoverType, draft.getExistingFlatmates(), draft.getFurnishing());
@@ -353,8 +384,8 @@ public class ListingDraftService {
      * path nobody has written yet.
      */
     @Transactional
-    public void publish(UUID listingId, UUID userId) {
-        Listing draft = requireOwnedDraft(listingId, userId);
+    public void publish(UUID listingId, Actor actor) {
+        Listing draft = requireEditable(listingId, actor);
 
         List<Missing> missing = missingForPublication(draft);
         if (!missing.isEmpty()) {

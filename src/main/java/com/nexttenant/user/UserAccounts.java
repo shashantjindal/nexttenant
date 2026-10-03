@@ -126,6 +126,26 @@ public class UserAccounts {
         return user;
     }
 
+    /**
+     * Whether a number is already recorded against this account.
+     *
+     * <p>Asked by the admin listing flow before it writes one. An operator
+     * typing a listing on somebody's behalf is reading details off a WhatsApp
+     * message, and the account may already exist with a number its owner
+     * entered themselves — which is the better value of the two, because that
+     * person proved they could receive on it by signing in.
+     *
+     * <p>Returns a boolean rather than the number. Nothing outside this
+     * package needs to see a phone number to decide not to overwrite it, and
+     * a getter that hands one out gets used for other things later.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasPhone(UUID userId) {
+        return userPrivates.findById(userId)
+                .map(UserPrivate::hasPhone)
+                .orElse(false);
+    }
+
     @Transactional(readOnly = true)
     public Optional<User> byId(UUID userId) {
         return users.findById(userId);

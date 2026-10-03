@@ -105,6 +105,27 @@
       figure that happens to be a link is not discoverable: without this row,
       nothing on the page says these two lists exist at all.
     */-->
+    <!-- ================= Seed it ================= -->
+    <!--/*
+      The one action on this page that CREATES something, so it is set apart
+      from the three that only look things up. A marketplace with nothing in it
+      has to be filled by hand to begin with, and the fastest version of that
+      is an operator taking details over WhatsApp and typing them in.
+
+      The listing belongs to the person it is for, not to whoever types it:
+      their account, their requests, their number on acceptance. See
+      AdminListingController.
+    */-->
+    <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
+        Add a listing
+    </h2>
+
+    <div class="admin-search">
+        <a class="btn btn--primary" th:href="@{/admin/listings/new}">
+            List a flat for someone
+        </a>
+    </div>
+
     <h2 class="section__title" style="font-size: var(--t-md); margin-top: var(--s-6)">
         Look something up
     </h2>

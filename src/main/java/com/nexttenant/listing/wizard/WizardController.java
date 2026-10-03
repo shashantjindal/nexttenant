@@ -1,6 +1,5 @@
 package com.nexttenant.listing.wizard;
 
-import com.nexttenant.area.AreaRepository;
 import com.nexttenant.auth.AuthenticatedUser;
 import com.nexttenant.listing.AgreementHandling;
 import com.nexttenant.listing.Configuration;
@@ -23,6 +22,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import static com.nexttenant.listing.wizard.ListingInputs.orZero;
+import static com.nexttenant.listing.wizard.ListingInputs.parseDate;
+import static com.nexttenant.listing.wizard.ListingInputs.rupees;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -59,34 +62,39 @@ public class WizardController {
 
     private final ListingDraftService drafts;
     private final ListingDetailService details;
-    private final AreaRepository areas;
+    private final ListingFormOptions options;
+    private final ListingReadiness readiness;
     private final PhotoService photos;
 
     /* Injected rather than calling LocalDate.now(), so a test can say what
        "today" is when checking that a past move-in date is refused. */
     private final Clock clock;
 
-    /**
-     * "Today" means today in Mumbai.
-     *
-     * <p>The Clock bean is {@code systemUTC}, which is right for timestamps and
-     * wrong for a calendar date: between midnight and half past five in the
-     * morning IST it is still yesterday in UTC, so the date picker would offer
-     * a day that has already gone for the person reading it. Everyone using
-     * this wizard is in one city; this is that city.
-     */
-    private static final java.time.ZoneId IST = java.time.ZoneId.of("Asia/Kolkata");
-
     public WizardController(ListingDraftService drafts,
                             ListingDetailService details,
-                            AreaRepository areas,
+                            ListingFormOptions options,
+                            ListingReadiness readiness,
                             PhotoService photos,
                             Clock clock) {
         this.drafts = drafts;
         this.details = details;
-        this.areas = areas;
+        this.options = options;
+        this.readiness = readiness;
         this.photos = photos;
         this.clock = clock;
+    }
+
+    /**
+     * This door is the owner's, and only the owner's.
+     *
+     * <p>An admin signed in here is an ordinary person with their own
+     * listings. Filling one in for somebody else happens at
+     * {@code /admin/listings/...}, where it is a deliberate act with its own
+     * URL — rather than an extra power that quietly applies to every request
+     * an operator makes while browsing their own flat.
+     */
+    private static Actor actor(AuthenticatedUser user) {
+        return Actor.owner(user.id());
     }
 
     /** "List your flat" — resume where they left off, or start. */
@@ -108,7 +116,7 @@ public class WizardController {
         addCommon(model, draft, step);
 
         switch (step) {
-            case 1 -> addBasicsOptions(model);
+            case 1 -> options.addTo(model);
             case 2 -> {
                 model.addAttribute("photos", photos.forListing(id));
                 model.addAttribute("minPhotos", PhotoService.MIN_PHOTOS_TO_PUBLISH);
@@ -120,22 +128,6 @@ public class WizardController {
         }
 
         return "listing/wizard/step" + step;
-    }
-
-    /** The choices on screen one, all rendered as buttons rather than selects. */
-    private void addBasicsOptions(Model model) {
-        model.addAttribute("areaGroups", areas.findGrouped());
-        model.addAttribute("configurations", Configuration.values());
-        // MASTER_ROOM is deliberately absent: it exists for listings that
-        // already carry it and is not worth a fifth button on the screen that
-        // decides whether somebody lists at all.
-        model.addAttribute("roomTypes", List.of(
-                RoomType.PRIVATE_ROOM, RoomType.SHARED_ROOM,
-                RoomType.HALL, RoomType.ENTIRE_FLAT));
-        model.addAttribute("furnishings", Furnishing.values());
-        model.addAttribute("flatTypes", com.nexttenant.listing.FlatType.values());
-        model.addAttribute("genders", FlatmateGender.values());
-        model.addAttribute("makeups", com.nexttenant.listing.FlatmateMakeup.values());
     }
 
     /**
@@ -209,12 +201,12 @@ public class WizardController {
                              RedirectAttributes redirect) {
         Listing draft = drafts.requireOwnedDraft(id, user.id());
         try {
-            drafts.saveBasics(id, user.id(), areaName, configuration, roomType,
+            drafts.saveBasics(id, actor(user), areaName, configuration, roomType,
                     furnishing, flatType, flatmateGender, flatmateMakeup,
                     parseDate(availableFrom, draft.getAvailableFrom(),
-                            LocalDate.now(clock.withZone(IST))),
+                            ListingInputs.today(clock)),
                     existingFlatmates);
-        } catch (InvalidDateException | IllegalArgumentException e) {
+        } catch (ListingInputs.InvalidDateException | IllegalArgumentException e) {
             redirect.addFlashAttribute("error", e.getMessage());
             return "redirect:/list/%s/1".formatted(id);
         }
@@ -234,13 +226,13 @@ public class WizardController {
                                      @RequestParam(required = false) String description,
                                      RedirectAttributes redirect) {
         try {
-            drafts.saveMoneyAndExtras(id, user.id(),
+            drafts.saveMoneyAndExtras(id, actor(user),
                     rupees("Monthly rent", monthlyRent),
                     rupees("Security deposit", deposit),
                     orZero(rupees("Brokerage", brokerage)),
                     orZero(rupees("Buy-out", buyout)),
                     mapsLink, description);
-        } catch (InvalidAmountException e) {
+        } catch (ListingInputs.InvalidAmountException e) {
             redirect.addFlashAttribute("error", e.getMessage());
             return "redirect:/list/%s/2".formatted(id);
         }
@@ -260,7 +252,7 @@ public class WizardController {
         // taking it down is one click away on the dashboard.
         Listing draft = drafts.requireOwnedDraft(id, user.id());
         if (draft.getStatus() == ListingStatus.DRAFT && missingFor(draft).isEmpty()) {
-            drafts.publish(id, user.id());
+            drafts.publish(id, actor(user));
             redirect.addFlashAttribute("notice", "Your listing is live.");
         }
         return "redirect:/list/%s/preview".formatted(id);
@@ -302,7 +294,7 @@ public class WizardController {
                                  @RequestParam(required = false) String houseRulesNote,
                                  RedirectAttributes redirect) {
         try {
-            drafts.saveMoreDetail(id, user.id(),
+            drafts.saveMoreDetail(id, actor(user),
                     handoverType, amenities, perks,
                     rupees("Society maintenance", maintenance), maintenanceIncluded,
                     floor, hasLift, societyName, fullAddress,
@@ -310,7 +302,7 @@ public class WizardController {
                     noticePeriodDays, bachelorsAllowed,
                     flatmateProfessions, nonVegAllowed, petsAllowed, smokingAllowed,
                     guestsAllowed, houseRulesNote);
-        } catch (InvalidAmountException e) {
+        } catch (ListingInputs.InvalidAmountException e) {
             redirect.addFlashAttribute("error", e.getMessage());
             return "redirect:/list/%s/more".formatted(id);
         }
@@ -335,33 +327,16 @@ public class WizardController {
             return "listing/wizard/preview";
         }
 
-        drafts.publish(id, user.id());
+        drafts.publish(id, actor(user));
         // Straight to the canonical address rather than the bare id, which
         // would 301 onward. Nothing breaks either way; this just does not
         // make the first view of a brand new listing a round trip.
         return "redirect:" + draft.path();
     }
 
-    /**
-     * Everything still standing between this draft and publication.
-     *
-     * <p>Combines the field checks from the draft service with the photo
-     * minimum, because a listing with no photos is technically complete and
-     * practically useless — and the design states the minimum plainly.
-     */
+    /** Delegated, because the admin flow publishes through the same rule. */
     private List<ListingDraftService.Missing> missingFor(Listing draft) {
-        List<ListingDraftService.Missing> missing =
-                new java.util.ArrayList<>(drafts.missingForPublication(draft));
-
-        long count = photos.countFor(draft.getId());
-        if (count < PhotoService.MIN_PHOTOS_TO_PUBLISH) {
-            missing.add(new ListingDraftService.Missing(
-                    "at least %d photos (you have %d)"
-                            .formatted(PhotoService.MIN_PHOTOS_TO_PUBLISH, count),
-                    TOTAL_STEPS));
-        }
-
-        return missing;
+        return readiness.missingFor(draft, TOTAL_STEPS);
     }
 
     // ---- Shared -----------------------------------------------------------
@@ -383,10 +358,8 @@ public class WizardController {
         // listing published in August still means "available now", and its
         // owner should not be stopped from saving an edit to something else
         // because of it.
-        LocalDate today = LocalDate.now(clock.withZone(IST));
-        LocalDate existing = draft.getAvailableFrom();
-        model.addAttribute("earliestMoveIn",
-                existing != null && existing.isBefore(today) ? existing : today);
+        model.addAttribute("earliestMoveIn", ListingInputs.earliestMoveIn(
+                draft.getAvailableFrom(), ListingInputs.today(clock)));
     }
 
     /**
@@ -425,102 +398,6 @@ public class WizardController {
     /** POST-redirect-GET, so a refresh does not resubmit the step. */
     private static String next(UUID id, int step) {
         return "redirect:/list/%s/%d".formatted(id, step);
-    }
-
-    /**
-     * Accepts what people actually type into a money field.
-     *
-     * <p>"32,000", "₹32000" and "32000 " are all the same number. Rejecting the
-     * first two would be technically defensible and would irritate everybody,
-     * because the rest of the site renders rents with those very separators.
-     */
-    /**
-     * What counts as somebody typing a number: digits, and the separators the
-     * site itself prints. A rupee sign because it is beside the field, commas
-     * and spaces because "32,000" and "32 000" are how the amount is written
-     * everywhere else on the page.
-     */
-    private static final java.util.regex.Pattern MONEY =
-            java.util.regex.Pattern.compile("[\\u20B9\\s,0-9]+");
-
-    private static Integer rupees(String field, String input) {
-        if (input == null || input.isBlank()) {
-            return null;
-        }
-
-        String cleaned = input.trim();
-
-        // Anything else is refused rather than filtered out, and that is the
-        // whole change here. Stripping non-digits turned "0234ax" into "0234"
-        // and saved ₹234 — a number the person never typed, on the field that
-        // decides what they are asking for, with nothing on screen to say it
-        // had happened. A typo is worth an error message; it is not worth
-        // guessing at.
-        if (!MONEY.matcher(cleaned).matches()) {
-            throw new InvalidAmountException(field);
-        }
-
-        String digits = cleaned.replaceAll("[^0-9]", "");
-        if (digits.isEmpty()) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(digits);
-        } catch (NumberFormatException e) {
-            // Longer than an int: eleven digits of rent is a typo too.
-            throw new InvalidAmountException(field);
-        }
-    }
-
-    /** A money field that was not a number. Carries the label to point at. */
-    static class InvalidAmountException extends RuntimeException {
-        InvalidAmountException(String field) {
-            super("%s needs to be a number — digits only.".formatted(field));
-        }
-    }
-
-    private static int orZero(Integer value) {
-        return value == null ? 0 : value;
-    }
-
-    /**
-     * The move-in date, refused if it is in the past.
-     *
-     * <p>"Available from 3 August" on a listing read in October is not a date,
-     * it is a sign nobody has looked at the listing in months — and it is the
-     * one field a searcher filters on, so a stale value quietly removes the
-     * room from the results it should be in.
-     *
-     * <p>The exception is a date already stored. A listing published in August
-     * for an August move-in is still perfectly valid in October; it simply
-     * means "available now". Refusing to let its owner save an unrelated edit
-     * to house rules, because a field they did not touch is now in the past,
-     * would be the validation making the listing worse.
-     */
-    private static LocalDate parseDate(String value, LocalDate current, LocalDate today) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-
-        LocalDate parsed;
-        try {
-            parsed = LocalDate.parse(value.trim());
-        } catch (java.time.format.DateTimeParseException e) {
-            throw new InvalidDateException("That move-in date could not be read.");
-        }
-
-        if (parsed.isBefore(today) && !parsed.equals(current)) {
-            throw new InvalidDateException(
-                    "The move-in date cannot be in the past.");
-        }
-        return parsed;
-    }
-
-    /** A move-in date that was unreadable or already gone. */
-    static class InvalidDateException extends RuntimeException {
-        InvalidDateException(String message) {
-            super(message);
-        }
     }
 
     private static final List<Option> AMENITIES = List.of(
